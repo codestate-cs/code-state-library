@@ -93,7 +93,7 @@ export async function handleSessionSave({
     extensions: {}
   });
   if (result.ok) {
-    logger.log(`Session "${sessionDetails.sessionName}" saved successfully!`);
+    logger.log(`✅ Session "${sessionDetails.sessionName}" saved successfully!`);
   } else {
     logger.error('Failed to save session', { error: result.error });
   }

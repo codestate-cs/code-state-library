@@ -46,8 +46,6 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     }
 
     // 1. Load existing session and validate
-    logger.log(`\n📋 Updating session: "${targetSession}"`);
-    
     const sessionResult = await updateSession.execute(targetSession, {});
     if (!sessionResult.ok) {
       logger.error('Failed to load session', { error: sessionResult.error });
@@ -55,10 +53,10 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     }
 
     const session = sessionResult.value;
-    logger.log(`Session: "${session.name}"`);
-    logger.log(`Project: ${session.projectRoot}`);
-    logger.log(`Branch: ${session.git.branch}`);
-    logger.log(`Commit: ${session.git.commit}`);
+    logger.plainLog(`\n📋 Updating session: "${session.name}"`);
+    logger.log(`✅ Project: ${session.projectRoot}`);
+    logger.log(`✅ Branch: ${session.git.branch}`);
+    logger.log(`✅ Commit: ${session.git.commit}`);
 
     // Check if we're in the correct directory
     const currentDir = process.cwd();
@@ -98,7 +96,7 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
 
     // 3. Handle current repository dirty state
     if (gitStatus.isDirty) {
-      logger.warn('Current repository has uncommitted changes:');
+      logger.warn('⚠️ Current repository has uncommitted changes:');
       gitStatus.dirtyFiles.forEach(file => {
         logger.plainLog(`  ${file.status}: ${file.path}`);
       });
@@ -130,14 +128,14 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
           }
         ]);
         
-        logger.log('Committing changes...');
+        logger.log('✅ Committing changes...');
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
           logger.error('Failed to commit changes', { error: commitResult.error });
           logger.warn('Session update cancelled.');
           return;
         }
-        logger.log('Changes committed successfully');
+        logger.log('✅ Changes committed successfully');
       } else if (dirtyAction === 'stash') {
         logger.log('Stashing changes...');
         const stashResult = await gitService.createStash('Session update stash');
@@ -151,7 +149,6 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     }
 
     // 4. Capture current Git state
-    logger.log('\n📸 Capturing current Git state...');
     const gitState = await getCurrentGitState(gitService, logger);
     if (!gitState) {
       logger.error('Failed to capture Git state');
@@ -159,7 +156,6 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     }
 
     // 5. Ask user for new notes and tags (pre-populate with existing values)
-    logger.log('\n📝 Updating session details...');
     const sessionDetails = await promptSessionDetails({
       name: session.name, // Session name is immutable
       notes: session.notes || '',
@@ -167,7 +163,6 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     });
 
     // 6. Update session with new data (keep same ID and name)
-    logger.log('\n💾 Updating session...');
     const updateResult = await updateSession.execute(targetSession, {
       notes: sessionDetails.sessionNotes,
       tags: sessionDetails.sessionTags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0),
@@ -183,20 +178,12 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
 
     const updatedSession = updateResult.value;
     logger.log(`\n✅ Session "${updatedSession.name}" updated successfully!`);
-    logger.log(`Updated at: ${updatedSession.updatedAt.toISOString()}`);
     
     if (updatedSession.notes) {
-      logger.log(`📝 Notes: ${updatedSession.notes}`);
+      logger.plainLog(`\n📝 Notes: ${updatedSession.notes}`);
     }
     if (updatedSession.tags.length > 0) {
       logger.log(`🏷️  Tags: ${updatedSession.tags.join(', ')}`);
-    }
-    
-    logger.log(`Branch: ${updatedSession.git.branch}`);
-    logger.log(`Commit: ${updatedSession.git.commit}`);
-    logger.log(`Dirty: ${updatedSession.git.isDirty ? 'Yes' : 'No'}`);
-    if (updatedSession.git.stashId) {
-      logger.log(`Stash: ${updatedSession.git.stashId}`);
     }
 
   } catch (error) {
