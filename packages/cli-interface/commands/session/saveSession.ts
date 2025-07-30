@@ -1,5 +1,4 @@
-import { SaveSession, ConfigurableLogger, GitService } from '@codestate/cli-api/main';
-import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
+import { SaveSession, ConfigurableLogger, GitService, Terminal } from '@codestate/cli-api/main';
 import inquirer from '../../utils/inquirer';
 import {
   promptSessionDetails,
@@ -123,7 +122,7 @@ export async function saveSessionCommand() {
             ]);
             
             // Configure Git
-            const terminal = new TerminalFacade();
+            const terminal = new Terminal();
             await terminal.execute(`git config user.name "${userName}"`);
             await terminal.execute(`git config user.email "${userEmail}"`);
             logger.log('Git configured successfully.');

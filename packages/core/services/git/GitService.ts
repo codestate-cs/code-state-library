@@ -5,6 +5,7 @@ import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 import { ITerminalService } from '@codestate/core/domain/ports/ITerminalService';
 import { GitError, ErrorCode } from '@codestate/core/domain/types/ErrorTypes';
 import { validateGitStatus } from '@codestate/core/domain/schemas/SchemaRegistry';
+import { platform } from 'os';
 
 export class GitService implements IGitService {
   constructor(
@@ -594,11 +595,35 @@ export class GitService implements IGitService {
 
   private async cleanupTempFile(tempFile: string): Promise<void> {
     try {
-      await this.terminalService.execute(`rm -f ${tempFile}`, {
+      // Use cross-platform file deletion
+      const currentPlatform = platform();
+      let deleteCommand: string;
+      
+      if (currentPlatform === 'win32') {
+        // Windows - use del command
+        deleteCommand = `del /f /q "${tempFile}"`;
+      } else {
+        // Unix-like systems - use rm command
+        deleteCommand = `rm -f "${tempFile}"`;
+      }
+      
+      this.logger.debug('Attempting to clean up temp file', { tempFile, deleteCommand, platform: currentPlatform });
+      
+      const result = await this.terminalService.execute(deleteCommand, {
         cwd: this.repositoryPath,
         timeout: 5000
       });
-      this.logger.debug('Temp file cleaned up', { tempFile });
+      
+      if (result.ok && result.value.exitCode === 0) {
+        this.logger.debug('Temp file cleaned up successfully', { tempFile });
+      } else {
+        this.logger.warn('Temp file cleanup may have failed', { 
+          tempFile, 
+          exitCode: result.ok ? result.value.exitCode : undefined,
+          stderr: result.ok ? result.value.stderr : undefined,
+          stdout: result.ok ? result.value.stdout : undefined
+        });
+      }
     } catch (error) {
       this.logger.error('Failed to clean up temp file', { tempFile, error });
     }
