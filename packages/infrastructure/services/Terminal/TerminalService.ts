@@ -101,6 +101,72 @@ export class TerminalService implements ITerminalService {
     return { ok: true, value: results };
   }
 
+  async spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>> {
+    this.logger.debug('TerminalService.spawnTerminal called', { command, options });
+    
+    const terminalCommand: TerminalCommand = {
+      command,
+      ...options
+    };
+    
+    return this.spawnTerminalCommand(terminalCommand);
+  }
+
+  async spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>> {
+    this.logger.debug('TerminalService.spawnTerminalCommand called', { command });
+    
+    try {
+      // Validate command
+      if (!command.command || command.command.trim().length === 0) {
+        return { ok: false, error: new TerminalError('Command cannot be empty', ErrorCode.TERMINAL_COMMAND_FAILED) };
+      }
+
+      // Get the appropriate terminal command for the current platform
+      const terminalCmd = this.getTerminalCommand();
+      const shell = this.getDefaultShell();
+      
+      // Prepare spawn options
+      const spawnOptions: SpawnOptions = {
+        cwd: command.cwd || process.cwd(),
+        env: { ...process.env, ...command.env },
+        detached: true, // Important: run in detached mode so it opens in a new window
+        stdio: 'ignore', // Ignore stdio to prevent hanging
+      };
+
+      // Parse the command to execute
+      const [cmd, args] = this.parseCommand(command.command);
+      
+      // Create the full command string for the terminal
+      const fullCommand = `${cmd} ${args.join(' ')}`;
+      
+      // Spawn the terminal with the command
+      const terminalArgs = this.getTerminalArgs(terminalCmd, shell, fullCommand, command.cwd);
+      
+      const child = spawn(terminalCmd, terminalArgs, spawnOptions);
+      
+      // Don't wait for the process to complete since it's a new terminal window
+      child.unref();
+      
+      this.logger.log('Terminal spawned successfully', { 
+        command: command.command, 
+        terminalCmd,
+        terminalArgs 
+      });
+      
+      return { ok: true, value: true };
+    } catch (error) {
+      this.logger.error('Failed to spawn terminal', { command: command.command, error });
+      
+      return { 
+        ok: false, 
+        error: new TerminalError(
+          `Failed to spawn terminal: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        ) 
+      };
+    }
+  }
+
   async isCommandAvailable(command: string): Promise<Result<boolean>> {
     this.logger.debug('TerminalService.isCommandAvailable called', { command });
     
@@ -140,6 +206,38 @@ export class TerminalService implements ITerminalService {
       default: // linux, freebsd, etc.
         return process.env.SHELL || '/bin/bash';
     }
+  }
+
+  private getTerminalCommand(): string {
+    const osPlatform = platform();
+    if (osPlatform === 'win32') {
+      return 'cmd.exe';
+    } else if (osPlatform === 'darwin') {
+      return 'open';
+    } else {
+      // Linux - try common terminal emulators
+      return 'gnome-terminal';
+    }
+  }
+
+  private getTerminalArgs(terminalCmd: string, shell: string, command: string, cwd?: string): string[] {
+    const args: string[] = [];
+    
+    if (terminalCmd === 'cmd.exe') {
+      // Windows
+      args.push('/c', 'start', 'cmd', '/k', command);
+    } else if (terminalCmd === 'open') {
+      // macOS
+      args.push('-a', 'Terminal', command);
+    } else {
+      // Linux - gnome-terminal
+      args.push('--', shell, '-c', command);
+      if (cwd) {
+        args.unshift('--working-directory', cwd);
+      }
+    }
+    
+    return args;
   }
 
   private parseCommand(commandString: string): [string, string[]] {

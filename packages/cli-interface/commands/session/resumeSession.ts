@@ -144,11 +144,18 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       await terminal.execute(`git checkout ${session.git.branch}`);
       logger.log(`Branch switched to ${session.git.branch}`);
     }
+    
     if (session.git.stashId) {
       logger.log(`Applying stash ${session.git.stashId}...`);
       const applyStash = new ApplyStash();
-      await applyStash.execute(session.git.stashId);
-      logger.log('Stash applied successfully');
+      const stashResult = await applyStash.execute(session.git.stashId);
+      if (stashResult.ok && stashResult.value.success) {
+        logger.log('Stash applied successfully');
+      } else {
+        logger.error('Failed to apply stash', { 
+          error: stashResult.ok ? stashResult.value.error : stashResult.error 
+        });
+      }
     }
 
     // 5. Execute scripts for the projectRoot
@@ -156,11 +163,30 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     const getScriptsByRootPath = new GetScriptsByRootPath();
     const scriptsResult = await getScriptsByRootPath.execute(session.projectRoot);
     if (scriptsResult.ok && scriptsResult.value.length > 0) {
-      await terminal.executeBatch(scriptsResult.value.map(script => ({
-        command: script.script,
-        cwd: session.projectRoot
-      })));
-      logger.log('Scripts executed successfully');
+      logger.log(`Found ${scriptsResult.value.length} script(s) to execute...`);
+      
+      // Spawn terminal windows for each script
+      for (const script of scriptsResult.value) {
+        logger.log(`Spawning terminal for script: ${script.name || script.script}`);
+        
+        const spawnResult = await terminal.spawnTerminal(script.script, {
+          cwd: session.projectRoot,
+          timeout: 5000 // Short timeout for spawning
+        });
+        
+        if (!spawnResult.ok) {
+          logger.error(`Failed to spawn terminal for script: ${script.name || script.script}`, { 
+            error: spawnResult.error 
+          });
+        } else {
+          logger.log(`Terminal spawned successfully for: ${script.name || script.script}`);
+        }
+        
+        // Small delay between spawning terminals to avoid overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      logger.log('All script terminals spawned successfully');
     } else {
       logger.log('No scripts to execute.');
     }
