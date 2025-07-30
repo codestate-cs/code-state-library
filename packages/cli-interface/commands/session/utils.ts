@@ -51,16 +51,22 @@ export async function promptDirtyState(gitStatus: any, canStash: boolean) {
 export async function getCurrentGitState(gitService: any, logger: any) {
   const currentBranchResult = await gitService.getCurrentBranch();
   const currentCommitResult = await gitService.getCurrentCommit();
-  if (!currentBranchResult.ok || !currentCommitResult.ok) {
+  const isDirtyResult = await gitService.getIsDirty();
+  
+  if (!currentBranchResult.ok || !currentCommitResult.ok || !isDirtyResult.ok) {
     logger.error('Failed to get Git state', {
       branchError: currentBranchResult.ok ? undefined : currentBranchResult.error,
-      commitError: currentCommitResult.ok ? undefined : currentCommitResult.error
+      commitError: currentCommitResult.ok ? undefined : currentCommitResult.error,
+      isDirtyError: isDirtyResult.ok ? undefined : isDirtyResult.error
     });
     return null;
   }
+  
   return {
     branch: currentBranchResult.value,
-    commit: currentCommitResult.value
+    commit: currentCommitResult.value,
+    isDirty: isDirtyResult.value,
+    stashId: null // No stash ID for current state
   };
 }
 
