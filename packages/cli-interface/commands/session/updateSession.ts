@@ -162,15 +162,15 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     logger.log('\n📝 Updating session details...');
     const sessionDetails = await promptSessionDetails({
       name: session.name, // Session name is immutable
-      notes: session.notes,
-      tags: session.tags
+      notes: session.notes || '',
+      tags: session.tags.join(', ') // Convert array to string for prompt
     });
 
     // 6. Update session with new data (keep same ID and name)
     logger.log('\n💾 Updating session...');
     const updateResult = await updateSession.execute(targetSession, {
-      notes: sessionDetails.notes,
-      tags: sessionDetails.tags,
+      notes: sessionDetails.sessionNotes,
+      tags: sessionDetails.sessionTags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0),
       git: gitState,
       files: [], // Empty array in CLI mode
       extensions: {}
