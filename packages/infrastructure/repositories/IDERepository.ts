@@ -7,6 +7,9 @@ export class IDERepository implements IIDERepository {
   async getIDEDefinitions(): Promise<Result<IDE[]>> {
     const currentPlatform = platform();
     
+    // Get user profile path for Windows
+    const localAppData = process.env.LOCALAPPDATA;
+    
     // Default IDE definitions
     const defaultIDEs: IDE[] = [
       {
@@ -23,7 +26,7 @@ export class IDERepository implements IIDERepository {
       },
       {
         name: 'cursor',
-        command: 'cursor',
+        command: currentPlatform === 'win32' ? `${localAppData}\\Programs\\cursor\\Cursor.exe` : 'cursor',
         args: ['--new-window'],
         supportedPlatforms: ['win32', 'darwin', 'linux']
       },

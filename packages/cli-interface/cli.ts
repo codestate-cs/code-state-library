@@ -32,6 +32,10 @@ Commands:
   scripts delete-by-path    Delete all scripts for a root path
   scripts export            Export scripts to JSON
   scripts import            Import scripts from JSON
+  
+  session save              Save current session
+  session resume            Resume a saved session
+  session update            Update a saved session
 
 Examples:
   codestate config show

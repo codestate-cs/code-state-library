@@ -171,8 +171,19 @@ export class TerminalService implements ITerminalService {
     this.logger.debug('TerminalService.isCommandAvailable called', { command });
     
     try {
+      const osPlatform = platform();
+      let checkCommand: string;
+      
+      if (osPlatform === 'win32') {
+        // On Windows, use 'where' command
+        checkCommand = `where ${command}`;
+      } else {
+        // On Unix-like systems, use 'which' command
+        checkCommand = `which ${command}`;
+      }
+      
       const result = await this.executeCommand({ 
-        command: `which ${command}`, 
+        command: checkCommand, 
         timeout: 5000 
       });
       return { ok: true, value: result.ok && result.value.success };
