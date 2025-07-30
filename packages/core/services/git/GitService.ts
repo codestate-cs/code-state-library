@@ -325,6 +325,7 @@ export class GitService implements IGitService {
 
   async commitChanges(message: string): Promise<Result<boolean>> {
     this.logger.debug('GitService.commitChanges called', { message });
+    let tempFile: string | undefined;
     try {
       // First, check if Git is properly configured
       const configResult = await this.isGitConfigured();
@@ -384,11 +385,44 @@ export class GitService implements IGitService {
         return { ok: true, value: true }; // Return success since there's nothing to commit
       }
 
-      // Then commit with the provided message
-      const commitResult = await this.terminalService.execute(`git commit -m "${message}"`, {
+      // Then commit with the provided message using a temporary file to avoid shell parsing issues
+      tempFile = `temp_commit_msg_${Date.now()}.txt`;
+      
+      this.logger.debug('Writing commit message to temp file', { tempFile, message });
+      
+      // Write commit message to temp file
+      const writeMsgResult = await this.terminalService.execute(`echo "${message.replace(/"/g, '\\"')}" > ${tempFile}`, {
+        cwd: this.repositoryPath,
+        timeout: 10000
+      });
+
+      if (!writeMsgResult.ok || writeMsgResult.value.exitCode !== 0) {
+        this.logger.error('Failed to write commit message to temp file', { 
+          error: writeMsgResult.ok ? undefined : writeMsgResult.error,
+          exitCode: writeMsgResult.ok ? writeMsgResult.value.exitCode : undefined,
+          stderr: writeMsgResult.ok ? writeMsgResult.value.stderr : undefined
+        });
+        // Clean up temp file even on write failure
+        await this.cleanupTempFile(tempFile);
+        return { ok: false, error: new GitError('Failed to write commit message', ErrorCode.GIT_COMMAND_FAILED) };
+      }
+
+      this.logger.debug('Commit message written to temp file', { tempFile });
+
+      // Commit using the temp file
+      const commitResult = await this.terminalService.execute(`git commit -F ${tempFile}`, {
         cwd: this.repositoryPath,
         timeout: 30000
       });
+
+      this.logger.debug('Git commit command executed', { 
+        exitCode: commitResult.ok ? commitResult.value.exitCode : undefined,
+        stdout: commitResult.ok ? commitResult.value.stdout : undefined,
+        stderr: commitResult.ok ? commitResult.value.stderr : undefined
+      });
+
+      // Always clean up temp file regardless of commit result
+      await this.cleanupTempFile(tempFile);
 
       if (!commitResult.ok) {
         this.logger.error('Failed to commit changes', { error: commitResult.error });
@@ -407,6 +441,10 @@ export class GitService implements IGitService {
       this.logger.log('Changes committed successfully', { message });
       return { ok: true, value: true };
     } catch (error) {
+      // Clean up temp file even on unexpected errors
+      if (tempFile) {
+        await this.cleanupTempFile(tempFile);
+      }
       this.logger.error('Failed to commit changes', { error });
       return { ok: false, error: new GitError('Failed to commit changes', ErrorCode.GIT_COMMAND_FAILED) };
     }
@@ -552,5 +590,17 @@ export class GitService implements IGitService {
     }
 
     return files;
+  }
+
+  private async cleanupTempFile(tempFile: string): Promise<void> {
+    try {
+      await this.terminalService.execute(`rm -f ${tempFile}`, {
+        cwd: this.repositoryPath,
+        timeout: 5000
+      });
+      this.logger.debug('Temp file cleaned up', { tempFile });
+    } catch (error) {
+      this.logger.error('Failed to clean up temp file', { tempFile, error });
+    }
   }
 } 

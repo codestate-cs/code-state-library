@@ -9,6 +9,10 @@ export interface ITerminalService {
   // Batch operations
   executeBatch(commands: TerminalCommand[]): Promise<Result<TerminalResult[]>>;
   
+  // Terminal spawning
+  spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
+  spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
+  
   // Utility methods
   isCommandAvailable(command: string): Promise<Result<boolean>>;
   getShell(): Promise<Result<string>>;
