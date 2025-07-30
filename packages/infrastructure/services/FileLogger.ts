@@ -20,6 +20,9 @@ export class FileLogger implements ILoggerService {
     this.filePath = config.filePath;
     this.ensureLogDirectory();
   }
+  plainLog(message: string, meta?: Record<string, unknown>): void {
+    throw new Error('Method not implemented.');
+  }
 
   private ensureLogDirectory(): void {
     const logDir = path.dirname(this.filePath);
