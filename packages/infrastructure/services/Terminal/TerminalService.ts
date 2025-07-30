@@ -172,21 +172,30 @@ export class TerminalService implements ITerminalService {
     
     try {
       const osPlatform = platform();
-      let checkCommand: string;
       
       if (osPlatform === 'win32') {
-        // On Windows, use 'where' command
-        checkCommand = `where ${command}`;
+        // On Windows, check if the command is a full path to an executable
+        if (command.includes('\\') && command.endsWith('.exe')) {
+          // It's a full path, check if file exists
+          const fs = await import('fs');
+          const exists = fs.existsSync(command);
+          return { ok: true, value: exists };
+        } else {
+          // Try to find it in PATH using PowerShell's Get-Command
+          const result = await this.executeCommand({ 
+            command: `powershell -Command "Get-Command '${command}' -ErrorAction SilentlyContinue"`, 
+            timeout: 5000 
+          });
+          return { ok: true, value: result.ok && result.value.success && result.value.stdout.trim() !== '' };
+        }
       } else {
         // On Unix-like systems, use 'which' command
-        checkCommand = `which ${command}`;
+        const result = await this.executeCommand({ 
+          command: `which ${command}`, 
+          timeout: 5000 
+        });
+        return { ok: true, value: result.ok && result.value.success };
       }
-      
-      const result = await this.executeCommand({ 
-        command: checkCommand, 
-        timeout: 5000 
-      });
-      return { ok: true, value: result.ok && result.value.success };
     } catch (error) {
       this.logger.debug('Command availability check failed', { command, error });
       return { ok: true, value: false };
