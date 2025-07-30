@@ -3,6 +3,12 @@ import { ApplyStash } from '@codestate/core/use-cases/git/ApplyStash';
 import { GetScriptsByRootPath } from '@codestate/core/use-cases/scripts/GetScriptsByRootPath';
 import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
 import inquirer from '../../utils/inquirer';
+import {
+  promptSessionDetails,
+  promptDirtyState,
+  getCurrentGitState,
+  handleSessionSave
+} from './utils';
 
 export async function resumeSessionCommand(sessionIdOrName?: string) {
   const logger = new ConfigurableLogger();
@@ -58,7 +64,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     if (currentDir !== session.projectRoot) {
       logger.warn(`You are in ${currentDir}`);
       logger.log(`Session was saved from ${session.projectRoot}`);
-      
       const { changeDirectory } = await inquirer.customPrompt([
         {
           type: 'confirm',
@@ -67,7 +72,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
           default: true
         }
       ]);
-
       if (changeDirectory) {
         logger.log(`Changing to ${session.projectRoot}...`);
         process.chdir(session.projectRoot);
@@ -89,7 +93,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       logger.error('Failed to get Git status', { error: gitStatusResult.error });
       return;
     }
-
     const gitStatus = gitStatusResult.value;
 
     // 3. Handle current repository dirty state
@@ -98,72 +101,35 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       gitStatus.dirtyFiles.forEach(file => {
         logger.plainLog(`  ${file.status}: ${file.path}`);
       });
-
-      const { dirtyAction } = await inquirer.customPrompt([
-        {
-          type: 'list',
-          name: 'dirtyAction',
-          message: 'How would you like to handle current changes?',
-          choices: [
-            { name: 'Save current work as new session', value: 'save' },
-            { name: 'Discard current changes', value: 'discard' },
-            { name: 'Cancel resume', value: 'cancel' }
-          ]
-        }
-      ]);
-
+      // Check if we can stash (only modified files, no new/deleted files)
+      const hasNewFiles = gitStatus.newFiles.length > 0;
+      const hasDeletedFiles = gitStatus.deletedFiles.length > 0;
+      const hasUntrackedFiles = gitStatus.untrackedFiles.length > 0;
+      const canStash = !hasNewFiles && !hasDeletedFiles && !hasUntrackedFiles;
+      const { dirtyAction } = await promptDirtyState(gitStatus, canStash);
       if (dirtyAction === 'cancel') {
         logger.warn('Session resume cancelled.');
         return;
       }
-
       if (dirtyAction === 'save') {
         logger.log('Saving current work as new session...');
-        // Prompt for session name/notes/tags
-        const sessionDetails = await inquirer.customPrompt([
-          {
-            type: 'input',
-            name: 'sessionName',
-            message: 'Enter session name:',
-            validate: (input: string) => {
-              if (!input.trim()) {
-                return 'Session name is required';
-              }
-              return true;
-            }
-          },
-          {
-            type: 'input',
-            name: 'sessionNotes',
-            message: 'Enter session notes (optional):'
-          },
-          {
-            type: 'input',
-            name: 'sessionTags',
-            message: 'Enter session tags (comma-separated, optional):'
-          }
-        ]);
-        // Get current branch/commit
-        const currentBranchResult = await gitService.getCurrentBranch();
-        const currentCommitResult = await gitService.getCurrentCommit();
-        await saveSession.execute({
-          name: sessionDetails.sessionName,
+        const sessionDetails = await promptSessionDetails();
+        const gitState = await getCurrentGitState(gitService, logger);
+        if (!gitState) return;
+        await handleSessionSave({
+          sessionDetails,
           projectRoot: process.cwd(),
-          notes: sessionDetails.sessionNotes || '',
-          tags: sessionDetails.sessionTags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0),
-          files: [],
           git: {
-            branch: currentBranchResult.ok ? currentBranchResult.value : '',
-            commit: currentCommitResult.ok ? currentCommitResult.value : '',
+            ...gitState,
             isDirty: false,
             stashId: null
           },
-          extensions: {}
+          saveSession,
+          logger
         });
         logger.log('Current work saved. Proceeding with resume...');
       } else if (dirtyAction === 'discard') {
         logger.log('Discarding current changes...');
-        // Discard changes: git reset --hard && git clean -fd
         await terminal.execute('git reset --hard');
         await terminal.execute('git clean -fd');
         logger.log('Changes discarded. Proceeding with resume...');
@@ -172,14 +138,12 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
 
     // 4. Restore Git state
     logger.log('\n🔄 Restoring Git state...');
-    // Switch branch if needed
     const currentBranchResult = await gitService.getCurrentBranch();
     if (currentBranchResult.ok && currentBranchResult.value !== session.git.branch) {
       logger.log(`Switching from ${currentBranchResult.value} to ${session.git.branch}...`);
       await terminal.execute(`git checkout ${session.git.branch}`);
       logger.log(`Branch switched to ${session.git.branch}`);
     }
-    // Apply stash if needed
     if (session.git.stashId) {
       logger.log(`Applying stash ${session.git.stashId}...`);
       const applyStash = new ApplyStash();
@@ -208,15 +172,12 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
 
     logger.log(`\n✅ Session "${session.name}" resumed successfully!`);
     logger.log('Your development environment has been restored.');
-    
     if (session.notes) {
       logger.log(`\n📝 Notes: ${session.notes}`);
     }
-    
     if (session.tags.length > 0) {
       logger.log(`🏷️  Tags: ${session.tags.join(', ')}`);
     }
-
   } catch (error) {
     logger.error('Unexpected error during session resume', { error });
   }
