@@ -54,10 +54,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     }
 
     const session = sessionResult.value;
-    logger.log(`\n📋 Resuming session: "${session.name}"`);
-    logger.log(`Project: ${session.projectRoot}`);
-    logger.log(`Branch: ${session.git.branch}`);
-    logger.log(`Commit: ${session.git.commit}`);
+    logger.plainLog(`\n📋 Resuming session: "${session.name}"`);
 
     // Check if we're in the correct directory
     const currentDir = process.cwd();
@@ -129,7 +126,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         });
         logger.log('Current work saved. Proceeding with resume...');
       } else if (dirtyAction === 'discard') {
-        logger.log('Discarding current changes...');
         await terminal.execute('git reset --hard');
         await terminal.execute('git clean -fd');
         logger.log('Changes discarded. Proceeding with resume...');
@@ -137,12 +133,9 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     }
 
     // 4. Restore Git state
-    logger.log('\n🔄 Restoring Git state...');
     const currentBranchResult = await gitService.getCurrentBranch();
     if (currentBranchResult.ok && currentBranchResult.value !== session.git.branch) {
-      logger.log(`Switching from ${currentBranchResult.value} to ${session.git.branch}...`);
       await terminal.execute(`git checkout ${session.git.branch}`);
-      logger.log(`Branch switched to ${session.git.branch}`);
     }
     
     if (session.git.stashId) {
@@ -150,7 +143,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       const applyStash = new ApplyStash();
       const stashResult = await applyStash.execute(session.git.stashId);
       if (stashResult.ok && stashResult.value.success) {
-        logger.log('Stash applied successfully');
+       
       } else {
         logger.error('Failed to apply stash', { 
           error: stashResult.ok ? stashResult.value.error : stashResult.error 
@@ -159,16 +152,11 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     }
 
     // 5. Execute scripts for the projectRoot
-    logger.log('\n🚀 Executing saved scripts...');
     const getScriptsByRootPath = new GetScriptsByRootPath();
     const scriptsResult = await getScriptsByRootPath.execute(session.projectRoot);
     if (scriptsResult.ok && scriptsResult.value.length > 0) {
-      logger.log(`Found ${scriptsResult.value.length} script(s) to execute...`);
-      
       // Spawn terminal windows for each script
       for (const script of scriptsResult.value) {
-        logger.log(`Spawning terminal for script: ${script.name || script.script}`);
-        
         const spawnResult = await terminal.spawnTerminal(script.script, {
           cwd: session.projectRoot,
           timeout: 5000 // Short timeout for spawning
@@ -179,27 +167,24 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
             error: spawnResult.error 
           });
         } else {
-          logger.log(`Terminal spawned successfully for: ${script.name || script.script}`);
+          
         }
         
         // Small delay between spawning terminals to avoid overwhelming the system
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      logger.log('All script terminals spawned successfully');
     } else {
       logger.log('No scripts to execute.');
     }
 
     // 6. Open IDE and files
-    logger.log('\n🖥️  Opening IDE and files...');
-    
+
     // Get configured IDE from config
     const getConfig = new GetConfig();
     const configResult = await getConfig.execute();
     if (configResult.ok && configResult.value.ide) {
       const configuredIDE = configResult.value.ide;
-      logger.log(`Using configured IDE: ${configuredIDE}`);
       
       // Open IDE with project
       const openIDE = new OpenIDE();
@@ -210,7 +195,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         
         // Open files if session has files
         if (session.files && session.files.length > 0) {
-          logger.log(`Opening ${session.files.length} file(s) from session...`);
           
           const openFiles = new OpenFiles();
           const filesResult = await openFiles.execute({
@@ -225,7 +209,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
           });
           
           if (filesResult.ok) {
-            logger.log('Files opened successfully in IDE');
           } else {
             logger.error('Failed to open files in IDE', { error: filesResult.error });
           }
@@ -237,18 +220,16 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         logger.warn('Continuing without IDE...');
       }
     } else {
-      logger.warn('No IDE configured. Skipping IDE opening.');
+      
     }
 
     // 7. Update session metadata (last accessed)
-    logger.log('\n📝 Updating session metadata...');
+    
     // TODO: Implement session metadata update
-    logger.log('Session metadata updated');
-
+    
     logger.log(`\n✅ Session "${session.name}" resumed successfully!`);
-    logger.log('Your development environment has been restored.');
     if (session.notes) {
-      logger.log(`\n📝 Notes: ${session.notes}`);
+      logger.plainLog(`\n📝 Notes: ${session.notes}`);
     }
     if (session.tags.length > 0) {
       logger.log(`🏷️  Tags: ${session.tags.join(', ')}`);

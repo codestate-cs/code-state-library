@@ -29,7 +29,6 @@ export async function saveSessionCommand() {
         logger.warn('Session save cancelled.');
         return;
       }
-      logger.plainLog('Continuing without Git integration...');
       const sessionDetails = await promptSessionDetails();
       const projectRoot = process.cwd();
       await handleSessionSave({
@@ -57,9 +56,9 @@ export async function saveSessionCommand() {
 
     // 2. Handle dirty repository
     if (gitStatus.isDirty) {
-      logger.warn('Repository has uncommitted changes:');
+      logger.warn('⚠️ Repository has uncommitted changes:');
       gitStatus.dirtyFiles.forEach(file => {
-        logger.log(`  ${file.status}: ${file.path}`);
+        logger.plainLog(`  ${file.status}: ${file.path}`);
       });
       // Check if we can stash (only modified files, no new/deleted files)
       const hasNewFiles = gitStatus.newFiles.length > 0;
@@ -146,7 +145,7 @@ export async function saveSessionCommand() {
           }
         ]);
         
-        logger.log('Committing changes...');
+        logger.log('✅ Committing changes...');
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
           logger.error('Failed to commit changes', { 
@@ -187,7 +186,7 @@ export async function saveSessionCommand() {
             return;
           }
         } else {
-          logger.log('Changes committed successfully.');
+          logger.log('✅ Changes committed successfully.');
         }
       } else if (dirtyAction === 'stash') {
         const stashResult = await gitService.createStash('Session save stash');
