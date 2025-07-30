@@ -1,0 +1,26 @@
+{
+  "name": "codestate-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "tests"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter ./packages/cli-interface run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "cli": "tsx packages/cli-interface/cli.ts",
+    "start": "tsx packages/cli-interface/cli.ts"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "inquirer": "^12.9.0",
+    "zod": "^4.0.13"
+  }
+}
