@@ -1,7 +1,4 @@
-import { ResumeSession, ConfigurableLogger, GitService, ListSessions, SaveSession, UpdateSession } from '@codestate/cli-api/main';
-import { ApplyStash } from '@codestate/core/use-cases/git/ApplyStash';
-import { GetScriptsByRootPath } from '@codestate/core/use-cases/scripts/GetScriptsByRootPath';
-import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
+import { ResumeSession, ConfigurableLogger, GitService, ListSessions, SaveSession, UpdateSession, ApplyStash, Terminal, GetScriptsByRootPath } from '@codestate/cli-api/main';
 import inquirer from '../../utils/inquirer';
 import {
   promptSessionDetails,
@@ -17,7 +14,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
   const listSessions = new ListSessions();
   const saveSession = new SaveSession();
   const updateSession = new UpdateSession();
-  const terminal = new TerminalFacade();
+  const terminal = new Terminal();
 
   try {
     // If no session specified, ask user to select one
