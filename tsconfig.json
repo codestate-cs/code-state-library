@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@codestate/core/*": ["packages/core/*"],
+      "@codestate/infrastructure/*": ["packages/infrastructure/*"],
+      "@codestate/framework/*": ["packages/framework/*"],
+      "@codestate/cli-api/*": ["packages/cli-api/*"],
+      "@codestate/cli-interface/*": ["packages/cli-interface/*"],
+      "@codestate/shared/*": ["packages/shared/*"]
+    }
+  },
+  "include": [
+    "packages/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests"
+  ]
+} 
