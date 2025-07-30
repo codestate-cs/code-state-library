@@ -1,5 +1,6 @@
 import { saveSessionCommand } from '../../commands/session';
 import { resumeSessionCommand } from '../../commands/session';
+import { updateSessionCommand } from '../../commands/session';
 
 export async function handleSessionCommand(subcommand: string, options: string[]) {
   switch (subcommand) {
@@ -9,6 +10,10 @@ export async function handleSessionCommand(subcommand: string, options: string[]
     case 'resume':
       const sessionIdOrName = options[0];
       await resumeSessionCommand(sessionIdOrName);
+      break;
+    case 'update':
+      const updateSessionIdOrName = options[0];
+      await updateSessionCommand(updateSessionIdOrName);
       break;
     default:
       console.error(`Error: Unknown session subcommand '${subcommand}'`);
