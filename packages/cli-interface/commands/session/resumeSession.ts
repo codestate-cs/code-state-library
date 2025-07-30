@@ -1,4 +1,7 @@
-import { ResumeSession, ConfigurableLogger, GitService, ListSessions, SaveSession, UpdateSession, ApplyStash, Terminal, GetScriptsByRootPath } from '@codestate/cli-api/main';
+import { ResumeSession, ConfigurableLogger, GitService, ListSessions, SaveSession, UpdateSession, GetConfig, OpenIDE, OpenFiles } from '@codestate/cli-api/main';
+import { ApplyStash } from '@codestate/core/use-cases/git/ApplyStash';
+import { GetScriptsByRootPath } from '@codestate/core/use-cases/scripts/GetScriptsByRootPath';
+import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
 import inquirer from '../../utils/inquirer';
 import {
   promptSessionDetails,
@@ -14,7 +17,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
   const listSessions = new ListSessions();
   const saveSession = new SaveSession();
   const updateSession = new UpdateSession();
-  const terminal = new Terminal();
+  const terminal = new TerminalFacade();
 
   try {
     // If no session specified, ask user to select one
@@ -188,7 +191,56 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       logger.log('No scripts to execute.');
     }
 
-    // 6. Update session metadata (last accessed)
+    // 6. Open IDE and files
+    logger.log('\n🖥️  Opening IDE and files...');
+    
+    // Get configured IDE from config
+    const getConfig = new GetConfig();
+    const configResult = await getConfig.execute();
+    if (configResult.ok && configResult.value.ide) {
+      const configuredIDE = configResult.value.ide;
+      logger.log(`Using configured IDE: ${configuredIDE}`);
+      
+      // Open IDE with project
+      const openIDE = new OpenIDE();
+      const ideResult = await openIDE.execute(configuredIDE, session.projectRoot);
+      
+      if (ideResult.ok) {
+        logger.log(`IDE '${configuredIDE}' opened successfully`);
+        
+        // Open files if session has files
+        if (session.files && session.files.length > 0) {
+          logger.log(`Opening ${session.files.length} file(s) from session...`);
+          
+          const openFiles = new OpenFiles();
+          const filesResult = await openFiles.execute({
+            ide: configuredIDE,
+            projectRoot: session.projectRoot,
+            files: session.files.map(file => ({
+              path: file.path,
+              line: file.cursor?.line,
+              column: file.cursor?.column,
+              isActive: file.isActive
+            }))
+          });
+          
+          if (filesResult.ok) {
+            logger.log('Files opened successfully in IDE');
+          } else {
+            logger.error('Failed to open files in IDE', { error: filesResult.error });
+          }
+        } else {
+          logger.log('No files to open from session');
+        }
+      } else {
+        logger.error(`Failed to open IDE '${configuredIDE}'`, { error: ideResult.error });
+        logger.warn('Continuing without IDE...');
+      }
+    } else {
+      logger.warn('No IDE configured. Skipping IDE opening.');
+    }
+
+    // 7. Update session metadata (last accessed)
     logger.log('\n📝 Updating session metadata...');
     // TODO: Implement session metadata update
     logger.log('Session metadata updated');
