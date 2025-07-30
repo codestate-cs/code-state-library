@@ -1,4 +1,5 @@
 import { SaveSession, ConfigurableLogger, GitService } from '@codestate/cli-api/main';
+import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
 import inquirer from '../../utils/inquirer';
 import {
   promptSessionDetails,
@@ -72,6 +73,66 @@ export async function saveSessionCommand() {
         return;
       }
       if (dirtyAction === 'commit') {
+        // Check if Git is properly configured first
+        const configResult = await gitService.isGitConfigured();
+        if (!configResult.ok) {
+          logger.error('Failed to check Git configuration', { error: configResult.error });
+          logger.warn('Session save cancelled.');
+          return;
+        }
+
+        if (!configResult.value) {
+          logger.error('Git is not properly configured for commits.');
+          logger.warn('Please configure Git with your name and email:');
+          logger.warn('  git config --global user.name "Your Name"');
+          logger.warn('  git config --global user.email "your.email@example.com"');
+          
+          const { configureGit } = await inquirer.customPrompt([
+            {
+              type: 'confirm',
+              name: 'configureGit',
+              message: 'Would you like to configure Git now?',
+              default: false
+            }
+          ]);
+          
+          if (configureGit) {
+            const { userName, userEmail } = await inquirer.customPrompt([
+              {
+                type: 'input',
+                name: 'userName',
+                message: 'Enter your name for Git:',
+                validate: (input: string) => {
+                  if (!input.trim()) {
+                    return 'Name is required';
+                  }
+                  return true;
+                }
+              },
+              {
+                type: 'input',
+                name: 'userEmail',
+                message: 'Enter your email for Git:',
+                validate: (input: string) => {
+                  if (!input.trim()) {
+                    return 'Email is required';
+                  }
+                  return true;
+                }
+              }
+            ]);
+            
+            // Configure Git
+            const terminal = new TerminalFacade();
+            await terminal.execute(`git config user.name "${userName}"`);
+            await terminal.execute(`git config user.email "${userEmail}"`);
+            logger.log('Git configured successfully.');
+          } else {
+            logger.warn('Session save cancelled.');
+            return;
+          }
+        }
+
         const { commitMessage } = await inquirer.customPrompt([
           {
             type: 'input',
@@ -85,10 +146,49 @@ export async function saveSessionCommand() {
             }
           }
         ]);
+        
+        logger.log('Committing changes...');
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
-          logger.error('Failed to commit changes', { error: commitResult.error });
-          return;
+          logger.error('Failed to commit changes', { 
+            error: commitResult.error,
+            message: commitResult.error.message
+          });
+          
+          // Provide more specific error messages
+          logger.warn('Git commit failed. This might be due to:');
+          logger.warn('  - No changes to commit');
+          logger.warn('  - Git configuration issues');
+          logger.warn('  - Repository permissions');
+          logger.warn('Consider using "stash" instead or check your git status.');
+          
+          const { retryAction } = await inquirer.customPrompt([
+            {
+              type: 'list',
+              name: 'retryAction',
+              message: 'What would you like to do?',
+              choices: [
+                { name: 'Try stashing instead', value: 'stash' },
+                { name: 'Cancel session save', value: 'cancel' }
+              ]
+            }
+          ]);
+          
+          if (retryAction === 'stash') {
+            logger.log('Attempting to stash changes...');
+            const stashResult = await gitService.createStash('Session save stash');
+            if (!stashResult.ok) {
+              logger.error('Failed to stash changes', { error: stashResult.error });
+              logger.warn('Session save cancelled.');
+              return;
+            }
+            logger.log('Changes stashed successfully.');
+          } else {
+            logger.warn('Session save cancelled.');
+            return;
+          }
+        } else {
+          logger.log('Changes committed successfully.');
         }
       } else if (dirtyAction === 'stash') {
         const stashResult = await gitService.createStash('Session save stash');

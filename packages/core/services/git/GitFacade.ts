@@ -28,6 +28,10 @@ export class GitFacade implements IGitService {
     return this.service.getCurrentCommit(...args);
   }
 
+  async isGitConfigured(...args: Parameters<IGitService['isGitConfigured']>) {
+    return this.service.isGitConfigured(...args);
+  }
+
   async commitChanges(...args: Parameters<IGitService['commitChanges']>) {
     return this.service.commitChanges(...args);
   }

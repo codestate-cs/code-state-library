@@ -326,7 +326,32 @@ export class GitService implements IGitService {
   async commitChanges(message: string): Promise<Result<boolean>> {
     this.logger.debug('GitService.commitChanges called', { message });
     try {
-      // First, add all changes
+      // First, check if Git is properly configured
+      const configResult = await this.isGitConfigured();
+      if (!configResult.ok) {
+        this.logger.error('Failed to check git configuration', { error: configResult.error });
+        return { ok: false, error: new GitError('Failed to check git configuration', ErrorCode.GIT_COMMAND_FAILED) };
+      }
+
+      if (!configResult.value) {
+        this.logger.error('Git is not properly configured. Please set user.name and user.email');
+        return { ok: false, error: new GitError('Git is not properly configured. Please set user.name and user.email', ErrorCode.GIT_COMMAND_FAILED) };
+      }
+
+      // Check if there are any changes to commit
+      const statusResult = await this.getStatus();
+      if (!statusResult.ok) {
+        this.logger.error('Failed to get git status before commit', { error: statusResult.error });
+        return { ok: false, error: new GitError('Failed to get git status before commit', ErrorCode.GIT_COMMAND_FAILED) };
+      }
+
+      const status = statusResult.value;
+      if (!status.isDirty) {
+        this.logger.warn('No changes to commit');
+        return { ok: true, value: true }; // Return success since there's nothing to commit
+      }
+
+      // Add all changes
       const addResult = await this.terminalService.execute('git add .', {
         cwd: this.repositoryPath,
         timeout: 30000
@@ -342,6 +367,23 @@ export class GitService implements IGitService {
         return { ok: false, error: new GitError('Failed to add changes', ErrorCode.GIT_COMMAND_FAILED) };
       }
 
+      // Check if there are staged changes to commit
+      const stagedStatusResult = await this.terminalService.execute('git diff --cached --name-only', {
+        cwd: this.repositoryPath,
+        timeout: 10000
+      });
+
+      if (!stagedStatusResult.ok) {
+        this.logger.error('Failed to check staged changes', { error: stagedStatusResult.error });
+        return { ok: false, error: new GitError('Failed to check staged changes', ErrorCode.GIT_COMMAND_FAILED) };
+      }
+
+      const stagedFiles = stagedStatusResult.value.stdout.trim().split('\n').filter(line => line.length > 0);
+      if (stagedFiles.length === 0) {
+        this.logger.warn('No changes staged for commit');
+        return { ok: true, value: true }; // Return success since there's nothing to commit
+      }
+
       // Then commit with the provided message
       const commitResult = await this.terminalService.execute(`git commit -m "${message}"`, {
         cwd: this.repositoryPath,
@@ -354,7 +396,11 @@ export class GitService implements IGitService {
       }
 
       if (commitResult.value.exitCode !== 0) {
-        this.logger.error('Failed to commit changes', { exitCode: commitResult.value.exitCode, stderr: commitResult.value.stderr });
+        this.logger.error('Failed to commit changes', { 
+          exitCode: commitResult.value.exitCode, 
+          stderr: commitResult.value.stderr,
+          stdout: commitResult.value.stdout 
+        });
         return { ok: false, error: new GitError('Failed to commit changes', ErrorCode.GIT_COMMAND_FAILED) };
       }
 
@@ -390,6 +436,34 @@ export class GitService implements IGitService {
     } catch (error) {
       this.logger.error('Failed to get repository root', { error });
       return { ok: false, error: new GitError('Failed to get repository root', ErrorCode.GIT_COMMAND_FAILED) };
+    }
+  }
+
+  async isGitConfigured(): Promise<Result<boolean>> {
+    this.logger.debug('GitService.isGitConfigured called');
+    try {
+      // Check if user name is configured
+      const nameResult = await this.terminalService.execute('git config user.name', {
+        cwd: this.repositoryPath,
+        timeout: 5000
+      });
+
+      // Check if user email is configured
+      const emailResult = await this.terminalService.execute('git config user.email', {
+        cwd: this.repositoryPath,
+        timeout: 5000
+      });
+
+      const hasName = nameResult.ok && nameResult.value.exitCode === 0 && nameResult.value.stdout.trim().length > 0;
+      const hasEmail = emailResult.ok && emailResult.value.exitCode === 0 && emailResult.value.stdout.trim().length > 0;
+
+      const isConfigured = hasName && hasEmail;
+      this.logger.log('Git configuration check', { hasName, hasEmail, isConfigured });
+      
+      return { ok: true, value: isConfigured };
+    } catch (error) {
+      this.logger.error('Failed to check git configuration', { error });
+      return { ok: false, error: new GitError('Failed to check git configuration', ErrorCode.GIT_COMMAND_FAILED) };
     }
   }
 

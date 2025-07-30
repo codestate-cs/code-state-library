@@ -18,5 +18,6 @@ export interface IGitService {
   getCurrentBranch(): Promise<Result<string>>;
   getCurrentCommit(): Promise<Result<string>>;
   commitChanges(message: string): Promise<Result<boolean>>;
+  isGitConfigured(): Promise<Result<boolean>>;
   getRepositoryRoot(): Promise<Result<string>>;
 } 
