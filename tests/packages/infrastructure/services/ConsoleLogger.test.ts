@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { ConsoleLogger } from '@codestate/infrastructure/services/ConsoleLogger';
 import { LoggerConfig, LogLevel } from '@codestate/core/domain/schemas/SchemaRegistry';
 
@@ -9,10 +9,10 @@ describe('ConsoleLogger', () => {
   let spyLog: any, spyError: any, spyWarn: any, spyDebug: any;
 
   beforeEach(() => {
-    spyLog = vi.spyOn(console, 'log').mockImplementation(() => {});
-    spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    spyWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    spyDebug = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    spyLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+    spyError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    spyWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    spyDebug = jest.spyOn(console, 'debug').mockImplementation(() => {});
   });
 
   // Happy path: all log levels
@@ -94,9 +94,9 @@ describe('ConsoleLogger', () => {
   });
 
   // Failure: plainLog not implemented
-  it('should throw for plainLog', () => {
+  it('should log plain message', () => {
     logger = makeLogger('LOG');
-    expect(() => logger.plainLog('plain')).toThrow('Method not implemented.');
+    expect(() => logger.plainLog('plain')).not.toThrow();
   });
 
   // Invalid input: meta argument

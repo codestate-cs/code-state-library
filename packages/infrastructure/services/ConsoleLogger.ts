@@ -14,7 +14,10 @@ export class ConsoleLogger implements ILoggerService {
     this.level = config.level;
   }
   plainLog(message: string, meta?: Record<string, unknown>): void {
-    throw new Error('Method not implemented.');
+    console.log(message);
+    if (meta && Object.keys(meta).length > 0) {
+      console.log(meta);
+    }
   }
   
   private shouldLog(messageLevel: LogLevel): boolean {

@@ -1,6 +1,6 @@
 import { IGitService } from '@codestate/core/domain/ports/IGitService';
 import { GitStatus, GitFile, GitFileStatus, GitStash, GitStashResult, GitStashApplyResult } from '@codestate/core/domain/models/Git';
-import { Result } from '@codestate/core/domain/models/Result';
+import { Result, isSuccess, isFailure } from '@codestate/core/domain/models/Result';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 import { ITerminalService } from '@codestate/core/domain/ports/ITerminalService';
 import { GitError, ErrorCode } from '@codestate/core/domain/types/ErrorTypes';
@@ -18,7 +18,7 @@ export class GitService implements IGitService {
     this.logger.debug('GitService.getIsDirty called');
     try {
       const statusResult = await this.getStatus();
-      if (!statusResult.ok) {
+      if (isFailure(statusResult)) {
         return statusResult;
       }
       return { ok: true, value: statusResult.value.isDirty };
@@ -38,7 +38,7 @@ export class GitService implements IGitService {
     try {
       // Check if we're in a git repository
       const isRepoResult = await this.isGitRepository();
-      if (!isRepoResult.ok || !isRepoResult.value) {
+      if (isFailure(isRepoResult) || !isRepoResult.value) {
         return { ok: false, error: new GitError('Not a git repository', ErrorCode.GIT_NOT_REPOSITORY) };
       }
 
@@ -48,7 +48,7 @@ export class GitService implements IGitService {
         timeout: 30000
       });
 
-      if (!statusResult.ok) {
+      if (isFailure(statusResult)) {
         this.logger.error('Failed to get git status', { error: statusResult.error });
         return { ok: false, error: new GitError('Failed to get git status', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -88,7 +88,7 @@ export class GitService implements IGitService {
         timeout: 30000
       });
 
-      if (!stashResult.ok) {
+      if (isFailure(stashResult)) {
         this.logger.error('Failed to create stash', { error: stashResult.error });
         return { 
           ok: true, 
@@ -101,7 +101,7 @@ export class GitService implements IGitService {
 
       // Get the stash list to find our newly created stash
       const listResult = await this.listStashes();
-      if (!listResult.ok) {
+      if (isFailure(listResult)) {
         return { 
           ok: true, 
           value: { 
@@ -154,7 +154,7 @@ export class GitService implements IGitService {
         timeout: 30000
       });
 
-      if (!applyResult.ok) {
+      if (isFailure(applyResult)) {
         this.logger.error('Failed to apply stash', { error: applyResult.error, stashName });
         return { 
           ok: true, 
@@ -169,7 +169,7 @@ export class GitService implements IGitService {
       const statusResult = await this.getStatus();
       const conflicts: string[] = [];
       
-      if (statusResult.ok) {
+      if (isSuccess(statusResult)) {
         const status = statusResult.value;
         conflicts.push(...status.modifiedFiles
           .filter(file => file.path.includes('<<<<<<<') || file.path.includes('=======') || file.path.includes('>>>>>>>'))
@@ -205,7 +205,7 @@ export class GitService implements IGitService {
         timeout: 30000
       });
 
-      if (!listResult.ok) {
+      if (isFailure(listResult)) {
         this.logger.error('Failed to list stashes', { error: listResult.error });
         return { ok: false, error: new GitError('Failed to list stashes', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -242,7 +242,7 @@ export class GitService implements IGitService {
         timeout: 30000
       });
 
-      if (!deleteResult.ok) {
+      if (isFailure(deleteResult)) {
         this.logger.error('Failed to delete stash', { error: deleteResult.error, stashName });
         return { ok: false, error: new GitError('Failed to delete stash', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -263,7 +263,7 @@ export class GitService implements IGitService {
         timeout: 10000
       });
 
-      return { ok: true, value: result.ok && result.value.exitCode === 0 };
+      return { ok: true, value: isSuccess(result) && result.value.exitCode === 0 };
     } catch (error) {
       this.logger.error('Failed to check if directory is git repository', { error });
       return { ok: false, error: new GitError('Failed to check git repository', ErrorCode.GIT_COMMAND_FAILED) };
@@ -278,12 +278,12 @@ export class GitService implements IGitService {
         timeout: 10000
       });
 
-      if (!result.ok) {
+      if (isFailure(result)) {
         this.logger.error('Failed to get current branch', { error: result.error });
         return { ok: false, error: new GitError('Failed to get current branch', ErrorCode.GIT_COMMAND_FAILED) };
       }
       
-      if (result.value.exitCode !== 0) {
+      if (isFailure(result) || result.value.exitCode !== 0) {
         this.logger.error('Failed to get current branch', { exitCode: result.value.exitCode, stderr: result.value.stderr });
         return { ok: false, error: new GitError('Failed to get current branch', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -305,12 +305,12 @@ export class GitService implements IGitService {
         timeout: 10000
       });
 
-      if (!result.ok) {
+      if (isFailure(result)) {
         this.logger.error('Failed to get current commit', { error: result.error });
         return { ok: false, error: new GitError('Failed to get current commit', ErrorCode.GIT_COMMAND_FAILED) };
       }
       
-      if (result.value.exitCode !== 0) {
+      if (isFailure(result) || result.value.exitCode !== 0) {
         this.logger.error('Failed to get current commit', { exitCode: result.value.exitCode, stderr: result.value.stderr });
         return { ok: false, error: new GitError('Failed to get current commit', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -330,7 +330,7 @@ export class GitService implements IGitService {
     try {
       // First, check if Git is properly configured
       const configResult = await this.isGitConfigured();
-      if (!configResult.ok) {
+      if (isFailure(configResult)) {
         this.logger.error('Failed to check git configuration', { error: configResult.error });
         return { ok: false, error: new GitError('Failed to check git configuration', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -342,7 +342,7 @@ export class GitService implements IGitService {
 
       // Check if there are any changes to commit
       const statusResult = await this.getStatus();
-      if (!statusResult.ok) {
+      if (isFailure(statusResult)) {
         this.logger.error('Failed to get git status before commit', { error: statusResult.error });
         return { ok: false, error: new GitError('Failed to get git status before commit', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -359,12 +359,12 @@ export class GitService implements IGitService {
         timeout: 30000
       });
 
-      if (!addResult.ok) {
+      if (isFailure(addResult)) {
         this.logger.error('Failed to add changes', { error: addResult.error });
         return { ok: false, error: new GitError('Failed to add changes', ErrorCode.GIT_COMMAND_FAILED) };
       }
 
-      if (addResult.value.exitCode !== 0) {
+      if (isFailure(addResult) || addResult.value.exitCode !== 0) {
         this.logger.error('Failed to add changes', { exitCode: addResult.value.exitCode, stderr: addResult.value.stderr });
         return { ok: false, error: new GitError('Failed to add changes', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -375,7 +375,7 @@ export class GitService implements IGitService {
         timeout: 10000
       });
 
-      if (!stagedStatusResult.ok) {
+      if (isFailure(stagedStatusResult)) {
         this.logger.error('Failed to check staged changes', { error: stagedStatusResult.error });
         return { ok: false, error: new GitError('Failed to check staged changes', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -397,11 +397,11 @@ export class GitService implements IGitService {
         timeout: 10000
       });
 
-      if (!writeMsgResult.ok || writeMsgResult.value.exitCode !== 0) {
+      if (isFailure(writeMsgResult) || writeMsgResult.value.exitCode !== 0) {
         this.logger.error('Failed to write commit message to temp file', { 
-          error: writeMsgResult.ok ? undefined : writeMsgResult.error,
-          exitCode: writeMsgResult.ok ? writeMsgResult.value.exitCode : undefined,
-          stderr: writeMsgResult.ok ? writeMsgResult.value.stderr : undefined
+          error: isSuccess(writeMsgResult) ? undefined : writeMsgResult.error,
+          exitCode: isSuccess(writeMsgResult) ? writeMsgResult.value.exitCode : undefined,
+          stderr: isSuccess(writeMsgResult) ? writeMsgResult.value.stderr : undefined
         });
         // Clean up temp file even on write failure
         await this.cleanupTempFile(tempFile);
@@ -417,20 +417,20 @@ export class GitService implements IGitService {
       });
 
       this.logger.debug('Git commit command executed', { 
-        exitCode: commitResult.ok ? commitResult.value.exitCode : undefined,
-        stdout: commitResult.ok ? commitResult.value.stdout : undefined,
-        stderr: commitResult.ok ? commitResult.value.stderr : undefined
+        exitCode: isSuccess(commitResult) ? commitResult.value.exitCode : undefined,
+        stdout: isSuccess(commitResult) ? commitResult.value.stdout : undefined,
+        stderr: isSuccess(commitResult) ? commitResult.value.stderr : undefined
       });
 
       // Always clean up temp file regardless of commit result
       await this.cleanupTempFile(tempFile);
 
-      if (!commitResult.ok) {
+      if (isFailure(commitResult)) {
         this.logger.error('Failed to commit changes', { error: commitResult.error });
         return { ok: false, error: new GitError('Failed to commit changes', ErrorCode.GIT_COMMAND_FAILED) };
       }
 
-      if (commitResult.value.exitCode !== 0) {
+      if (isFailure(commitResult) || commitResult.value.exitCode !== 0) {
         this.logger.error('Failed to commit changes', { 
           exitCode: commitResult.value.exitCode, 
           stderr: commitResult.value.stderr,
@@ -459,12 +459,12 @@ export class GitService implements IGitService {
         timeout: 10000
       });
 
-      if (!result.ok) {
+      if (isFailure(result)) {
         this.logger.error('Failed to get repository root', { error: result.error });
         return { ok: false, error: new GitError('Failed to get repository root', ErrorCode.GIT_COMMAND_FAILED) };
       }
       
-      if (result.value.exitCode !== 0) {
+      if (isFailure(result) || result.value.exitCode !== 0) {
         this.logger.error('Failed to get repository root', { exitCode: result.value.exitCode, stderr: result.value.stderr });
         return { ok: false, error: new GitError('Failed to get repository root', ErrorCode.GIT_COMMAND_FAILED) };
       }
@@ -493,8 +493,8 @@ export class GitService implements IGitService {
         timeout: 5000
       });
 
-      const hasName = nameResult.ok && nameResult.value.exitCode === 0 && nameResult.value.stdout.trim().length > 0;
-      const hasEmail = emailResult.ok && emailResult.value.exitCode === 0 && emailResult.value.stdout.trim().length > 0;
+      const hasName = isSuccess(nameResult) && nameResult.value.exitCode === 0 && nameResult.value.stdout.trim().length > 0;
+      const hasEmail = isSuccess(emailResult) && emailResult.value.exitCode === 0 && emailResult.value.stdout.trim().length > 0;
 
       const isConfigured = hasName && hasEmail;
       this.logger.log('Git configuration check', { hasName, hasEmail, isConfigured });
@@ -614,14 +614,14 @@ export class GitService implements IGitService {
         timeout: 5000
       });
       
-      if (result.ok && result.value.exitCode === 0) {
+      if (isSuccess(result) && result.value.exitCode === 0) {
         this.logger.debug('Temp file cleaned up successfully', { tempFile });
       } else {
         this.logger.warn('Temp file cleanup may have failed', { 
           tempFile, 
-          exitCode: result.ok ? result.value.exitCode : undefined,
-          stderr: result.ok ? result.value.stderr : undefined,
-          stdout: result.ok ? result.value.stdout : undefined
+          exitCode: isSuccess(result) ? result.value.exitCode : undefined,
+          stderr: isSuccess(result) ? result.value.stderr : undefined,
+          stdout: isSuccess(result) ? result.value.stdout : undefined
         });
       }
     } catch (error) {

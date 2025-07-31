@@ -21,7 +21,13 @@ export class FileLogger implements ILoggerService {
     this.ensureLogDirectory();
   }
   plainLog(message: string, meta?: Record<string, unknown>): void {
-    throw new Error('Method not implemented.');
+    const entry = {
+      level: 'plain',
+      timestamp: new Date().toISOString(),
+      message,
+      ...(meta ? { meta } : {})
+    };
+    appendFileSync(this.filePath, JSON.stringify(entry) + '\n', { encoding: 'utf8' });
   }
 
   private ensureLogDirectory(): void {
