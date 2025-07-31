@@ -13,6 +13,9 @@ export class ConsoleLogger implements ILoggerService {
   constructor(config: LoggerConfig) {
     this.level = config.level;
   }
+  plainLog(message: string, meta?: Record<string, unknown>): void {
+    throw new Error('Method not implemented.');
+  }
   
   private shouldLog(messageLevel: LogLevel): boolean {
     return LOG_LEVEL_PRIORITY[this.level] >= LOG_LEVEL_PRIORITY[messageLevel];

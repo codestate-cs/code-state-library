@@ -15,6 +15,9 @@ export class ConfigurableLogger implements ILoggerService {
       this.sinks.push(new FileLogger(config));
     }
   }
+  plainLog(message: string, meta?: Record<string, unknown>): void {
+    throw new Error('Method not implemented.');
+  }
 
   log(message: string, meta?: Record<string, unknown>): void {
     this.sinks.forEach(sink => sink.log(message, meta));
