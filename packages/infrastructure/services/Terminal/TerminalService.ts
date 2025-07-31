@@ -91,8 +91,8 @@ export class TerminalService implements ITerminalService {
     for (const command of commands) {
       const result = await this.executeCommand(command);
       if (!result.ok) {
-        this.logger.error('Batch execution failed', { command: command.command, error: result.error });
-        return result;
+        this.logger.error('Batch execution failed', { command: command.command, error: (result as any).error });
+        return { ok: false, error: (result as any).error };
       }
       results.push(result.value);
     }

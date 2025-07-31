@@ -164,7 +164,7 @@ export const LoggerPlugin = {
 
 ```ts
 test('throws on empty session', async () => {
-  const mockRepo = { save: vi.fn() };
+  const mockRepo = { save: jest.fn() };
   const useCase = new SaveSession(mockRepo);
   await expect(useCase.execute(new Session('1', [], new Date()))).rejects.toThrow();
 });

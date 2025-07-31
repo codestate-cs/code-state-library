@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from '@jest/globals';
 import { GitStatus, GitFile, GitFileStatus, GitStash, GitStashResult, GitStashApplyResult } from '@codestate/core/domain/models/Git';
 
 // Helper for a valid GitFile
