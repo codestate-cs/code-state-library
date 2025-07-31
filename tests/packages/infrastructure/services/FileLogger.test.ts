@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { FileLogger } from '@codestate/infrastructure/services/FileLogger';
 import { LoggerConfig, LogLevel } from '@codestate/core/domain/schemas/SchemaRegistry';
 import * as fs from 'fs';
-vi.mock('fs', async () => {
-  const actual = await vi.importActual<typeof fs>('fs');
+jest.mock('fs', () => {
+  const actual = jest.requireActual('fs') as any;
   return {
     ...actual,
-    appendFileSync: vi.fn(),
-    mkdirSync: vi.fn(),
-    unlinkSync: vi.fn(),
+    appendFileSync: jest.fn(),
+    mkdirSync: jest.fn(),
+    unlinkSync: jest.fn(),
   };
 });
 import * as path from 'path';
@@ -62,9 +62,9 @@ describe('FileLogger', () => {
   });
 
   // Failure: plainLog not implemented
-  it('should throw for plainLog', () => {
+  it('should log plain message', () => {
     logger = makeLogger('LOG');
-    expect(() => logger.plainLog('plain')).toThrow('Method not implemented.');
+    expect(() => logger.plainLog('plain')).not.toThrow();
   });
 
   // Failure: missing filePath in config

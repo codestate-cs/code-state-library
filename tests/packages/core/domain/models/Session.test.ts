@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from '@jest/globals';
 import { Session, FileState, GitState } from '@codestate/core/domain/models/Session';
 
 const validFileState: FileState = {

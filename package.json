@@ -8,22 +8,62 @@
     "tests"
   ],
   "scripts": {
-    "dev": "pnpm --filter ./packages/cli-interface run dev",
-    "build": "pnpm -r run build",
-    "test": "pnpm -r run test",
+    "dev": "npm --prefix ./packages/cli-interface run dev",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "test:unit": "jest --config jest.config.js --testPathPattern=tests/packages",
+    "test:integration": "jest --config jest.config.js --testPathPattern=tests/integration",
+    "test:e2e": "jest --config jest.config.js --testPathPattern=tests/e2e",
+    "test:coverage": "jest --config jest.config.js --coverage --coverageReporters=text --coverageReporters=lcov --coverageReporters=html",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:ci": "npm run test:coverage && npm run test:unit && npm run test:integration",
     "cli": "tsx packages/cli-interface/cli.ts",
-    "start": "tsx packages/cli-interface/cli.ts"
+    "start": "tsx packages/cli-interface/cli.ts",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist coverage .nyc_output",
+    "prepublishOnly": "npm run clean && npm run build && npm run test:ci"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.2.4",
-    "@vitest/ui": "^3.2.4",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "jest-environment-node": "^29.5.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
-    "typescript": "^5.0.0",
-    "vitest": "^3.2.4"
+    "typescript": "^5.0.0"
   },
   "dependencies": {
     "inquirer": "^12.9.0",
     "zod": "^4.0.13"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/tests", "<rootDir>/packages"],
+    "testMatch": ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "packages/**/*.ts",
+      "!packages/**/*.d.ts",
+      "!packages/**/index.ts",
+      "!packages/**/main.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 90,
+        "functions": 90,
+        "lines": 90,
+        "statements": 90
+      }
+    }
   }
 }

@@ -16,7 +16,7 @@ export class ConfigurableLogger implements ILoggerService {
     }
   }
   plainLog(message: string, meta?: Record<string, unknown>): void {
-    throw new Error('Method not implemented.');
+    this.sinks.forEach(sink => sink.plainLog(message, meta));
   }
 
   log(message: string, meta?: Record<string, unknown>): void {

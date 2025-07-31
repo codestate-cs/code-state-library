@@ -1,5 +1,5 @@
 import { ConfigSchema, validateConfig } from '@codestate/core/domain/schemas/SchemaRegistry';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@jest/globals';
 
 describe('ConfigSchema & validateConfig', () => {
   // Happy path

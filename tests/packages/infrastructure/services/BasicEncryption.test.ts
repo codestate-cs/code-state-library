@@ -1,15 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { BasicEncryption } from '../../../../packages/infrastructure/services/BasicEncryption';
 import { ErrorCode } from '../../../../packages/core/domain/types/ErrorTypes';
 import crypto from 'crypto';
 import * as path from 'path';
 
 const mockLogger = {
-  debug: vi.fn(),
-  error: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  plainLog: vi.fn(),
+  debug: jest.fn(),
+  error: jest.fn(),
+  log: jest.fn(),
+  warn: jest.fn(),
+  plainLog: jest.fn(),
 };
 
 
@@ -21,7 +21,7 @@ describe('BasicEncryption', () => {
 
   beforeEach(() => {
     encryption = new BasicEncryption(mockLogger);
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should encrypt and decrypt data correctly (happy path)', async () => {
@@ -39,7 +39,7 @@ describe('BasicEncryption', () => {
     const result = await encryption.decrypt(malformed, key);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe(ErrorCode.ENCRYPTION_INVALID_FORMAT);
+      expect((result as any).error.code).toBe(ErrorCode.ENCRYPTION_INVALID_FORMAT);
     }
   });
 
@@ -58,16 +58,19 @@ describe('BasicEncryption', () => {
     const result = await encryption.decrypt(tampered, key);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
+      expect((result as any).error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
     }
   });
 
   it('should return error if encryption throws unexpectedly (pathological)', async () => {
     // Mock the actual crypto module import used in BasicEncryption
-    const backup = vi.spyOn(crypto, 'randomBytes').mockImplementationOnce(() => { throw new Error('Random fail'); });
+    const backup = jest.spyOn(crypto, 'randomBytes').mockImplementationOnce(() => { throw new Error('Random fail'); });
     // No need to recreate the instance, just call encrypt
     const result = await encryption.encrypt(plainText, key);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect((result as any).error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
+    }
     backup.mockRestore();
   });
 
@@ -75,11 +78,11 @@ describe('BasicEncryption', () => {
     const encrypted = await encryption.encrypt(plainText, key);
     expect(encrypted.ok).toBe(true);
     if (!encrypted.ok) return;
-    const backup = vi.spyOn(Buffer, 'from').mockImplementationOnce(() => { throw new Error('Buffer fail'); });
+    const backup = jest.spyOn(Buffer, 'from').mockImplementationOnce(() => { throw new Error('Buffer fail'); });
     const result = await encryption.decrypt(encrypted.value, key);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
+      expect((result as any).error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
     }
     backup.mockRestore();
   });
@@ -93,7 +96,7 @@ describe('BasicEncryption', () => {
     const result = await encryption.decrypt(tampered, key);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
+      expect((result as any).error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
     }
   });
 
@@ -104,7 +107,7 @@ describe('BasicEncryption', () => {
     const result = await encryption.decrypt(encrypted.value, 'wrong-key');
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
+      expect((result as any).error.code).toBe(ErrorCode.ENCRYPTION_FAILED);
     }
   });
 });

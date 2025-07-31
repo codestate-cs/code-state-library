@@ -1,14 +1,14 @@
 import { vi } from "vitest";
 
 export const promises = {
-  readFile: vi.fn(),
-  writeFile: vi.fn(),
-  mkdir: vi.fn(),
-  open: vi.fn(),
-  access: vi.fn(),
-  copyFile: vi.fn(),
-  rename: vi.fn(),
-  unlink: vi.fn(),
+  readFile: jest.fn(),
+  writeFile: jest.fn(),
+  mkdir: jest.fn(),
+  open: jest.fn(),
+  access: jest.fn(),
+  copyFile: jest.fn(),
+  rename: jest.fn(),
+  unlink: jest.fn(),
 };
 
 export const constants = {
