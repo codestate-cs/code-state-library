@@ -14,8 +14,10 @@ export default {
   moduleNameMapper: {
     '^@codestate/core/(.*)$': '<rootDir>/packages/core/$1',
     '^@codestate/infrastructure/(.*)$': '<rootDir>/packages/infrastructure/$1',
+    '^@codestate/framework/(.*)$': '<rootDir>/packages/framework/$1',
     '^@codestate/cli-api/(.*)$': '<rootDir>/packages/cli-api/$1',
-    '^@codestate/cli-interface/(.*)$': '<rootDir>/packages/cli-interface/$1'
+    '^@codestate/cli-interface/(.*)$': '<rootDir>/packages/cli-interface/$1',
+    '^@codestate/shared/(.*)$': '<rootDir>/packages/shared/$1'
   },
   collectCoverageFrom: [
     'packages/**/*.ts',

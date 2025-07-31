@@ -1,6 +1,6 @@
 import { IScriptService, IScriptRepository } from '../../domain/ports/IScriptService';
 import { Script, ScriptIndex } from '../../domain/models/Script';
-import { Result } from '../../domain/models/Result';
+import { Result, isSuccess, isFailure } from '../../domain/models/Result';
 import { ILoggerService } from '../../domain/ports/ILoggerService';
 
 export class ScriptService implements IScriptService {
@@ -12,7 +12,7 @@ export class ScriptService implements IScriptService {
   async createScript(script: Script): Promise<Result<void>> {
     this.logger.debug('ScriptService.createScript called', { script });
     const result = await this.repository.createScript(script);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to create script', { error: result.error, script });
     } else {
       this.logger.log('Script created successfully', { script });
@@ -23,7 +23,7 @@ export class ScriptService implements IScriptService {
   async createScripts(scripts: Script[]): Promise<Result<void>> {
     this.logger.debug('ScriptService.createScripts called', { count: scripts.length });
     const result = await this.repository.createScripts(scripts);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to create scripts', { error: result.error, count: scripts.length });
     } else {
       this.logger.log('Scripts created successfully', { count: scripts.length });
@@ -34,7 +34,7 @@ export class ScriptService implements IScriptService {
   async getScriptsByRootPath(rootPath: string): Promise<Result<Script[]>> {
     this.logger.debug('ScriptService.getScriptsByRootPath called', { rootPath });
     const result = await this.repository.getScriptsByRootPath(rootPath);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to get scripts by root path', { error: result.error, rootPath });
     } else {
       this.logger.log('Scripts retrieved by root path', { rootPath, count: result.value.length });
@@ -45,7 +45,7 @@ export class ScriptService implements IScriptService {
   async getAllScripts(): Promise<Result<Script[]>> {
     this.logger.debug('ScriptService.getAllScripts called');
     const result = await this.repository.getAllScripts();
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to get all scripts', { error: result.error });
     } else {
       this.logger.log('All scripts retrieved', { count: result.value.length });
@@ -56,7 +56,7 @@ export class ScriptService implements IScriptService {
   async updateScript(name: string, rootPath: string, scriptUpdate: Partial<Script>): Promise<Result<void>> {
     this.logger.debug('ScriptService.updateScript called', { name, rootPath, scriptUpdate });
     const result = await this.repository.updateScript(name, rootPath, scriptUpdate);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to update script', { error: result.error, name, rootPath });
     } else {
       this.logger.log('Script updated successfully', { name, rootPath });
@@ -67,7 +67,7 @@ export class ScriptService implements IScriptService {
   async updateScripts(updates: Array<{ name: string; rootPath: string; script: Partial<Script> }>): Promise<Result<void>> {
     this.logger.debug('ScriptService.updateScripts called', { count: updates.length });
     const result = await this.repository.updateScripts(updates);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to update scripts', { error: result.error, count: updates.length });
     } else {
       this.logger.log('Scripts updated successfully', { count: updates.length });
@@ -78,7 +78,7 @@ export class ScriptService implements IScriptService {
   async deleteScript(name: string, rootPath: string): Promise<Result<void>> {
     this.logger.debug('ScriptService.deleteScript called', { name, rootPath });
     const result = await this.repository.deleteScript(name, rootPath);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to delete script', { error: result.error, name, rootPath });
     } else {
       this.logger.log('Script deleted successfully', { name, rootPath });
@@ -89,7 +89,7 @@ export class ScriptService implements IScriptService {
   async deleteScripts(scripts: Array<{ name: string; rootPath: string }>): Promise<Result<void>> {
     this.logger.debug('ScriptService.deleteScripts called', { count: scripts.length });
     const result = await this.repository.deleteScripts(scripts);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to delete scripts', { error: result.error, count: scripts.length });
     } else {
       this.logger.log('Scripts deleted successfully', { count: scripts.length });
@@ -100,10 +100,10 @@ export class ScriptService implements IScriptService {
   async deleteScriptsByRootPath(rootPath: string): Promise<Result<void>> {
     this.logger.debug('ScriptService.deleteScriptsByRootPath called', { rootPath });
     const result = await this.repository.deleteScriptsByRootPath(rootPath);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to delete scripts by root path', { error: result.error, rootPath });
     } else {
-      this.logger.log('Scripts deleted by root path', { rootPath });
+      this.logger.log('Scripts deleted by root path successfully', { rootPath });
     }
     return result;
   }
@@ -111,7 +111,7 @@ export class ScriptService implements IScriptService {
   async getScriptIndex(): Promise<Result<ScriptIndex>> {
     this.logger.debug('ScriptService.getScriptIndex called');
     const result = await this.repository.loadScriptIndex();
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to get script index', { error: result.error });
     } else {
       this.logger.log('Script index retrieved', { entryCount: result.value.entries.length });
@@ -120,9 +120,9 @@ export class ScriptService implements IScriptService {
   }
 
   async updateScriptIndex(index: ScriptIndex): Promise<Result<void>> {
-    this.logger.debug('ScriptService.updateScriptIndex called', { index });
+    this.logger.debug('ScriptService.updateScriptIndex called');
     const result = await this.repository.saveScriptIndex(index);
-    if (!result.ok) {
+    if (isFailure(result)) {
       this.logger.error('Failed to update script index', { error: result.error });
     } else {
       this.logger.log('Script index updated successfully');
