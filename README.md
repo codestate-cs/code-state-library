@@ -22,8 +22,18 @@ A developer context engine for saving and resuming your full development environ
 ## Scripts
 
 - `dev` - Start CLI in dev mode
-- `build` - Build all packages
+- `build` - Build both CLI and types packages
+- `build:cli` - Build CLI package only
+- `build:types` - Build types package only
 - `test` - Run all tests
+
+## Build System
+
+This project uses a dual-package build system that creates:
+1. **CLI Package** (`codestate`) - Main CLI executable and API
+2. **Types Package** (`@types/codestate`) - Comprehensive TypeScript definitions
+
+See [BUILD_SYSTEM.md](./BUILD_SYSTEM.md) for detailed documentation.
 
 ## License
 MIT 

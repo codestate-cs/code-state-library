@@ -1,6 +1,6 @@
 import { IScriptRepository } from '../../core/domain/ports/IScriptService';
 import { Script, ScriptIndex, ScriptCollection } from '../../core/domain/models/Script';
-import { Result } from '../../core/domain/models/Result';
+import { Result, isFailure } from '../../core/domain/models/Result';
 import { validateScript, validateScriptIndex, validateScriptCollection } from '../../core/domain/schemas/SchemaRegistry';
 import { ILoggerService } from '../../core/domain/ports/ILoggerService';
 import { IEncryptionService } from '../../core/domain/ports/IEncryptionService';
@@ -47,7 +47,7 @@ export class ScriptRepository implements IScriptRepository {
       
       // Get or create script collection for this rootPath
       const collection = await this.getOrCreateScriptCollection(validatedScript.rootPath);
-      if (!collection.ok) {
+      if (isFailure(collection)) {
         return { ok: false, error: collection.error };
       }
       
@@ -56,7 +56,7 @@ export class ScriptRepository implements IScriptRepository {
       
       // Save collection
       const saveResult = await this.saveScriptCollection(validatedScript.rootPath, collection.value);
-      if (!saveResult.ok) {
+      if (isFailure(saveResult)) {
         return { ok: false, error: saveResult.error };
       }
       
@@ -123,7 +123,7 @@ export class ScriptRepository implements IScriptRepository {
         // Create or update collection
         const collection: ScriptCollection = { scripts: allScripts };
         const saveResult = await this.saveScriptCollection(rootPath, collection);
-        if (!saveResult.ok) {
+        if (isFailure(saveResult)) {
           return { ok: false, error: saveResult.error };
         }
         
@@ -142,7 +142,7 @@ export class ScriptRepository implements IScriptRepository {
   async getScriptsByRootPath(rootPath: string): Promise<Result<Script[]>> {
     try {
       const collection = await this.loadScriptCollection(rootPath);
-      if (!collection.ok) {
+      if (isFailure(collection)) {
         return { ok: true, value: [] }; // Return empty array if no scripts exist
       }
       return { ok: true, value: collection.value.scripts };
@@ -155,7 +155,7 @@ export class ScriptRepository implements IScriptRepository {
   async getAllScripts(): Promise<Result<Script[]>> {
     try {
       const index = await this.loadScriptIndex();
-      if (!index.ok) {
+      if (isFailure(index)) {
         return { ok: true, value: [] };
       }
       
@@ -177,7 +177,7 @@ export class ScriptRepository implements IScriptRepository {
   async updateScript(name: string, rootPath: string, scriptUpdate: Partial<Script>): Promise<Result<void>> {
     try {
       const scripts = await this.getScriptsByRootPath(rootPath);
-      if (!scripts.ok) {
+      if (isFailure(scripts)) {
         return { ok: false, error: scripts.error };
       }
       
@@ -204,7 +204,7 @@ export class ScriptRepository implements IScriptRepository {
       
       // Save collection
       const saveResult = await this.saveScriptCollection(rootPath, collection);
-      if (!saveResult.ok) {
+      if (isFailure(saveResult)) {
         return { ok: false, error: saveResult.error };
       }
       
@@ -236,7 +236,7 @@ export class ScriptRepository implements IScriptRepository {
       // Process each rootPath group
       for (const [rootPath, rootUpdates] of updatesByRootPath) {
         const scripts = await this.getScriptsByRootPath(rootPath);
-        if (!scripts.ok) {
+        if (isFailure(scripts)) {
           return { ok: false, error: scripts.error };
         }
         
@@ -280,7 +280,7 @@ export class ScriptRepository implements IScriptRepository {
         // Save updated collection
         const collection: ScriptCollection = { scripts: updatedScripts };
         const saveResult = await this.saveScriptCollection(rootPath, collection);
-        if (!saveResult.ok) {
+        if (isFailure(saveResult)) {
           return { ok: false, error: saveResult.error };
         }
       }
@@ -296,7 +296,7 @@ export class ScriptRepository implements IScriptRepository {
   async deleteScript(name: string, rootPath: string): Promise<Result<void>> {
     try {
       const scripts = await this.getScriptsByRootPath(rootPath);
-      if (!scripts.ok) {
+      if (isFailure(scripts)) {
         return { ok: false, error: scripts.error };
       }
       
@@ -312,7 +312,7 @@ export class ScriptRepository implements IScriptRepository {
       
       // Save collection
       const saveResult = await this.saveScriptCollection(rootPath, collection);
-      if (!saveResult.ok) {
+      if (isFailure(saveResult)) {
         return { ok: false, error: saveResult.error };
       }
       
@@ -344,7 +344,7 @@ export class ScriptRepository implements IScriptRepository {
       // Process each rootPath group
       for (const [rootPath, scriptNames] of deletionsByRootPath) {
         const existingScripts = await this.getScriptsByRootPath(rootPath);
-        if (!existingScripts.ok) {
+        if (isFailure(existingScripts)) {
           return { ok: false, error: existingScripts.error };
         }
         
@@ -362,7 +362,7 @@ export class ScriptRepository implements IScriptRepository {
         // Save updated collection
         const collection: ScriptCollection = { scripts: remainingScripts };
         const saveResult = await this.saveScriptCollection(rootPath, collection);
-        if (!saveResult.ok) {
+        if (isFailure(saveResult)) {
           return { ok: false, error: saveResult.error };
         }
       }
@@ -407,7 +407,7 @@ export class ScriptRepository implements IScriptRepository {
           const config = await this.configService.getConfig();
           if (config.ok && config.value.encryption?.enabled && config.value.encryption.encryptionKey) {
             const decrypted = await this.encryption.decrypt(raw, config.value.encryption.encryptionKey);
-            if (!decrypted.ok) {
+            if (isFailure(decrypted)) {
               this.logger.error('Failed to decrypt script index', { error: decrypted.error });
               return { ok: false, error: decrypted.error };
             }
@@ -447,7 +447,7 @@ export class ScriptRepository implements IScriptRepository {
       const config = await this.configService.getConfig();
       if (config.ok && config.value.encryption?.enabled && config.value.encryption.encryptionKey) {
         const encResult = await this.encryption.encrypt(data, config.value.encryption.encryptionKey);
-        if (!encResult.ok) {
+        if (isFailure(encResult)) {
           this.logger.error('Failed to encrypt script index', { error: encResult.error });
           return { ok: false, error: encResult.error };
         }
@@ -506,7 +506,7 @@ export class ScriptRepository implements IScriptRepository {
         const config = await this.configService.getConfig();
         if (config.ok && config.value.encryption?.enabled && config.value.encryption.encryptionKey) {
           const decrypted = await this.encryption.decrypt(raw, config.value.encryption.encryptionKey);
-          if (!decrypted.ok) {
+          if (isFailure(decrypted)) {
             this.logger.error('Failed to decrypt script collection', { error: decrypted.error });
             return { ok: false, error: decrypted.error };
           }
@@ -536,7 +536,7 @@ export class ScriptRepository implements IScriptRepository {
       const config = await this.configService.getConfig();
       if (config.ok && config.value.encryption?.enabled && config.value.encryption.encryptionKey) {
         const encResult = await this.encryption.encrypt(data, config.value.encryption.encryptionKey);
-        if (!encResult.ok) {
+        if (isFailure(encResult)) {
           this.logger.error('Failed to encrypt script collection', { error: encResult.error });
           return { ok: false, error: encResult.error };
         }
@@ -560,7 +560,7 @@ export class ScriptRepository implements IScriptRepository {
 
   private async getReferenceFilePath(rootPath: string): Promise<string | null> {
     const index = await this.loadScriptIndex();
-    if (!index.ok) {
+    if (isFailure(index)) {
       return null;
     }
     
@@ -581,7 +581,7 @@ export class ScriptRepository implements IScriptRepository {
 
   private async updateIndexForRootPath(rootPath: string): Promise<void> {
     const index = await this.loadScriptIndex();
-    if (!index.ok) {
+    if (isFailure(index)) {
       return;
     }
     
@@ -601,7 +601,7 @@ export class ScriptRepository implements IScriptRepository {
 
   private async removeFromIndex(rootPath: string): Promise<void> {
     const index = await this.loadScriptIndex();
-    if (!index.ok) {
+    if (isFailure(index)) {
       return;
     }
     

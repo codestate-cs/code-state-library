@@ -1,6 +1,6 @@
 import { Session } from '@codestate/core/domain/models/Session';
 import { validateSession, validateSessionIndex, SessionIndex, SessionIndexEntry } from '@codestate/core/domain/schemas/SchemaRegistry';
-import { Result } from '@codestate/core/domain/models/Result';
+import { Result, isFailure } from '@codestate/core/domain/models/Result';
 import { ConfigurableLogger } from '@codestate/infrastructure/services/ConfigurableLogger/ConfigurableLogger';
 import { FileStorage } from '@codestate/infrastructure/services/FileStorage';
 import { StorageError } from '@codestate/core/domain/types/ErrorTypes';
@@ -27,18 +27,21 @@ export class SessionRepository {
   async load(idOrName: string): Promise<Result<Session, StorageError>> {
     this.logger.debug(`Loading session: ${idOrName}`);
     const indexResult = await this.getIndex();
-    if (!indexResult.ok) return indexResult;
+    if (isFailure(indexResult)) return indexResult;
     const entry = indexResult.value.sessions.find(s => s.id === idOrName || s.name === idOrName);
     if (!entry) {
       return { ok: false, error: new StorageError('Session not found', undefined, { idOrName }) };
     }
     const fileResult = await this.storage.read(entry.referenceFile);
-    if (!fileResult.ok) return fileResult;
+    if (isFailure(fileResult)) return fileResult;
     try {
-      const session = validateSession(JSON.parse(fileResult.value));
-      // Fix: Ensure createdAt and updatedAt are Date objects
-      if (typeof session.createdAt === 'string') session.createdAt = new Date(session.createdAt);
-      if (typeof session.updatedAt === 'string') session.updatedAt = new Date(session.updatedAt);
+      const validatedSession = validateSession(JSON.parse(fileResult.value));
+      // Ensure createdAt and updatedAt are Date objects and required
+      const session: Session = {
+        ...validatedSession,
+        createdAt: validatedSession.createdAt || new Date(),
+        updatedAt: validatedSession.updatedAt || new Date(),
+      };
       return { ok: true, value: session };
     } catch (error) {
       this.logger.error('Session validation failed', { error });
@@ -57,11 +60,11 @@ export class SessionRepository {
     // Write session file
     const fileName = this.getSessionFileName(session.id);
     const writeResult = await this.storage.write(fileName, JSON.stringify(session));
-    if (!writeResult.ok) return writeResult;
+    if (isFailure(writeResult)) return writeResult;
     // Update index
     const indexResult = await this.getIndex();
     let index: SessionIndex;
-    if (!indexResult.ok) {
+    if (isFailure(indexResult)) {
       // If index doesn't exist, create new
       index = { version: SESSION_INDEX_VERSION, sessions: [] };
     } else {
@@ -83,14 +86,14 @@ export class SessionRepository {
     index.sessions.push(entry);
     // Write index
     const indexWrite = await this.storage.write(SESSION_INDEX_PATH, JSON.stringify(index));
-    if (!indexWrite.ok) return indexWrite;
+    if (isFailure(indexWrite)) return indexWrite;
     return { ok: true, value: undefined };
   }
 
   async delete(idOrName: string): Promise<Result<void, StorageError>> {
     this.logger.debug(`Deleting session: ${idOrName}`);
     const indexResult = await this.getIndex();
-    if (!indexResult.ok) return indexResult;
+    if (isFailure(indexResult)) return indexResult;
     const index = indexResult.value;
     const entry = index.sessions.find(s => s.id === idOrName || s.name === idOrName);
     if (!entry) {
@@ -98,24 +101,24 @@ export class SessionRepository {
     }
     // Delete session file
     const delResult = await this.storage.delete(entry.referenceFile);
-    if (!delResult.ok) return delResult;
+    if (isFailure(delResult)) return delResult;
     // Remove from index
     index.sessions = index.sessions.filter(s => s.id !== entry.id);
     const indexWrite = await this.storage.write(SESSION_INDEX_PATH, JSON.stringify(index));
-    if (!indexWrite.ok) return indexWrite;
+    if (isFailure(indexWrite)) return indexWrite;
     return { ok: true, value: undefined };
   }
 
   async list(): Promise<Result<SessionIndexEntry[], StorageError>> {
     this.logger.debug('Listing all sessions');
     const indexResult = await this.getIndex();
-    if (!indexResult.ok) return indexResult;
+    if (isFailure(indexResult)) return indexResult;
     return { ok: true, value: indexResult.value.sessions };
   }
 
   private async getIndex(): Promise<Result<SessionIndex, StorageError>> {
     const readResult = await this.storage.read(SESSION_INDEX_PATH);
-    if (!readResult.ok) {
+    if (isFailure(readResult)) {
       // If file not found, create a new empty index
       if (readResult.error.code === 'STORAGE_READ_FAILED') {
         const emptyIndex: SessionIndex = { version: SESSION_INDEX_VERSION, sessions: [] };

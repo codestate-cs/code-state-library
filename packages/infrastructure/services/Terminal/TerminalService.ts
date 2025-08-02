@@ -1,6 +1,6 @@
 import { ITerminalService } from '@codestate/core/domain/ports/ITerminalService';
 import { TerminalCommand, TerminalResult, TerminalOptions } from '@codestate/core/domain/models/Terminal';
-import { Result } from '@codestate/core/domain/models/Result';
+import { Result, isFailure } from '@codestate/core/domain/models/Result';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 import { TerminalError, ErrorCode } from '@codestate/core/domain/types/ErrorTypes';
 import { spawn, SpawnOptions } from 'child_process';
@@ -90,7 +90,7 @@ export class TerminalService implements ITerminalService {
     
     for (const command of commands) {
       const result = await this.executeCommand(command);
-      if (!result.ok) {
+      if (isFailure(result)) {
         this.logger.error('Batch execution failed', { command: command.command, error: (result as any).error });
         return { ok: false, error: (result as any).error };
       }

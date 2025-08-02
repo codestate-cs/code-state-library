@@ -3,7 +3,7 @@ import { IIDERepository } from '../../domain/ports/IIDERepository';
 import { ITerminalService } from '../../domain/ports/ITerminalService';
 import { ILoggerService } from '../../domain/ports/ILoggerService';
 import { IDE, FileOpenRequest } from '../../domain/models/IDE';
-import { Result } from '../../domain/models/Result';
+import { Result, isFailure } from '../../domain/models/Result';
 import { platform } from 'os';
 
 export class IDEService implements IIDEService {
@@ -26,7 +26,7 @@ export class IDEService implements IIDEService {
 
       // Get IDE definition
       const idesResult = await this.getAvailableIDEs();
-      if (!idesResult.ok) {
+      if (isFailure(idesResult)) {
         this.logger.error('Failed to get IDE definitions', { error: idesResult.error });
         return { ok: false, error: idesResult.error };
       }
@@ -54,7 +54,7 @@ export class IDEService implements IIDEService {
         timeout: 10000
       });
 
-      if (!result.ok) {
+      if (isFailure(result)) {
         this.logger.error('Failed to open IDE', { error: result.error, ideName, command });
         return { ok: false, error: result.error };
       }
@@ -80,7 +80,7 @@ export class IDEService implements IIDEService {
 
       // Get IDE definition
       const idesResult = await this.getAvailableIDEs();
-      if (!idesResult.ok) {
+      if (isFailure(idesResult)) {
         this.logger.error('Failed to get IDE definitions', { error: idesResult.error });
         return { ok: false, error: idesResult.error };
       }
@@ -111,7 +111,7 @@ export class IDEService implements IIDEService {
         timeout: 10000
       });
 
-      if (!result.ok) {
+      if (isFailure(result)) {
         this.logger.error('Failed to open files', { error: result.error, request, command });
         return { ok: false, error: result.error };
       }
@@ -129,7 +129,7 @@ export class IDEService implements IIDEService {
     
     try {
       const result = await this.repository.getIDEDefinitions();
-      if (!result.ok) {
+      if (isFailure(result)) {
         this.logger.error('Failed to get IDE definitions', { error: result.error });
         return { ok: false, error: result.error };
       }
@@ -148,7 +148,7 @@ export class IDEService implements IIDEService {
     try {
       // Get IDE definition
       const idesResult = await this.getAvailableIDEs();
-      if (!idesResult.ok) {
+      if (isFailure(idesResult)) {
         return { ok: false, error: idesResult.error };
       }
 
@@ -159,7 +159,7 @@ export class IDEService implements IIDEService {
 
       // Check if command is available
       const result = await this.terminalService.isCommandAvailable(ide.command);
-      if (!result.ok) {
+      if (isFailure(result)) {
         this.logger.error('Failed to check IDE availability', { error: result.error, ideName });
         return { ok: false, error: result.error };
       }

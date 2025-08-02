@@ -1,5 +1,5 @@
 import { IScriptService } from '@codestate/core/domain/ports/IScriptService';
-import { Result } from '@codestate/core/domain/models/Result';
+import { Result, isFailure } from '@codestate/core/domain/models/Result';
 import { ScriptFacade } from '@codestate/core/services/scripts/ScriptFacade';
 
 export class ExportScripts {
@@ -11,7 +11,7 @@ export class ExportScripts {
   
   async execute(): Promise<Result<string>> {
     const result = await this.scriptService.getAllScripts();
-    if (!result.ok) return { ok: false, error: result.error };
+    if (isFailure(result)) return { ok: false, error: result.error };
     return { ok: true, value: JSON.stringify(result.value, null, 2) };
   }
 } 
