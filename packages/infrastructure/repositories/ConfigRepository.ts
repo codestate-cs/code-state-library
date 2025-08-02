@@ -1,6 +1,6 @@
 import { IConfigRepository } from '../../core/domain/ports/IConfigService';
 import { Config } from '../../core/domain/models/Config';
-import { Result } from '../../core/domain/models/Result';
+import { Result, isFailure } from '../../core/domain/models/Result';
 import { validateConfig } from '../../core/domain/schemas/SchemaRegistry';
 import { ILoggerService } from '../../core/domain/ports/ILoggerService';
 import { IEncryptionService } from '../../core/domain/ports/IEncryptionService';
@@ -49,7 +49,7 @@ export class ConfigRepository implements IConfigRepository {
         // For now, try with empty key and fail gracefully
         const key = '';
         const decrypted = await this.encryption.decrypt(raw, key);
-        if (!decrypted.ok) {
+        if (isFailure(decrypted)) {
           this.logger.error('Decryption failed', { error: decrypted.error });
           return { ok: false, error: decrypted.error };
         }
@@ -99,7 +99,7 @@ export class ConfigRepository implements IConfigRepository {
       if (config.encryption?.enabled && config.encryption.encryptionKey) {
         this.logger.log('Encrypting config before save', { path: this.configPath });
         const encResult = await this.encryption.encrypt(data, config.encryption.encryptionKey);
-        if (!encResult.ok) {
+        if (isFailure(encResult)) {
           this.logger.error('Encryption failed', { error: encResult.error });
           return { ok: false, error: encResult.error };
         }

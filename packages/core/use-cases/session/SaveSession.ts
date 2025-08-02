@@ -1,6 +1,6 @@
 import { ISessionService } from '@codestate/core/domain/ports/ISessionService';
 import { Session } from '@codestate/core/domain/models/Session';
-import { Result } from '@codestate/core/domain/models/Result';
+import { Result, isFailure } from '@codestate/core/domain/models/Result';
 import { SessionFacade } from '@codestate/core/services/session/SessionFacade';
 
 export class SaveSession {

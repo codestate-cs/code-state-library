@@ -9,7 +9,10 @@
   ],
   "scripts": {
     "dev": "npm --prefix ./packages/cli-interface run dev",
-    "build": "npm run build --workspaces",
+    "build": "node esbuild.config.js",
+    "build:watch": "node esbuild.config.js --watch",
+    "build:cli": "node esbuild.config.js --cli-only",
+    "build:types": "node esbuild.config.js --types-only",
     "test": "npm run test --workspaces",
     "test:unit": "jest --config jest.config.js --testPathPattern=tests/packages",
     "test:integration": "jest --config jest.config.js --testPathPattern=tests/integration",
@@ -22,7 +25,10 @@
     "lint": "eslint . --ext .ts,.js",
     "lint:fix": "eslint . --ext .ts,.js --fix",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf dist coverage .nyc_output",
+    "clean": "rimraf dist dist-types coverage .nyc_output",
+    "publish:cli": "npm run build && cd dist && npm publish",
+    "publish:types": "npm run build && cd dist-types && npm publish",
+    "publish:all": "npm run build && npm run publish:cli && npm run publish:types",
     "prepublishOnly": "npm run clean && npm run build && npm run test:ci"
   },
   "devDependencies": {

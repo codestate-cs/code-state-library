@@ -2,7 +2,7 @@ import { IStorageService } from '../../core/domain/ports/IStorageService';
 import { ILoggerService } from '../../core/domain/ports/ILoggerService';
 import { IEncryptionService } from '../../core/domain/ports/IEncryptionService';
 import { StorageError, ErrorCode } from '../../core/domain/types/ErrorTypes';
-import { Result } from '../../core/domain/models/Result';
+import { Result, isFailure } from '../../core/domain/models/Result';
 import { promises as fs, constants as fsConstants } from 'fs';
 import * as path from 'path';
 import { validateFileStorageConfig } from '../../core/domain/schemas/SchemaRegistry';
@@ -40,7 +40,7 @@ export class FileStorage implements IStorageService {
       this.logger.debug('File read', { filePath });
       if (this.config.encryptionEnabled && this.config.encryptionKey) {
         const decrypted = await this.encryption.decrypt(data, this.config.encryptionKey);
-        if (!decrypted.ok) {
+        if (isFailure(decrypted)) {
           this.logger.error('Decryption failed during read', { filePath });
           return { ok: false, error: new StorageError('Decryption failed', ErrorCode.STORAGE_DECRYPTION_FAILED, { filePath }) };
         }
@@ -61,7 +61,7 @@ export class FileStorage implements IStorageService {
       let toWrite = data;
       if (this.config.encryptionEnabled && this.config.encryptionKey) {
         const encrypted = await this.encryption.encrypt(data, this.config.encryptionKey);
-        if (!encrypted.ok) {
+        if (isFailure(encrypted)) {
           this.logger.error('Encryption failed during write', { filePath });
           return { ok: false, error: new StorageError('Encryption failed', ErrorCode.STORAGE_WRITE_FAILED, { filePath }) };
         }

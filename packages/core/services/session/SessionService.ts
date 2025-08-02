@@ -1,6 +1,6 @@
 import { ISessionService } from '../../domain/ports/ISessionService';
 import { Session } from '../../domain/models/Session';
-import { Result } from '../../domain/models/Result';
+import { Result, isFailure } from '../../domain/models/Result';
 import { SessionRepository } from '@codestate/infrastructure/repositories/SessionRepository';
 import { SessionIndexEntry } from '../../domain/schemas/SchemaRegistry';
 
@@ -27,13 +27,13 @@ export class SessionService implements ISessionService {
       extensions: input.extensions,
     };
     const result = await this.repository.save(session);
-    if (!result.ok) return { ok: false, error: result.error };
+    if (isFailure(result)) return { ok: false, error: result.error };
     return { ok: true, value: session };
   }
 
   async updateSession(idOrName: string, input: Partial<Session> & { notes?: string; tags?: string[] }): Promise<Result<Session>> {
     const loadResult = await this.repository.load(idOrName);
-    if (!loadResult.ok) return { ok: false, error: loadResult.error };
+    if (isFailure(loadResult)) return { ok: false, error: loadResult.error };
     const oldSession = loadResult.value;
     const updated: Session = {
       ...oldSession,
@@ -45,7 +45,7 @@ export class SessionService implements ISessionService {
       extensions: input.extensions ?? oldSession.extensions,
     };
     const result = await this.repository.save(updated);
-    if (!result.ok) return { ok: false, error: result.error };
+    if (isFailure(result)) return { ok: false, error: result.error };
     return { ok: true, value: updated };
   }
 
@@ -55,7 +55,7 @@ export class SessionService implements ISessionService {
 
   async listSessions(filter?: { tags?: string[]; search?: string }): Promise<Result<Session[]>> {
     const result = await this.repository.list();
-    if (!result.ok) return { ok: false, error: result.error };
+    if (isFailure(result)) return { ok: false, error: result.error };
     let sessions = result.value;
     if (filter?.tags) {
       sessions = sessions.filter(s => filter.tags!.every(tag => s.tags.includes(tag)));
