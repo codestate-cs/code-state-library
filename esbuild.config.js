@@ -88,29 +88,45 @@ if (existsSync('./dist')) {
 if (!buildTypesOnly) {
   console.log('🔨 Building CLI packages...');
   
-  // Build API bundle
-  await build({
-    ...commonConfig,
-    entryPoints: ['./packages/cli-api/main.ts'],
-    outfile: './dist/api.js',
-    format: 'esm',
-  });
-
-  // Build CLI bundle
+  // Build CLI bundle (ES Module)
   await build({
     ...commonConfig,
     entryPoints: ['./packages/cli-interface/cli.ts'],
     outfile: './dist/index.js',
     format: 'esm',
   });
+
+  // Build CLI bundle (CommonJS)
+  await build({
+    ...commonConfig,
+    entryPoints: ['./packages/cli-interface/cli.ts'],
+    outfile: './dist/index.cjs',
+    format: 'cjs',
+  });
+
+  // Build API bundle (ES Module) - External version
+  await build({
+    ...commonConfig,
+    entryPoints: ['./packages/cli-api/api.ts'],
+    outfile: './dist/api.js',
+    format: 'esm',
+  });
+
+  // Build API bundle (CommonJS) - External version
+  await build({
+    ...commonConfig,
+    entryPoints: ['./packages/cli-api/api.ts'],
+    outfile: './dist/api.cjs',
+    format: 'cjs',
+  });
 }
 
-// Generate comprehensive TypeScript declarations
+// Generate TypeScript declarations from actual source code
 if (!buildCliOnly) {
   console.log('🔨 Building types package...');
   
   try {
-    // Create a temporary tsconfig for comprehensive declaration generation
+    // Create a temporary tsconfig for declaration generation
     const tempTsConfig = {
       compilerOptions: {
         target: "ES2020",
@@ -122,32 +138,58 @@ if (!buildCliOnly) {
         rootDir: "./packages",
         baseUrl: ".",
         paths: {
-          "@codestate/*": ["packages/*"]
+          "@codestate/core/*": ["packages/core/*"],
+          "@codestate/infrastructure/*": ["packages/infrastructure/*"],
+          "@codestate/cli-api/*": ["packages/cli-api/*"],
+          "@codestate/cli-interface/*": ["packages/cli-interface/*"]
         },
         skipLibCheck: true,
         esModuleInterop: true,
-        allowSyntheticDefaultImports: true
+        allowSyntheticDefaultImports: true,
+        strict: true,
+        forceConsistentCasingInFileNames: true
       },
       include: [
-        "packages/cli-api/**/*.ts",
-        "packages/core/**/*.ts",
-        "packages/infrastructure/**/*.ts"
+        "packages/cli-api/api.ts",
+        "packages/cli-api/main.ts",
+        "packages/core/domain/models/*.ts",
+        "packages/core/use-cases/**/*.ts",
+        "packages/core/services/**/*.ts",
+        "packages/infrastructure/services/**/*.ts"
       ],
       exclude: ["node_modules", "dist", "dist-types", "tests"]
     };
     
     writeFileSync('./temp-tsconfig.json', JSON.stringify(tempTsConfig, null, 2));
+    
+    // Generate declarations using TypeScript compiler
     execSync('npx tsc --project temp-tsconfig.json', { stdio: 'inherit' });
     
     // Clean up temp file
     unlinkSync('./temp-tsconfig.json');
-    console.log('✅ TypeScript declarations generated');
-  } catch (error) {
-    console.log('⚠️ TypeScript declarations generation failed, creating comprehensive declarations');
     
-    // Create comprehensive type declarations as fallback
-    const comprehensiveTypes = `declare module 'codestate/api' {
-  // Core domain models
+    // Create module declarations for the package exports
+    const moduleDeclarations = `declare module 'codestate' {
+  export * from './cli-api/api';
+}
+
+declare module 'codestate/api' {
+  export * from './cli-api/api';
+}
+`;
+    
+    writeFileSync('./dist-types/index.d.ts', moduleDeclarations);
+    writeFileSync('./dist-types/api.d.ts', 'export * from "./cli-api/api";');
+    
+    console.log('✅ TypeScript declarations generated from source code');
+    
+  } catch (error) {
+    console.log('⚠️ TypeScript declaration generation failed, creating fallback declarations');
+    console.log('Error:', error.message);
+    
+    // Fallback: Create basic declarations
+    const fallbackTypes = `declare module 'codestate' {
+  // Fallback type declarations
   export interface Session {
     id: string;
     name: string;
@@ -155,11 +197,7 @@ if (!buildCliOnly) {
     tags?: string[];
     projectRoot: string;
     files?: string[];
-    git?: { 
-      branch: string; 
-      commit: string; 
-      isDirty: boolean; 
-    };
+    git?: any;
     scripts?: any[];
     createdAt: Date;
     updatedAt: Date;
@@ -177,125 +215,144 @@ if (!buildCliOnly) {
   }
 
   export interface Config {
-    scripts?: {
-      rootPath?: string;
-      defaultTags?: string[];
-    };
-    git?: {
-      autoStash?: boolean;
-      autoCommit?: boolean;
-    };
-    ide?: {
-      defaultEditor?: string;
-      openFiles?: boolean;
-    };
-    logging?: {
-      level?: 'debug' | 'info' | 'warn' | 'error';
-      output?: 'console' | 'file' | 'both';
-      filePath?: string;
-    };
+    scripts?: any;
+    git?: any;
+    ide?: any;
+    logging?: any;
   }
 
-  // API Use Cases
+  // Use Cases
   export class SaveSession {
-    execute(request: {
-      name: string;
-      notes?: string;
-      tags?: string[];
-      projectRoot: string;
-      files?: string[];
-      git?: any;
-    }): Promise<{ success: boolean; data?: Session; error?: any }>;
+    execute(request: any): Promise<any>;
   }
   
   export class ResumeSession {
-    execute(id: string): Promise<{ success: boolean; data?: Session; error?: any }>;
+    execute(id: string): Promise<any>;
   }
   
   export class ListSessions {
-    execute(): Promise<{ success: boolean; data?: Session[]; error?: any }>;
+    execute(): Promise<any>;
   }
   
   export class DeleteSession {
-    execute(id: string): Promise<{ success: boolean; error?: any }>;
+    execute(id: string): Promise<any>;
   }
   
   export class UpdateSession {
-    execute(id: string, updates: {
-      name?: string;
-      notes?: string;
-      tags?: string[];
-    }): Promise<{ success: boolean; data?: Session; error?: any }>;
+    execute(id: string, updates: any): Promise<any>;
   }
 
   export class CreateScript {
-    execute(script: {
-      name: string;
-      description?: string;
-      content: string;
-      tags?: string[];
-      rootPath?: string;
-    }): Promise<{ success: boolean; data?: Script; error?: any }>;
+    execute(script: any): Promise<any>;
   }
 
   export class GetScripts {
-    execute(): Promise<{ success: boolean; data?: Script[]; error?: any }>;
+    execute(): Promise<any>;
   }
 
   export class UpdateScript {
-    execute(id: string, updates: {
-      name?: string;
-      description?: string;
-      content?: string;
-      tags?: string[];
-    }): Promise<{ success: boolean; data?: Script; error?: any }>;
+    execute(id: string, updates: any): Promise<any>;
   }
 
   export class DeleteScript {
-    execute(id: string): Promise<{ success: boolean; error?: any }>;
+    execute(id: string): Promise<any>;
   }
 
   export class GetConfig {
-    execute(): Promise<{ ok: boolean; value?: Config; error?: any }>;
+    execute(): Promise<any>;
   }
 
   export class UpdateConfig {
-    execute(config: Partial<Config>): Promise<{ ok: boolean; value?: Config; error?: any }>;
+    execute(config: any): Promise<any>;
+  }
+
+  export class ImportConfig {
+    execute(json: string): Promise<any>;
+  }
+
+  export class ExportConfig {
+    execute(): Promise<any>;
+  }
+
+  // Git Use Cases
+  export class CommitChanges {
+    execute(message: string): Promise<any>;
+  }
+
+  export class CreateStash {
+    execute(message?: string): Promise<any>;
+  }
+
+  export class ApplyStash {
+    execute(stashId?: string): Promise<any>;
+  }
+
+  export class GetGitStatus {
+    execute(): Promise<any>;
+  }
+
+  // IDE Use Cases
+  export class GetAvailableIDEs {
+    execute(): Promise<any>;
+  }
+
+  export class OpenFiles {
+    execute(files: string[]): Promise<any>;
   }
 
   // Infrastructure services
   export class ConfigurableLogger {
-    constructor(config?: {
-      level?: 'debug' | 'info' | 'warn' | 'error';
-      output?: 'console' | 'file' | 'both';
-      filePath?: string;
-    });
+    constructor(config?: any);
+    log(message: string, context?: any): void;
     error(message: string, context?: any): void;
     info(message: string, context?: any): void;
     warn(message: string, context?: any): void;
     debug(message: string, context?: any): void;
   }
 
+  export class GitService {
+    commit(message: string): Promise<any>;
+    stash(message?: string): Promise<any>;
+    applyStash(stashId?: string): Promise<any>;
+    getStatus(): Promise<any>;
+  }
+
+  export class IDEService {
+    getAvailableIDEs(): Promise<any>;
+    openFiles(files: string[]): Promise<any>;
+  }
+
+  export class Terminal {
+    execute(command: string): Promise<any>;
+  }
+
   // Result types
   export interface Result<T, E = Error> {
-    success: boolean;
-    data?: T;
+    ok: boolean;
+    value?: T;
     error?: E;
   }
 
   export interface Success<T> {
-    success: true;
-    data: T;
+    ok: true;
+    value: T;
   }
 
   export interface Failure<E> {
-    success: false;
+    ok: false;
     error: E;
   }
-}`;
+}
 
-  writeFileSync('./dist-types/index.d.ts', comprehensiveTypes);
-  writeFileSync('./dist-types/api.d.ts', comprehensiveTypes);
+declare module 'codestate/api' {
+  export * from 'codestate';
+}
+`;
+    
+    writeFileSync('./dist-types/index.d.ts', fallbackTypes);
+    writeFileSync('./dist-types/api.d.ts', 'export * from "./index";');
+    
+    console.log('✅ Fallback type declarations created');
   }
 }
 
@@ -311,8 +368,8 @@ if (!buildCliOnly) {
 if (buildCliOnly) {
   console.log('✅ CLI package build completed successfully!');
   console.log('📦 CLI Package (codestate):');
-  console.log('   - dist/api.js (API bundle)');
   console.log('   - dist/index.js (CLI bundle)');
+  console.log('   - dist/api.js (API bundle)');
   console.log('   - dist/package.json (CLI package manifest)');
 } else if (buildTypesOnly) {
   console.log('✅ Types package build completed successfully!');
@@ -323,8 +380,8 @@ if (buildCliOnly) {
 } else {
   console.log('✅ Dual-package build completed successfully!');
   console.log('📦 CLI Package (codestate):');
-  console.log('   - dist/api.js (API bundle)');
   console.log('   - dist/index.js (CLI bundle)');
+  console.log('   - dist/api.js (API bundle)');
   console.log('   - dist/package.json (CLI package manifest)');
   console.log('');
   console.log('📦 Types Package (@types/codestate):');

@@ -1,6 +1,6 @@
 {
   "name": "@types/codestate",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "TypeScript definitions for codestate",
   "main": "index.d.ts",
   "types": "index.d.ts",
