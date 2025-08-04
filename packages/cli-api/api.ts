@@ -1,4 +1,4 @@
-// Main entry point for CLI with all dependencies
+// API entry point for external consumption (no CLI dependencies)
 // Core domain models
 export * from '@codestate/core/domain/models/Session';
 export * from '@codestate/core/domain/models/Script';
@@ -16,4 +16,4 @@ export * from '@codestate/core/use-cases/ide';
 export { CLILoggerFacade as ConfigurableLogger } from '@codestate/infrastructure/services/CLILogger/CLILoggerFacade';
 export { GitFacade as GitService } from '@codestate/core/services/git/GitFacade';
 export { TerminalFacade as Terminal } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
-export { IDEFacade as IDEService } from '@codestate/core/services/ide/IDEFacade';
+export { IDEFacade as IDEService } from '@codestate/core/services/ide/IDEFacade'; 
