@@ -1,6 +1,6 @@
 {
-  "name": "@codestate/core",
-  "version": "1.0.0",
+  "name": "codestate-core",
+  "version": "1.0.2",
   "description": "Core domain models, use cases, and services for CodeState",
   "type": "module",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
     "build": "node ../../esbuild.config.js --core-only",
     "build:watch": "node ../../esbuild.config.js --core-only --watch",
     "clean": "rimraf dist",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "codestate",

@@ -1,6 +1,6 @@
 {
-  "name": "@codestate/cli",
-  "version": "1.0.0",
+  "name": "codestate-cli",
+  "version": "1.0.2",
   "description": "CodeState CLI - Configuration, Script, and Git Management",
   "type": "module",
   "main": "dist/cli.js",
@@ -14,7 +14,7 @@
     "build": "node ../../esbuild.config.js --cli-only",
     "build:watch": "node ../../esbuild.config.js --cli-only --watch",
     "clean": "rimraf dist",
-    "prepublishOnly": "npm run clean && npm run build",
+    "prepublishOnly": "npm run build",
     "dev": "tsx cli.ts"
   },
   "keywords": [
@@ -34,7 +34,7 @@
     "tsx": "^4.20.3"
   },
   "dependencies": {
-    "@codestate/core": "^1.0.0",
+    "codestate-core": "^1.0.1",
     "inquirer": "^12.9.0"
   }
 } 
