@@ -1,4 +1,4 @@
-import { ImportScripts, ConfigurableLogger } from '@codestate/cli-api/main';
+import { ImportScripts, ConfigurableLogger } from '@codestate/core/api';
 
 export async function importScriptsCommand(json: string) {
   const logger = new ConfigurableLogger();

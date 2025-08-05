@@ -1,6 +1,6 @@
 # CodeState API Contract
 
-This document provides the complete API contract for the CodeState library, exported from `packages/cli-api/main.ts`. This API is designed for integration with VSCode extensions and other external applications.
+This document provides the complete API contract for the CodeState library, exported from `packages/cli-api/api.ts`. This API is designed for integration with VSCode extensions and other external applications.
 
 ## Table of Contents
 
@@ -640,7 +640,7 @@ const sessionResult = await saveSession.execute({
   tags: ['feature', 'in-progress'],
   files: [
     {
-      path: '/path/to/project/src/main.ts',
+      path: '/path/to/project/src/api.ts',
       cursor: { line: 10, column: 5 },
       isActive: true
     }
@@ -694,7 +694,7 @@ const openResult = await openFiles.execute({
   ide: 'vscode',
   projectRoot: '/path/to/project',
   files: [
-    { path: '/path/to/project/src/main.ts', line: 10, isActive: true },
+    { path: '/path/to/project/src/api.ts', line: 10, isActive: true },
     { path: '/path/to/project/src/utils.ts', line: 5 }
   ]
 });

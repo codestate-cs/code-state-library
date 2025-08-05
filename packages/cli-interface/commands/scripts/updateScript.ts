@@ -1,4 +1,4 @@
-import { UpdateScript, ConfigurableLogger, Script } from '@codestate/cli-api/main';
+import { UpdateScript, ConfigurableLogger, Script } from '@codestate/core/api';
 
 export async function updateScriptCommand(name: string, rootPath: string, scriptUpdate: Partial<Script>) {
   const logger = new ConfigurableLogger();

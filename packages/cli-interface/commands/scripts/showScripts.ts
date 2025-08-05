@@ -1,4 +1,4 @@
-import { GetScripts, ConfigurableLogger } from '@codestate/cli-api/main';
+import { GetScripts, ConfigurableLogger } from '@codestate/core/api';
 
 export async function showScriptsCommand() {
   const logger = new ConfigurableLogger();
@@ -8,8 +8,8 @@ export async function showScriptsCommand() {
     const scripts = result.value;
     
     if (scripts.length === 0) {
-      console.log('\n📝 No scripts found.');
-      console.log('Use `codestate scripts create` to add your first script.\n');
+      logger.plainLog('\n📝 No scripts found.');
+      logger.plainLog('Use `codestate scripts create` to add your first script.\n');
       return;
     }
     
@@ -22,19 +22,19 @@ export async function showScriptsCommand() {
       scriptsByPath.get(script.rootPath)!.push(script);
     });
     
-    console.log('\n📝 Scripts by Project Path:');
-    console.log('───────────────────────────');
+    logger.plainLog('\n📝 Scripts by Project Path:');
+    logger.plainLog('───────────────────────────');
     
     scriptsByPath.forEach((pathScripts, rootPath) => {
-      console.log(`\n📁 ${rootPath} (${pathScripts.length} script${pathScripts.length > 1 ? 's' : ''})`);
-      console.log('─'.repeat(rootPath.length + 10));
+      logger.plainLog(`\n📁 ${rootPath} (${pathScripts.length} script${pathScripts.length > 1 ? 's' : ''})`);
+      logger.plainLog('─'.repeat(rootPath.length + 10));
       
       pathScripts.forEach(script => {
-        console.log(`  • ${script.name} - ${script.script}`);
+        logger.plainLog(`  • ${script.name} - ${script.script}`);
       });
     });
     
-    console.log('');
+    logger.plainLog('');
   } else {
     logger.error('Failed to load scripts', { error: result.error });
   }

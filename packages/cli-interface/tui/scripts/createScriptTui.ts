@@ -1,6 +1,6 @@
 import inquirer from '@codestate/cli-interface/utils/inquirer';
 import { createScriptCommand } from '../../commands/scripts/createScript';
-import { Script } from '@codestate/cli-api/main';
+import { Script } from '@codestate/core/api';
 
 export async function createScriptTui() {
   await createScriptsInteractively();

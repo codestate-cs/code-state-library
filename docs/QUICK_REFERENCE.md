@@ -12,7 +12,7 @@
 
 ```
 packages/cli-api/
-└── main.ts                              # Export use cases and services
+└── api.ts                              # Export use cases and services
 
 packages/cli-interface/
 ├── commands/[module]/
@@ -57,7 +57,7 @@ packages/infrastructure/
 4. **Implement Repository** (`infrastructure/repositories/[Module]Repository.ts`)
 5. **Create Services** (`core/services/[module]/`)
 6. **Build Use Cases** (`core/use-cases/[module]/`)
-7. **Export Use Cases** (`cli-api/main.ts`)
+7. **Export Use Cases** (`cli-api/api.ts`)
 8. **Add Commands** (`cli-interface/commands/[module]/`)
 9. **Create TUI** (`cli-interface/tui/[module]/`)
 10. **Update Router** (`cli-interface/commands/index.ts`)
@@ -66,7 +66,7 @@ packages/infrastructure/
 
 ### **CLI API Pattern**
 ```typescript
-// cli-api/main.ts
+// cli-api/api.ts
 export { Get[Module] } from '@codestate/core/use-cases/[module]/Get[Module]';
 export { Create[Module] } from '@codestate/core/use-cases/[module]/Create[Module]';
 export { Update[Module] } from '@codestate/core/use-cases/[module]/Update[Module]';
@@ -78,7 +78,7 @@ export * from '@codestate/core/use-cases/[module]';
 ### **Command Pattern**
 ```typescript
 // commands/[module]/show[Module].ts
-import { Get[Module], ConfigurableLogger } from '@codestate/cli-api/main';
+import { Get[Module], ConfigurableLogger } from '@codestate/cli-api/api';
 
 export async function show[Module]Command() {
   const logger = new ConfigurableLogger();

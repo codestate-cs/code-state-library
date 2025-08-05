@@ -90,7 +90,7 @@ import { SaveSession } from 'codestate';
 
 ### 2. Simplified API Entry Points
 - **`packages/cli-api/api.ts`**: Clean external API exports
-- **`packages/cli-api/main.ts`**: CLI-specific exports
+- **`packages/cli-api/api.ts`**: CLI-specific exports
 - Consistent naming and structure
 
 ### 3. **Real Type Extraction** ⭐

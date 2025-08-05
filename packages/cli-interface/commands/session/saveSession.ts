@@ -1,4 +1,4 @@
-import { SaveSession, ConfigurableLogger, GitService, Terminal } from '@codestate/cli-api/main';
+import { SaveSession, ConfigurableLogger, GitService, Terminal } from '@codestate/core/api';
 import inquirer from '../../utils/inquirer';
 import {
   promptSessionDetails,
@@ -145,7 +145,7 @@ export async function saveSessionCommand() {
           }
         ]);
         
-        logger.log('✅ Committing changes...');
+        logger.log(' Committing changes...');
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
           logger.error('Failed to commit changes', { 
@@ -186,7 +186,7 @@ export async function saveSessionCommand() {
             return;
           }
         } else {
-          logger.log('✅ Changes committed successfully.');
+          logger.log(' Changes committed successfully.');
         }
       } else if (dirtyAction === 'stash') {
         const stashResult = await gitService.createStash('Session save stash');

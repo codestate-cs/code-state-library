@@ -32,7 +32,7 @@ CLI Layer → Command Layer → CLI API Layer → Use Case Layer → Service Lay
   - Launch TUI for interactive commands
   - Handle module-specific validation and error handling
 
-### **4. CLI API Layer (`packages/cli-api/main.ts`)**
+### **4. CLI API Layer (`packages/cli-api/api.ts`)**
 - **Purpose**: Export use cases and services for CLI interface
 - **Responsibilities**:
   - Export use cases from core layer
@@ -106,7 +106,7 @@ CLI Layer → Command Layer → CLI API Layer → Use Case Layer → Service Lay
    ┌─────────────────────────────────────┐
    │ commands/config/showConfig.ts       │
    │ - Import: { GetConfig } from        │
-   │   '@codestate/cli-api/main'         │
+   │   '@codestate/cli-api/api'         │
    │ - Create: new GetConfig()           │
    │ - Execute: getConfig.execute()      │
    └─────────────────────────────────────┘
@@ -114,7 +114,7 @@ CLI Layer → Command Layer → CLI API Layer → Use Case Layer → Service Lay
    
 5. CLI API Layer
    ┌─────────────────────────────────────┐
-   │ cli-api/main.ts                     │
+   │ cli-api/api.ts                     │
    │ - Export: { GetConfig } from        │
    │   '@codestate/core/use-cases/config'│
    │ - Export: { ConfigurableLogger }    │
@@ -162,7 +162,7 @@ CLI Layer → Command Layer → CLI API Layer → Use Case Layer → Service Lay
 ```
 packages/
 ├── cli-api/
-│   └── main.ts                          # Export use cases and services
+│   └── api.ts                          # Export use cases and services
 ├── cli-interface/
 │   ├── cli.ts                           # Main CLI entry point
 │   ├── commands/
@@ -263,7 +263,7 @@ export async function handle[Module]Command(subcommand: string, options: string[
 ### **4. Command Implementation**
 ```typescript
 // commands/[module]/show[Module].ts
-import { Get[Module], ConfigurableLogger } from '@codestate/cli-api/main';
+import { Get[Module], ConfigurableLogger } from '@codestate/cli-api/api';
 
 export async function show[Module]Command() {
   const logger = new ConfigurableLogger();
@@ -279,7 +279,7 @@ export async function show[Module]Command() {
 
 ### **5. CLI API Layer**
 ```typescript
-// cli-api/main.ts
+// cli-api/api.ts
 export { Get[Module] } from '@codestate/core/use-cases/[module]/Get[Module]';
 export { Create[Module] } from '@codestate/core/use-cases/[module]/Create[Module]';
 export { Update[Module] } from '@codestate/core/use-cases/[module]/Update[Module]';

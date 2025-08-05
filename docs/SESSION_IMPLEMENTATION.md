@@ -17,7 +17,7 @@ CLI Layer → Command Layer → TUI Handler Layer → CLI API Layer → Use Case
 ```
 packages/
 ├── cli-api/
-│   └── main.ts                          # Export session use cases
+│   └── api.ts                          # Export session use cases
 ├── cli-interface/
 │   ├── commands/
 │   │   └── session/                     # Session-specific commands

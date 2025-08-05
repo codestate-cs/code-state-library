@@ -6,7 +6,7 @@ This project now supports a dual-package build system that creates both the CLI 
 
 ### 1. CLI Package (`codestate`)
 - **Location**: `dist/`
-- **Purpose**: The main CLI executable and API functions
+- **Purpose**: The api CLI executable and API functions
 - **Files**:
   - `index.js` - CLI executable
   - `api.js` - API functions for external consumption
