@@ -22,7 +22,7 @@ const commonOptions = {
 
 // Core package build configuration
 const coreBuild = async () => {
-  console.log('🔨 Building @codestate/core...');
+  console.log('🔨 Building codestate-core...');
   
   const result = await esbuild.build({
     ...commonOptions,
@@ -73,7 +73,7 @@ const coreBuild = async () => {
     }
   });
 
-  console.log('✅ @codestate/core built successfully');
+  console.log('✅ codestate-core built successfully');
   return result;
 };
 
@@ -86,7 +86,7 @@ const cliBuild = async () => {
     entryPoints: ['packages/cli-interface/cli.ts'],
     outfile: 'packages/cli-interface/dist/cli.js',
     external: [
-      '@codestate/core',
+      'codestate-core',
       'inquirer',
       'fs',
       'path',
@@ -133,10 +133,10 @@ const cliBuild = async () => {
       {
         name: 'import-transformer',
         setup(build) {
-          // Transform imports from @codestate/core/* to @codestate/core
+          // Transform imports from codestate-core/* to codestate-core
           build.onResolve({ filter: /^@codestate\/core\// }, args => {
             return {
-              path: '@codestate/core',
+              path: 'codestate-core',
               external: true
             };
           });
@@ -195,34 +195,34 @@ const watch = async () => {
     });
     
     await context.watch();
-    console.log('👀 Watching @codestate/core...');
-  } else if (isCliOnly) {
-    const context = await esbuild.context({
-      ...commonOptions,
-      entryPoints: ['packages/cli-interface/cli.ts'],
-      outfile: 'packages/cli-interface/dist/cli.js',
-      external: [
-        '@codestate/core',
-        'inquirer',
-        'fs', 'path', 'os', 'crypto', 'child_process', 'util', 'events', 'stream',
-        'buffer', 'url', 'querystring', 'http', 'https', 'net', 'tls', 'dns',
-        'dgram', 'cluster', 'worker_threads', 'perf_hooks', 'async_hooks',
-        'timers', 'string_decoder', 'punycode', 'readline', 'repl', 'tty',
-        'vm', 'assert', 'constants', 'domain', 'module', 'process', 'v8',
-        'inspector', 'trace_events', 'wasi'
-      ],
-      define: { 'process.env.NODE_ENV': '"production"' },
-      plugins: [
-        {
-          name: 'import-transformer',
-          setup(build) {
-            build.onResolve({ filter: /^@codestate\/core\// }, args => {
-              return { path: '@codestate/core', external: true };
-            });
+    console.log('👀 Watching codestate-core...');
+      } else if (isCliOnly) {
+      const context = await esbuild.context({
+        ...commonOptions,
+        entryPoints: ['packages/cli-interface/cli.ts'],
+        outfile: 'packages/cli-interface/dist/cli.js',
+        external: [
+          'codestate-core',
+          'inquirer',
+          'fs', 'path', 'os', 'crypto', 'child_process', 'util', 'events', 'stream',
+          'buffer', 'url', 'querystring', 'http', 'https', 'net', 'tls', 'dns',
+          'dgram', 'cluster', 'worker_threads', 'perf_hooks', 'async_hooks',
+          'timers', 'string_decoder', 'punycode', 'readline', 'repl', 'tty',
+          'vm', 'assert', 'constants', 'domain', 'module', 'process', 'v8',
+          'inspector', 'trace_events', 'wasi'
+        ],
+        define: { 'process.env.NODE_ENV': '"production"' },
+        plugins: [
+          {
+            name: 'import-transformer',
+            setup(build) {
+              build.onResolve({ filter: /^@codestate\/core\// }, args => {
+                return { path: 'codestate-core', external: true };
+              });
+            }
           }
-        }
-      ]
-    });
+        ]
+      });
     
     await context.watch();
     console.log('👀 Watching @codestate CLI...');
@@ -249,7 +249,7 @@ const watch = async () => {
       entryPoints: ['packages/cli-interface/cli.ts'],
       outfile: 'packages/cli-interface/dist/cli.js',
       external: [
-        '@codestate/core', 'inquirer',
+        'codestate-core', 'inquirer',
         'fs', 'path', 'os', 'crypto', 'child_process', 'util', 'events', 'stream',
         'buffer', 'url', 'querystring', 'http', 'https', 'net', 'tls', 'dns',
         'dgram', 'cluster', 'worker_threads', 'perf_hooks', 'async_hooks',
@@ -263,7 +263,7 @@ const watch = async () => {
           name: 'import-transformer',
           setup(build) {
             build.onResolve({ filter: /^@codestate\/core\// }, args => {
-              return { path: '@codestate/core', external: true };
+              return { path: 'codestate-core', external: true };
             });
           }
         }
