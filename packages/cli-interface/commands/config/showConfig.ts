@@ -1,4 +1,4 @@
-import { GetConfig, ConfigurableLogger } from '@codestate/cli-api/main';
+import { GetConfig, ConfigurableLogger } from '@codestate/core/api';
 
 export async function showConfigCommand() {
   const logger = new ConfigurableLogger();
@@ -6,29 +6,29 @@ export async function showConfigCommand() {
   const result = await getConfig.execute();
   if (result.ok) {
     const config = result.value;
-    console.log('\n📋 Current Configuration:');
-    console.log('─────────────────────────');
-    console.log(`Editor: ${config.ide}`);
-    console.log(`Version: ${config.version}`);
-    console.log(`Encryption: ${config.encryption.enabled ? 'Yes' : 'No'}`);
-    console.log(`Storage Path: ${config.storagePath}`);
-    console.log(`Log Level: ${config.logger.level}`);
-    console.log(`Log Sinks: ${config.logger.sinks.join(', ')}`);
+    logger.plainLog('\n📋 Current Configuration:');
+    logger.plainLog('─────────────────────────');
+    logger.plainLog(`Editor: ${config.ide}`);
+    logger.plainLog(`Version: ${config.version}`);
+    logger.plainLog(`Encryption: ${config.encryption.enabled ? 'Yes' : 'No'}`);
+    logger.plainLog(`Storage Path: ${config.storagePath}`);
+    logger.plainLog(`Log Level: ${config.logger.level}`);
+    logger.plainLog(`Log Sinks: ${config.logger.sinks.join(', ')}`);
     
     if (config.experimental && Object.keys(config.experimental).length > 0) {
-      console.log('\n🔬 Experimental Features:');
+      logger.plainLog('\n🔬 Experimental Features:');
       Object.entries(config.experimental).forEach(([key, value]) => {
-        console.log(`  ${key}: ${value ? '✅' : '❌'}`);
+        logger.plainLog(`  ${key}: ${value ? '✅' : '❌'}`);
       });
     }
     
     if (config.extensions && Object.keys(config.extensions).length > 0) {
-      console.log('\n🔌 Extensions:');
+      logger.plainLog('\n🔌 Extensions:');
       Object.keys(config.extensions).forEach(key => {
-        console.log(`  ${key}`);
+        logger.plainLog(`  ${key}`);
       });
     }
-    console.log('');
+    logger.plainLog('');
   } else {
     logger.error('Failed to load config', { error: result.error });
   }

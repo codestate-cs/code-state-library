@@ -1,5 +1,5 @@
 import inquirer from '../../utils/inquirer';
-import { GitService, SaveSession, ConfigurableLogger } from '@codestate/cli-api/main';
+import { GitService, SaveSession, ConfigurableLogger } from '@codestate/core/api';
 
 export async function promptSessionDetails(defaults?: { name?: string; notes?: string; tags?: string }) {
   return inquirer.customPrompt([

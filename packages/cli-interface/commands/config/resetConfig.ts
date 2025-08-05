@@ -1,4 +1,4 @@
-import { ResetConfig, ConfigurableLogger } from '@codestate/cli-api/main';
+import { ResetConfig, ConfigurableLogger } from '@codestate/core/api';
 
 export async function resetConfigCommand() {
   const logger = new ConfigurableLogger();

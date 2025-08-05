@@ -3,8 +3,11 @@ import { importConfigTui } from './importConfigTui';
 import { showConfigTui } from './showConfigTui';
 import { resetConfigTui } from './resetConfigTui';
 import { exportConfigTui } from './exportConfigTui';
+import { ConfigurableLogger } from '@codestate/core/api';
 
 export async function handleConfigCommand(subcommand: string, options: string[]) {
+  const logger = new ConfigurableLogger();
+  
   switch (subcommand) {
     case 'show':
       await showConfigTui();
@@ -23,8 +26,8 @@ export async function handleConfigCommand(subcommand: string, options: string[])
       // Check if file path is provided
       const fileIndex = options.indexOf('--file');
       if (fileIndex === -1 || fileIndex === options.length - 1) {
-        console.error('Error: --file option is required for import command');
-        console.log('Usage: codestate config import --file <path>');
+        logger.error('Error: --file option is required for import command');
+        logger.plainLog('Usage: codestate config import --file <path>');
         process.exit(1);
       }
       const filePath = options[fileIndex + 1];
@@ -32,8 +35,8 @@ export async function handleConfigCommand(subcommand: string, options: string[])
       await importConfigTui();
       break;
     default:
-      console.error(`Error: Unknown config subcommand '${subcommand}'`);
-      console.log('Available config subcommands: show, edit, reset, export, import');
+      logger.error(`Error: Unknown config subcommand '${subcommand}'`);
+      logger.plainLog('Available config subcommands: show, edit, reset, export, import');
       process.exit(1);
   }
 } 

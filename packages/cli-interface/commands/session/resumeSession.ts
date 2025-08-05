@@ -1,4 +1,4 @@
-import { ResumeSession, ConfigurableLogger, GitService, ListSessions, SaveSession, UpdateSession, GetConfig, OpenIDE, OpenFiles } from '@codestate/cli-api/main';
+import { ResumeSession, ConfigurableLogger, GitService, ListSessions, SaveSession, UpdateSession, GetConfig, OpenIDE, OpenFiles } from '@codestate/core/api';
 import { ApplyStash } from '@codestate/core/use-cases/git/ApplyStash';
 import { GetScriptsByRootPath } from '@codestate/core/use-cases/scripts/GetScriptsByRootPath';
 import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';

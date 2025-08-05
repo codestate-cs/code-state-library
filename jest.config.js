@@ -23,7 +23,7 @@ export default {
     'packages/**/*.ts',
     '!packages/**/*.d.ts',
     '!packages/**/index.ts',
-    '!packages/**/main.ts',
+    '!packages/**/api.ts',
     '!tests/**/*'
   ],
   coverageThreshold: {

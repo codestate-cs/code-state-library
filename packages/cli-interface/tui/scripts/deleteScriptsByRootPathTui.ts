@@ -1,7 +1,9 @@
 import inquirer from '@codestate/cli-interface/utils/inquirer';
 import { deleteScriptsByRootPathCommand } from '../../commands/scripts/deleteScriptsByRootPath';
+import { ConfigurableLogger } from '@codestate/core/api';
 
 export async function deleteScriptsByRootPathTui() {
+  const logger = new ConfigurableLogger();
   const currentPath = process.cwd();
   const answers = await inquirer.customPrompt([
     {
@@ -22,6 +24,6 @@ export async function deleteScriptsByRootPathTui() {
   if (answers.confirm) {
     await deleteScriptsByRootPathCommand(answers.rootPath.trim());
   } else {
-    console.log('Script deletion cancelled.');
+    logger.plainLog('Script deletion cancelled.');
   }
 } 

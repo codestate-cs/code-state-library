@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 
 import { handleCommand } from './commands';
+import { ConfigurableLogger } from '@codestate/core/api';
 
 // Get command line arguments
 const args = process.argv.slice(2);
+const logger = new ConfigurableLogger();
 
 // Handle graceful exit
 process.on('SIGINT', () => {
-  console.log('\n👋 You have exited CodeState CLI');
+  logger.plainLog('\n👋 You have exited CodeState CLI');
   process.exit(0);
 });
 
 function showHelp() {
-  console.log(`
+  logger.plainLog(`
 CodeState CLI - Configuration, Script, and Git Management
 
 Usage: codestate <command> [options]
@@ -51,7 +53,7 @@ Options:
 }
 
 function showVersion() {
-  console.log('CodeState CLI v1.0.0');
+  logger.plainLog('CodeState CLI v1.0.0');
 }
 
 async function main() {
@@ -70,7 +72,7 @@ async function main() {
   const [command, subcommand, ...options] = args;
 
   if (!command) {
-    console.error('Error: No command specified');
+    logger.error('Error: No command specified');
     showHelp();
     process.exit(1);
   }
@@ -78,7 +80,7 @@ async function main() {
   try {
     await handleCommand(command, subcommand, options);
   } catch (error) {
-    console.error('Error:', error instanceof Error ? error.message : error);
+    logger.error('Error:', { error: error instanceof Error ? error.message : String(error) });
     process.exit(1);
   }
 }

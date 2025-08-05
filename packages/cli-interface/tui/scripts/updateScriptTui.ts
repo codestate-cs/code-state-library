@@ -1,6 +1,6 @@
 import inquirer from '@codestate/cli-interface/utils/inquirer';
 import { updateScriptCommand } from '../../commands/scripts/updateScript';
-import { Script } from '@codestate/cli-api/main';
+import { Script } from '@codestate/core/api';
 
 export async function updateScriptTui() {
   const currentPath = process.cwd();

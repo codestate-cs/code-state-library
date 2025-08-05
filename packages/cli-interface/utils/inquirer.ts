@@ -1,4 +1,5 @@
 import originalInquirer from 'inquirer';
+import { ConfigurableLogger } from '@codestate/core/api';
 
 // Create a safe wrapper that doesn't modify the original inquirer
 const inquirer = {
@@ -8,7 +9,8 @@ const inquirer = {
       return await originalInquirer.prompt(questions);
     } catch (error: any) {
       if (error.message?.includes('SIGINT') || error.message?.includes('force closed')) {
-        console.log('\n👋 You have exited CodeState CLI');
+        const logger = new ConfigurableLogger();
+        logger.plainLog('\n👋 You have exited CodeState CLI');
         process.exit(0);
       }
       throw error;

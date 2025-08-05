@@ -1,4 +1,4 @@
-import { UpdateSession, ConfigurableLogger, GitService } from '@codestate/cli-api/main';
+import { UpdateSession, ConfigurableLogger, GitService } from '@codestate/core/api';
 import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
 import inquirer from '../../utils/inquirer';
 import {
@@ -18,7 +18,7 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     // If no session specified, ask user to select one
     let targetSession = sessionIdOrName;
     if (!targetSession) {
-      const { UpdateSession } = await import('@codestate/cli-api/main');
+      const { UpdateSession } = await import('@codestate/core/api');
       const listSessions = new (await import('@codestate/core/use-cases/session/ListSessions')).ListSessions();
       const sessionsResult = await listSessions.execute();
       
@@ -128,14 +128,14 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
           }
         ]);
         
-        logger.log('✅ Committing changes...');
+        logger.log(' Committing changes...');
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
           logger.error('Failed to commit changes', { error: commitResult.error });
           logger.warn('Session update cancelled.');
           return;
         }
-        logger.log('✅ Changes committed successfully');
+        logger.log(' Changes committed successfully');
       } else if (dirtyAction === 'stash') {
         logger.log('Stashing changes...');
         const stashResult = await gitService.createStash('Session update stash');

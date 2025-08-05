@@ -478,7 +478,7 @@ describe('SchemaRegistry - GitFileSchema', () => {
   // Happy path
   it('should validate correct git file', () => {
     const validFile = {
-      path: 'src/main.ts',
+      path: 'src/api.ts',
       status: 'modified',
       staged: true,
     };
@@ -787,7 +787,7 @@ describe('SchemaRegistry - SessionSchema', () => {
       notes: 'Working on new feature',
       files: [
         {
-          path: 'src/main.ts',
+          path: 'src/api.ts',
           cursor: { line: 10, column: 5 },
           scroll: { top: 100, left: 0 },
           isActive: true,

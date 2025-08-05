@@ -1,4 +1,4 @@
-import { GetScriptsByRootPath, ConfigurableLogger } from '@codestate/cli-api/main';
+import { GetScriptsByRootPath, ConfigurableLogger } from '@codestate/core/api';
 
 export async function showScriptsByRootPathCommand(rootPath: string) {
   const logger = new ConfigurableLogger();

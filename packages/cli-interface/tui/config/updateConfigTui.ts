@@ -1,6 +1,6 @@
 import inquirer from '@codestate/cli-interface/utils/inquirer';
 import { updateConfigCommand } from '../../commands/config/updateConfig';
-import { Config } from '@codestate/cli-api/main';
+import { Config } from '@codestate/core/api';
 
 export async function updateConfigTui() {
   const answers = await inquirer.customPrompt([

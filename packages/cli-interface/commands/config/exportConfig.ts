@@ -1,4 +1,4 @@
-import { ExportConfig, ConfigurableLogger } from '@codestate/cli-api/main';
+import { ExportConfig, ConfigurableLogger } from '@codestate/core/api';
 
 export async function exportConfigCommand() {
   const logger = new ConfigurableLogger();
