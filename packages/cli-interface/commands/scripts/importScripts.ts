@@ -1,12 +1,12 @@
-import { ImportScripts, ConfigurableLogger } from '@codestate/core/api';
+import { ConfigurableLogger, ImportScripts } from "@codestate/core";
 
 export async function importScriptsCommand(json: string) {
   const logger = new ConfigurableLogger();
   const importScripts = new ImportScripts();
   const result = await importScripts.execute(json);
   if (result.ok) {
-    logger.log('Scripts imported successfully');
+    logger.log("Scripts imported successfully");
   } else {
-    logger.error('Failed to import scripts', { error: result.error });
+    logger.error("Failed to import scripts", { error: result.error });
   }
-} 
+}
