@@ -16,7 +16,7 @@
     "baseUrl": ".",
     "paths": {
       "@codestate/core/*": ["packages/core/*"],
-      "@codestate/infrastructure/*": ["packages/infrastructure/*"],
+  "@codestate/infrastructure/*": ["packages/core/infrastructure/*"],
       "@codestate/framework/*": ["packages/framework/*"],
       "@codestate/cli-api/*": ["packages/cli-api/*"],
       "@codestate/cli-interface/*": ["packages/cli-interface/*"],
