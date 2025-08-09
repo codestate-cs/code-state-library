@@ -22,10 +22,11 @@ const commonOptions = {
 // Core package build configuration
 const coreBuild = async () => {
   console.log('🔨 Building codestate-core...');
-  
+
+  // Build with esbuild
   const result = await esbuild.build({
     ...commonOptions,
-    entryPoints: ['packages/core.ts'],
+    entryPoints: ['packages/core/index.ts'],
     outfile: 'packages/core/dist/index.js',
     external: [
       'zod',
@@ -71,19 +72,6 @@ const coreBuild = async () => {
       'process.env.NODE_ENV': '"production"'
     }
   });
-
-  // Generate .d.ts files using tsc for codestate-core
-  const { execSync } = await import('child_process');
-  try {
-    execSync('npx tsc --declaration --emitDeclarationOnly --project ./tsconfig.json --outDir ./dist', {
-      stdio: 'inherit',
-      cwd: 'packages/core'
-    });
-    console.log('✅ TypeScript declaration files generated for codestate-core');
-  } catch (err) {
-    console.error('❌ Failed to generate .d.ts files for codestate-core:', err);
-    throw err;
-  }
 
   console.log('✅ codestate-core built successfully');
   return result;
@@ -165,7 +153,7 @@ const cliBuild = async () => {
 const build = async () => {
   try {
     // Create dist directories
-    await mkdir('packages/core/dist', { recursive: true });
+  await mkdir('packages/core/dist', { recursive: true });
     await mkdir('packages/cli-interface/dist', { recursive: true });
 
     if (isCoreOnly) {

@@ -4,6 +4,7 @@
   "description": "Core domain models, use cases, and services for CodeState",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js"
   },
@@ -11,7 +12,10 @@
     "dist"
   ],
   "scripts": {
-    "build": "node ../../esbuild.config.js --core-only",
+    "build:types": "tsc --project ./tsconfig.json",
+    "build:dts": "dts-bundle-generator --external-inlines @babel/types -o dist/index.d.ts index.ts",
+    "build": "npm run build:types && npm run build:dts && node ../../esbuild.config.js --core-only && npm run postbuild",
+    "postbuild": "rimraf dist/domain dist/infrastructure dist/services dist/use-cases /packages",
     "build:watch": "node ../../esbuild.config.js --core-only --watch",
     "clean": "rimraf dist",
     "prepublishOnly": "npm run build"
@@ -33,4 +37,4 @@
   "dependencies": {
     "zod": "^4.0.13"
   }
-} 
+}
