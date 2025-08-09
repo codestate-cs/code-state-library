@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 import * as esbuild from 'esbuild';
-import { readdir, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { mkdir } from 'fs/promises';
 
 const args = process.argv.slice(2);
 const isWatch = args.includes('--watch');
@@ -72,6 +71,19 @@ const coreBuild = async () => {
       'process.env.NODE_ENV': '"production"'
     }
   });
+
+  // Generate .d.ts files using tsc for codestate-core
+  const { execSync } = await import('child_process');
+  try {
+    execSync('npx tsc --declaration --emitDeclarationOnly --project ./tsconfig.json --outDir ./dist', {
+      stdio: 'inherit',
+      cwd: 'packages/core'
+    });
+    console.log('✅ TypeScript declaration files generated for codestate-core');
+  } catch (err) {
+    console.error('❌ Failed to generate .d.ts files for codestate-core:', err);
+    throw err;
+  }
 
   console.log('✅ codestate-core built successfully');
   return result;
