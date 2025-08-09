@@ -1,4 +1,4 @@
-import { DeleteScript, ConfigurableLogger } from '@codestate/core/api';
+import { ConfigurableLogger, DeleteScript } from "@codestate/core";
 
 export async function deleteScriptCommand(name: string, rootPath: string) {
   const logger = new ConfigurableLogger();
@@ -9,4 +9,4 @@ export async function deleteScriptCommand(name: string, rootPath: string) {
   } else {
     logger.error(`Failed to delete script '${name}'`, { error: result.error });
   }
-} 
+}

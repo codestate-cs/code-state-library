@@ -15,20 +15,15 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
+      "@codestate/core": ["packages/core"],
       "@codestate/core/*": ["packages/core/*"],
-  "@codestate/infrastructure/*": ["packages/core/infrastructure/*"],
+      "@codestate/infrastructure/*": ["packages/core/infrastructure/*"],
       "@codestate/framework/*": ["packages/framework/*"],
       "@codestate/cli-api/*": ["packages/cli-api/*"],
       "@codestate/cli-interface/*": ["packages/cli-interface/*"],
       "@codestate/shared/*": ["packages/shared/*"]
     }
   },
-  "include": [
-    "packages/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "tests"
-  ]
-} 
+  "include": ["packages/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
+}

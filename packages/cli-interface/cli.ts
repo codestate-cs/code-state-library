@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-import { handleCommand } from './commands';
-import { ConfigurableLogger } from '@codestate/core/api';
+import { ConfigurableLogger } from "@codestate/core";
+import { handleCommand } from "./commands";
 
 // Get command line arguments
 const args = process.argv.slice(2);
 const logger = new ConfigurableLogger();
 
 // Handle graceful exit
-process.on('SIGINT', () => {
-  logger.plainLog('\n👋 You have exited CodeState CLI');
+process.on("SIGINT", () => {
+  logger.plainLog("\n👋 You have exited CodeState CLI");
   process.exit(0);
 });
 
@@ -53,17 +53,17 @@ Options:
 }
 
 function showVersion() {
-  logger.plainLog('CodeState CLI v1.0.0');
+  logger.plainLog("CodeState CLI v1.0.0");
 }
 
 async function main() {
   // Handle help and version flags
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes("--help") || args.includes("-h")) {
     showHelp();
     return;
   }
 
-  if (args.includes('--version') || args.includes('-v')) {
+  if (args.includes("--version") || args.includes("-v")) {
     showVersion();
     return;
   }
@@ -72,7 +72,7 @@ async function main() {
   const [command, subcommand, ...options] = args;
 
   if (!command) {
-    logger.error('Error: No command specified');
+    logger.error("Error: No command specified");
     showHelp();
     process.exit(1);
   }
@@ -80,9 +80,11 @@ async function main() {
   try {
     await handleCommand(command, subcommand, options);
   } catch (error) {
-    logger.error('Error:', { error: error instanceof Error ? error.message : String(error) });
+    logger.error("Error:", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     process.exit(1);
   }
 }
 
-main(); 
+main();

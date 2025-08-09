@@ -1,4 +1,4 @@
-import { GetScriptsByRootPath, ConfigurableLogger } from '@codestate/core/api';
+import { ConfigurableLogger, GetScriptsByRootPath } from "@codestate/core";
 
 export async function showScriptsByRootPathCommand(rootPath: string) {
   const logger = new ConfigurableLogger();
@@ -7,6 +7,9 @@ export async function showScriptsByRootPathCommand(rootPath: string) {
   if (result.ok) {
     logger.log(`Scripts for ${rootPath}:`, { scripts: result.value });
   } else {
-    logger.error('Failed to load scripts for root path', { error: result.error, rootPath });
+    logger.error("Failed to load scripts for root path", {
+      error: result.error,
+      rootPath,
+    });
   }
-} 
+}

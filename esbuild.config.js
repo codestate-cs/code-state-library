@@ -25,7 +25,7 @@ const coreBuild = async () => {
   
   const result = await esbuild.build({
     ...commonOptions,
-    entryPoints: ['packages/core/api.ts'],
+    entryPoints: ['packages/core.ts'],
     outfile: 'packages/core/dist/index.js',
     external: [
       'zod',
@@ -192,7 +192,7 @@ const watch = async () => {
   if (isCoreOnly) {
     const context = await esbuild.context({
       ...commonOptions,
-      entryPoints: ['packages/core/api.ts'],
+      entryPoints: ['packages/core.ts'],
       outfile: 'packages/core/dist/index.js',
       external: [
         'zod',
@@ -242,7 +242,7 @@ const watch = async () => {
     // Watch both packages
     const coreContext = await esbuild.context({
       ...commonOptions,
-      entryPoints: ['packages/core/api.ts'],
+      entryPoints: ['packages/core.ts'],
       outfile: 'packages/core/dist/index.js',
       external: [
         'zod',
