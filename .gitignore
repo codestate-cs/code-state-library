@@ -3,3 +3,5 @@
 # Package dist directories
 packages/core/dist/
 packages/cli-interface/dist/
+packages/core/packages
+packages/cli-interface/packages
