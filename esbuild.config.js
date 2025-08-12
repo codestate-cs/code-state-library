@@ -83,6 +83,7 @@ const cliBuild = async () => {
   
   const result = await esbuild.build({
     ...commonOptions,
+    format: 'cjs',
     entryPoints: ['packages/cli-interface/cli.ts'],
     outfile: 'packages/cli-interface/dist/cli.js',
     external: [
@@ -129,20 +130,20 @@ const cliBuild = async () => {
     define: {
       'process.env.NODE_ENV': '"production"'
     },
-    plugins: [
-      {
-        name: 'import-transformer',
-        setup(build) {
-          // Transform imports from codestate-core/* to codestate-core
-          build.onResolve({ filter: /^@codestate\/core\// }, args => {
-            return {
-              path: 'codestate-core',
-              external: true
-            };
-          });
-        }
-      }
-    ]
+            plugins: [
+          {
+            name: 'import-transformer',
+            setup(build) {
+              // Transform imports from @codestate/core to codestate-core
+              build.onResolve({ filter: /^@codestate\/core$/ }, args => {
+                return {
+                  path: 'codestate-core',
+                  external: true
+                };
+              });
+            }
+          }
+        ]
   });
 
   console.log('✅ @codestate CLI built successfully');
@@ -180,7 +181,7 @@ const watch = async () => {
   if (isCoreOnly) {
     const context = await esbuild.context({
       ...commonOptions,
-      entryPoints: ['packages/core.ts'],
+      entryPoints: ['packages/core/index.ts'],
       outfile: 'packages/core/dist/index.js',
       external: [
         'zod',
@@ -199,6 +200,7 @@ const watch = async () => {
       } else if (isCliOnly) {
       const context = await esbuild.context({
         ...commonOptions,
+        format: 'cjs',
         entryPoints: ['packages/cli-interface/cli.ts'],
         outfile: 'packages/cli-interface/dist/cli.js',
         external: [
@@ -216,7 +218,8 @@ const watch = async () => {
           {
             name: 'import-transformer',
             setup(build) {
-              build.onResolve({ filter: /^@codestate\/core\// }, args => {
+              // Transform imports from @codestate/core to codestate-core
+              build.onResolve({ filter: /^@codestate\/core$/ }, args => {
                 return { path: 'codestate-core', external: true };
               });
             }
@@ -230,7 +233,7 @@ const watch = async () => {
     // Watch both packages
     const coreContext = await esbuild.context({
       ...commonOptions,
-      entryPoints: ['packages/core.ts'],
+      entryPoints: ['packages/core/index.ts'],
       outfile: 'packages/core/dist/index.js',
       external: [
         'zod',
@@ -246,6 +249,7 @@ const watch = async () => {
     
     const cliContext = await esbuild.context({
       ...commonOptions,
+      format: 'cjs',
       entryPoints: ['packages/cli-interface/cli.ts'],
       outfile: 'packages/cli-interface/dist/cli.js',
       external: [
@@ -262,7 +266,8 @@ const watch = async () => {
         {
           name: 'import-transformer',
           setup(build) {
-            build.onResolve({ filter: /^@codestate\/core\// }, args => {
+            // Transform imports from @codestate/core to codestate-core
+            build.onResolve({ filter: /^@codestate\/core$/ }, args => {
               return { path: 'codestate-core', external: true };
             });
           }

@@ -8,10 +8,10 @@ import {
   ResumeSession,
   SaveSession,
   UpdateSession,
+  Terminal,
+  ApplyStash,
+  GetScriptsByRootPath
 } from "@codestate/core";
-import { ApplyStash } from "@codestate/core/use-cases/git/ApplyStash";
-import { GetScriptsByRootPath } from "@codestate/core/use-cases/scripts/GetScriptsByRootPath";
-import { TerminalFacade } from "@codestate/infrastructure/services/Terminal/TerminalFacade";
 import inquirer from "../../utils/inquirer";
 import {
   getCurrentGitState,
@@ -27,7 +27,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
   const listSessions = new ListSessions();
   const saveSession = new SaveSession();
   const updateSession = new UpdateSession();
-  const terminal = new TerminalFacade();
+  const terminal = new Terminal();
 
   try {
     // If no session specified, ask user to select one
