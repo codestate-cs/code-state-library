@@ -1,5 +1,4 @@
-import { ConfigurableLogger, GitService, UpdateSession } from "@codestate/core";
-import { TerminalFacade } from "@codestate/infrastructure/services/Terminal/TerminalFacade";
+import { ConfigurableLogger, GitService, UpdateSession, ListSessions, Terminal } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
 import {
   getCurrentGitState,
@@ -11,16 +10,13 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
   const logger = new ConfigurableLogger();
   const updateSession = new UpdateSession();
   const gitService = new GitService();
-  const terminal = new TerminalFacade();
+  const terminal = new Terminal();
 
   try {
     // If no session specified, ask user to select one
     let targetSession = sessionIdOrName;
     if (!targetSession) {
-      const { UpdateSession } = await import("@codestate/core");
-      const listSessions = new (
-        await import("@codestate/core/use-cases/session/ListSessions")
-      ).ListSessions();
+      const listSessions = new ListSessions();
       const sessionsResult = await listSessions.execute();
 
       if (!sessionsResult.ok || sessionsResult.value.length === 0) {
