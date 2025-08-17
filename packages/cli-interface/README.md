@@ -2,6 +2,8 @@
 
 A powerful command-line interface for CodeState - a developer context engine for saving and resuming your full development environment.
 
+Visit [codestate.dev](https://www.codestate.dev/) for more information about CodeState.
+
 ## Overview
 
 CodeState CLI provides a comprehensive command-line interface for managing your development context, including scripts, sessions, configurations, and git operations. It features both traditional CLI commands and an interactive TUI (Text User Interface) for enhanced user experience.
@@ -213,9 +215,12 @@ CodeState CLI uses a configuration file to store settings. The default location 
 CodeState CLI integrates with popular IDEs:
 
 - **VS Code**: Open projects and files directly
+  - Install the [CodeState IDE Extension](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide) for seamless IDE integration - manage scripts, sessions, and configurations directly from VS Code
 - **WebStorm/IntelliJ**: Launch projects in JetBrains IDEs
 - **Sublime Text**: Open files in Sublime
 - **Vim/Neovim**: Open files in terminal editors
+
+> **Tip**: You can use both the CLI and IDE extension for most tasks. However, for saving sessions, we recommend using the IDE extension as it can capture file contents and open files, while the CLI can only save metadata. The CLI is great for terminal workflows and automation, while the IDE extension provides a native VS Code experience for managing your development context.
 
 ## Development
 
