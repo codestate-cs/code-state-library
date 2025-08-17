@@ -55,7 +55,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
 
     // Ensure targetSession is not empty
     if (!targetSession || !targetSession.trim()) {
-      logger.log("No session specified. Resume cancelled.");
+      logger.plainLog("No session specified. Resume cancelled.");
       return;
     }
 
@@ -73,7 +73,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     const currentDir = process.cwd();
     if (currentDir !== session.projectRoot) {
       logger.warn(`You are in ${currentDir}`);
-      logger.log(`Session was saved from ${session.projectRoot}`);
+      logger.plainLog(`Session was saved from ${session.projectRoot}`);
       const { changeDirectory } = await inquirer.customPrompt([
         {
           type: "confirm",
@@ -83,10 +83,10 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         },
       ]);
       if (changeDirectory) {
-        logger.log(`Changing to ${session.projectRoot}...`);
+        logger.plainLog(`Changing to ${session.projectRoot}...`);
         process.chdir(session.projectRoot);
       } else {
-        logger.log("Continuing in current directory...");
+        logger.plainLog("Continuing in current directory...");
       }
     }
 
@@ -126,7 +126,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         return;
       }
       if (dirtyAction === "save") {
-        logger.log("Saving current work as new session...");
+        logger.plainLog("Saving current work as new session...");
         const sessionDetails = await promptSessionDetails();
         const gitState = await getCurrentGitState(gitService, logger);
         if (!gitState) return;
@@ -141,11 +141,11 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
           saveSession,
           logger,
         });
-        logger.log("Current work saved. Proceeding with resume...");
+        logger.plainLog("Current work saved. Proceeding with resume...");
       } else if (dirtyAction === "discard") {
         await terminal.execute("git reset --hard");
         await terminal.execute("git clean -fd");
-        logger.log("Changes discarded. Proceeding with resume...");
+        logger.plainLog("Changes discarded. Proceeding with resume...");
       }
     }
 
@@ -159,7 +159,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     }
 
     if (session.git.stashId) {
-      logger.log(`Applying stash ${session.git.stashId}...`);
+      logger.plainLog(`Applying stash ${session.git.stashId}...`);
       const applyStash = new ApplyStash();
       const stashResult = await applyStash.execute(session.git.stashId);
       if (stashResult.ok && stashResult.value.success) {
@@ -199,7 +199,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     } else {
-      logger.log("No scripts to execute.");
+      logger.plainLog("No scripts to execute.");
     }
 
     // 6. Open IDE and files
@@ -241,7 +241,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
             });
           }
         } else {
-          logger.log("No files to open from session");
+          logger.plainLog("No files to open from session");
         }
       } else {
         logger.error(`Failed to open IDE '${configuredIDE}'`, {
@@ -261,7 +261,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       logger.plainLog(`\n📝 Notes: ${session.notes}`);
     }
     if (session.tags.length > 0) {
-      logger.log(`🏷️  Tags: ${session.tags.join(", ")}`);
+      logger.plainLog(`🏷️  Tags: ${session.tags.join(", ")}`);
     }
   } catch (error) {
     logger.error("Unexpected error during session resume", { error });

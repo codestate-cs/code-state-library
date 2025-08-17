@@ -26,7 +26,7 @@ export async function exportConfigTui() {
   logger.log = originalLog;
   if (filePath && output) {
     await fs.writeFile(filePath, output, "utf8");
-    logger.log(`Config exported to ${filePath}`);
+    logger.plainLog(`Config exported to ${filePath}`);
   } else if (output) {
     logger.plainLog(output);
   }

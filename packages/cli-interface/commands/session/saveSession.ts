@@ -135,7 +135,7 @@ export async function saveSessionCommand() {
             const terminal = new Terminal();
             await terminal.execute(`git config user.name "${userName}"`);
             await terminal.execute(`git config user.email "${userEmail}"`);
-            logger.log("Git configured successfully.");
+            logger.plainLog("Git configured successfully.");
           } else {
             logger.warn("Session save cancelled.");
             return;
@@ -156,7 +156,7 @@ export async function saveSessionCommand() {
           },
         ]);
 
-        logger.log(" Committing changes...");
+        logger.plainLog(" Committing changes...");
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
           logger.error("Failed to commit changes", {
@@ -186,7 +186,7 @@ export async function saveSessionCommand() {
           ]);
 
           if (retryAction === "stash") {
-            logger.log("Attempting to stash changes...");
+            logger.plainLog("Attempting to stash changes...");
             const stashResult = await gitService.createStash(
               "Session save stash"
             );
@@ -197,13 +197,13 @@ export async function saveSessionCommand() {
               logger.warn("Session save cancelled.");
               return;
             }
-            logger.log("Changes stashed successfully.");
+            logger.plainLog("Changes stashed successfully.");
           } else {
             logger.warn("Session save cancelled.");
             return;
           }
         } else {
-          logger.log(" Changes committed successfully.");
+          logger.plainLog(" Changes committed successfully.");
         }
       } else if (dirtyAction === "stash") {
         const stashResult = await gitService.createStash("Session save stash");

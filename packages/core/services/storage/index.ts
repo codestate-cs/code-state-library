@@ -1,0 +1,1 @@
+export { FileStorageFacade } from './FileStorageFacade';

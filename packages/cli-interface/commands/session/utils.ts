@@ -36,9 +36,9 @@ export async function promptSessionDetails(defaults?: {
 
 export async function promptDirtyState(gitStatus: any, canStash: boolean) {
   const choices = [{ name: "Commit changes", value: "commit" }];
-  if (canStash) {
-    choices.push({ name: "Stash changes", value: "stash" });
-  }
+  // if (canStash) {
+  //   choices.push({ name: "Stash changes", value: "stash" });
+  // }
   choices.push({ name: "Cancel", value: "cancel" });
   return inquirer.customPrompt([
     {

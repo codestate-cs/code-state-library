@@ -41,7 +41,7 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
 
     // Ensure targetSession is not empty
     if (!targetSession || !targetSession.trim()) {
-      logger.log("No session specified. Update cancelled.");
+      logger.plainLog("No session specified. Update cancelled.");
       return;
     }
 
@@ -54,15 +54,15 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
 
     const session = sessionResult.value;
     logger.plainLog(`\n📋 Updating session: "${session.name}"`);
-    logger.log(`✅ Project: ${session.projectRoot}`);
-    logger.log(`✅ Branch: ${session.git.branch}`);
-    logger.log(`✅ Commit: ${session.git.commit}`);
+    logger.plainLog(` Project: ${session.projectRoot}`);
+    logger.plainLog(` Branch: ${session.git.branch}`);
+    logger.plainLog(` Commit: ${session.git.commit}`);
 
     // Check if we're in the correct directory
     const currentDir = process.cwd();
     if (currentDir !== session.projectRoot) {
       logger.warn(`You are in ${currentDir}`);
-      logger.log(`Session was saved from ${session.projectRoot}`);
+      logger.plainLog(`Session was saved from ${session.projectRoot}`);
       const { changeDirectory } = await inquirer.customPrompt([
         {
           type: "confirm",
@@ -72,10 +72,10 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
         },
       ]);
       if (changeDirectory) {
-        logger.log(`Changing to ${session.projectRoot}...`);
+        logger.plainLog(`Changing to ${session.projectRoot}...`);
         process.chdir(session.projectRoot);
       } else {
-        logger.log("Continuing in current directory...");
+        logger.plainLog("Continuing in current directory...");
       }
     }
 
@@ -130,7 +130,7 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
           },
         ]);
 
-        logger.log(" Committing changes...");
+        logger.plainLog(" Committing changes...");
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
           logger.error("Failed to commit changes", {
@@ -139,18 +139,23 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
           logger.warn("Session update cancelled.");
           return;
         }
-        logger.log(" Changes committed successfully");
+        logger.plainLog(" Changes committed successfully");
       } else if (dirtyAction === "stash") {
-        logger.log("Stashing changes...");
+        logger.plainLog("Stashing changes...");
         const stashResult = await gitService.createStash(
           "Session update stash"
         );
-        if (!stashResult.ok || !stashResult.value.success) {
+        if (!stashResult.ok) {
           logger.error("Failed to stash changes", { error: stashResult.error });
           logger.warn("Session update cancelled.");
           return;
         }
-        logger.log("Changes stashed successfully");
+        if (!stashResult.value.success) {
+          logger.error("Failed to stash changes", { error: stashResult.value.error });
+          logger.warn("Session update cancelled.");
+          return;
+        }
+        logger.plainLog("Changes stashed successfully");
       }
     }
 
@@ -192,7 +197,7 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
       logger.plainLog(`\n📝 Notes: ${updatedSession.notes}`);
     }
     if (updatedSession.tags.length > 0) {
-      logger.log(`🏷️  Tags: ${updatedSession.tags.join(", ")}`);
+      logger.plainLog(`🏷️  Tags: ${updatedSession.tags.join(", ")}`);
     }
   } catch (error) {
     logger.error("Unexpected error during session update", { error });

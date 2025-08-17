@@ -13,8 +13,8 @@ export async function deleteSessionCommand(sessionIdOrName?: string) {
   try {
     // If no session ID/name provided, show interactive selection
     if (!sessionIdOrName) {
-      logger.log("📋 Available Sessions:");
-      logger.log("─────────────────────");
+      logger.plainLog("📋 Available Sessions:");
+      logger.plainLog("─────────────────────");
 
       const listResult = await listSessions.execute();
 
@@ -64,10 +64,10 @@ export async function deleteSessionCommand(sessionIdOrName?: string) {
     }
 
     // Delete the session
-    const result = await deleteSession.execute(sessionIdOrName);
+    const result = await deleteSession.execute(sessionIdOrName!);
 
     if (result.ok) {
-      logger.log(`✅ Session "${sessionIdOrName}" deleted successfully!`);
+      logger.log(` Session "${sessionIdOrName}" deleted successfully!`);
     } else {
       logger.error("Failed to delete session", { error: result.error });
     }

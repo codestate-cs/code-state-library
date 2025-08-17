@@ -20,4 +20,5 @@ export * from '@codestate/core/domain/types/ErrorRegistry';
 export { CLILoggerFacade as ConfigurableLogger } from '@codestate/infrastructure/services/CLILogger/CLILoggerFacade';
 export { GitFacade as GitService } from '@codestate/core/services/git/GitFacade';
 export { TerminalFacade as Terminal } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
-export { IDEFacade as IDEService } from '@codestate/core/services/ide/IDEFacade'; 
+export { IDEFacade as IDEService } from '@codestate/core/services/ide/IDEFacade';
+export { FileStorageFacade as FileStorage } from '@codestate/core/services/storage'; 

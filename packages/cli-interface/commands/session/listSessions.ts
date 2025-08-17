@@ -5,8 +5,8 @@ export async function listSessionsCommand() {
   const listSessions = new ListSessions();
 
   try {
-    logger.log("📋 Available Sessions:");
-    logger.log("─────────────────────");
+    logger.plainLog("📋 Available Sessions:");
+    logger.plainLog("─────────────────────");
 
     const result = await listSessions.execute();
 
@@ -18,7 +18,7 @@ export async function listSessionsCommand() {
     const sessions = result.value;
 
     if (sessions.length === 0) {
-      logger.log("No sessions found.");
+      logger.plainLog("No sessions found.");
       return;
     }
 
@@ -35,25 +35,25 @@ export async function listSessionsCommand() {
     // Display sessions grouped by project
     Object.entries(sessionsByProject).forEach(
       ([projectPath, projectSessions]) => {
-        logger.log(
+        logger.plainLog(
           `\n📁 ${projectPath} (${projectSessions.length} session${
             projectSessions.length > 1 ? "s" : ""
           })`
         );
-        logger.log("─".repeat(projectPath.length + 10));
+        logger.plainLog("─".repeat(projectPath.length + 10));
 
         projectSessions.forEach((session) => {
           const tags =
             session.tags.length > 0 ? ` [${session.tags.join(", ")}]` : "";
           const notes = session.notes ? ` - ${session.notes}` : "";
-          logger.log(`  • ${session.name}${tags}${notes}`);
-          logger.log(
+          logger.plainLog(`  • ${session.name}${tags}${notes}`);
+          logger.plainLog(
             `    ID: ${session.id} | Created: ${new Date(
               session.createdAt
             ).toLocaleString()}`
           );
           if (session.git) {
-            logger.log(
+            logger.plainLog(
               `    Git: ${session.git.branch} (${session.git.commit.substring(
                 0,
                 8
@@ -64,7 +64,7 @@ export async function listSessionsCommand() {
       }
     );
 
-    logger.log(
+    logger.plainLog(
       `\nTotal: ${sessions.length} session${sessions.length > 1 ? "s" : ""}`
     );
   } catch (error) {
