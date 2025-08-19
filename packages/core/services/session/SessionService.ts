@@ -1,18 +1,29 @@
 import { ISessionService } from '../../domain/ports/ISessionService';
-import { Session } from '../../domain/models/Session';
+import { Session, TerminalCommandState } from '../../domain/models/Session';
 import { Result, isFailure } from '../../domain/models/Result';
 import { SessionRepository } from '@codestate/infrastructure/repositories/SessionRepository';
 import { SessionIndexEntry } from '../../domain/schemas/SchemaRegistry';
+import { ITerminalService } from '../../domain/ports/ITerminalService';
 
 export class SessionService implements ISessionService {
   private repository: SessionRepository;
+  private terminalService?: ITerminalService;
 
-  constructor(repository: SessionRepository) {
+  constructor(repository: SessionRepository, terminalService?: ITerminalService) {
     this.repository = repository;
+    this.terminalService = terminalService;
   }
 
-
   async saveSession(input: Partial<Session> & { name: string; projectRoot: string; notes?: string; tags?: string[] }): Promise<Result<Session>> {
+    // Capture terminal commands if terminal service is available
+    let terminalCommands: TerminalCommandState[] | undefined;
+    if (this.terminalService) {
+      const terminalResult = await this.terminalService.getLastCommandsFromTerminals();
+      if (terminalResult.ok && terminalResult.value.length > 0) {
+        terminalCommands = terminalResult.value;
+      }
+    }
+
     // Generate session object (id, timestamps, etc. should be handled by caller for now)
     const session: Session = {
       id: input.id || `session-${Date.now()}`,
@@ -25,6 +36,7 @@ export class SessionService implements ISessionService {
       files: input.files || [],
       git: input.git!,
       extensions: input.extensions,
+      terminalCommands, // NEW: Terminal commands captured from open terminals
     };
     const result = await this.repository.save(session);
     if (isFailure(result)) return { ok: false, error: result.error };

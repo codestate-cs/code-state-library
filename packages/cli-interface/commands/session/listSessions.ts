@@ -60,6 +60,22 @@ export async function listSessionsCommand() {
               )})`
             );
           }
+          
+          // Show terminal commands info if available
+          if ((session as any).terminalCommands && (session as any).terminalCommands.length > 0) {
+            const terminalCount = (session as any).terminalCommands.length;
+            logger.plainLog(`    🖥️  Terminals: ${terminalCount} terminal${terminalCount > 1 ? 's' : ''}`);
+          }
+          
+          // Show files info if available
+          if (session.files && session.files.length > 0) {
+            const filesWithPosition = session.files.filter((f: any) => f.position !== undefined);
+            if (filesWithPosition.length > 0) {
+              logger.plainLog(`    📁 Files: ${session.files.length} (${filesWithPosition.length} with position)`);
+            } else {
+              logger.plainLog(`    📁 Files: ${session.files.length}`);
+            }
+          }
         });
       }
     );

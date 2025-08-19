@@ -66,7 +66,25 @@ export const ConfigSchema = z.object({
 export const ScriptSchema = z.object({
   name: z.string().min(1, 'Script name is required'),
   rootPath: z.string().min(1, 'Root path is required'),
-  script: z.string().min(1, 'Script command is required'),
+  script: z.string().min(1, 'Script command is required').optional(), // DEPRECATED: Backward compatible
+  commands: z.array(z.object({
+    command: z.string().min(1, 'Command is required'),
+    name: z.string().min(1, 'Command name is required'),
+    priority: z.number().int().min(0, 'Priority must be non-negative integer'),
+  })).optional(), // NEW: Backward compatible
+}).refine((data) => {
+  // Ensure either script or commands is provided
+  return data.script !== undefined || (data.commands !== undefined && data.commands.length > 0);
+}, {
+  message: 'Either script or commands array must be provided',
+  path: ['script', 'commands'],
+});
+
+// NEW: Script command schema
+export const ScriptCommandSchema = z.object({
+  command: z.string().min(1, 'Command is required'),
+  name: z.string().min(1, 'Command name is required'),
+  priority: z.number().int().min(0, 'Priority must be non-negative integer'),
 });
 
 export const ScriptIndexEntrySchema = z.object({
@@ -155,6 +173,7 @@ export const FileStateSchema = z.object({
     .object({ top: z.number(), left: z.number() })
     .optional(),
   isActive: z.boolean(),
+  position: z.number().optional(), // NEW: Backward compatible
 });
 
 export const GitStateSchema = z.object({
@@ -162,6 +181,17 @@ export const GitStateSchema = z.object({
   commit: z.string(),
   isDirty: z.boolean(),
   stashId: z.string().nullable().optional(),
+});
+
+// NEW: Terminal command state schema
+export const TerminalCommandStateSchema = z.object({
+  terminalId: z.number(),
+  terminalName: z.string().optional(),
+  commands: z.array(z.object({
+    command: z.string(),
+    name: z.string(),
+    priority: z.number().int().min(0, 'Priority must be non-negative integer'),
+  })),
 });
 
 export const SessionSchema = z.object({
@@ -175,6 +205,7 @@ export const SessionSchema = z.object({
   files: z.array(FileStateSchema),
   git: GitStateSchema,
   extensions: z.record(z.string(), z.unknown()).optional(),
+  terminalCommands: z.array(TerminalCommandStateSchema).optional(), // NEW: Backward compatible
 });
 
 // Session index entry schema
@@ -204,6 +235,7 @@ export const SchemaRegistry = {
   ErrorCode: ErrorCodeSchema,
   Config: ConfigSchema,
   Script: ScriptSchema,
+  ScriptCommand: ScriptCommandSchema, // NEW
   ScriptIndexEntry: ScriptIndexEntrySchema,
   ScriptIndex: ScriptIndexSchema,
   ScriptCollection: ScriptCollectionSchema,
@@ -216,6 +248,7 @@ export const SchemaRegistry = {
   TerminalCommand: TerminalCommandSchema,
   TerminalResult: TerminalResultSchema,
   TerminalOptions: TerminalOptionsSchema,
+  TerminalCommandState: TerminalCommandStateSchema, // NEW
   FileState: FileStateSchema,
   GitState: GitStateSchema,
   Session: SessionSchema,
@@ -232,6 +265,7 @@ export type PluginEnvironment = z.infer<typeof PluginEnvironmentSchema>;
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 export type Script = z.infer<typeof ScriptSchema>;
+export type ScriptCommand = z.infer<typeof ScriptCommandSchema>; // NEW
 export type ScriptIndexEntry = z.infer<typeof ScriptIndexEntrySchema>;
 export type ScriptIndex = z.infer<typeof ScriptIndexSchema>;
 export type ScriptCollection = z.infer<typeof ScriptCollectionSchema>;
@@ -244,6 +278,7 @@ export type GitStashApplyResult = z.infer<typeof GitStashApplyResultSchema>;
 export type TerminalCommand = z.infer<typeof TerminalCommandSchema>;
 export type TerminalResult = z.infer<typeof TerminalResultSchema>;
 export type TerminalOptions = z.infer<typeof TerminalOptionsSchema>;
+export type TerminalCommandState = z.infer<typeof TerminalCommandStateSchema>; // NEW
 export type FileState = z.infer<typeof FileStateSchema>;
 export type GitState = z.infer<typeof GitStateSchema>;
 export type Session = z.infer<typeof SessionSchema>;
@@ -301,4 +336,12 @@ export function validateSession(data: unknown): Session {
 
 export function validateSessionIndex(data: unknown): SessionIndex {
   return SessionIndexSchema.parse(data);
+}
+
+export function validateScriptCommand(data: unknown): ScriptCommand {
+  return ScriptCommandSchema.parse(data);
+}
+
+export function validateTerminalCommandState(data: unknown): TerminalCommandState {
+  return TerminalCommandStateSchema.parse(data);
 } 

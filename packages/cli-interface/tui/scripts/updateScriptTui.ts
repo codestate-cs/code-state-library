@@ -26,9 +26,14 @@ export async function updateScriptTui() {
       type: "input",
     },
     {
-      name: "newScript",
-      message: "New script command (leave empty to keep current):",
-      type: "input",
+      name: "updateType",
+      message: "What would you like to update?",
+      type: "list",
+      choices: [
+        { name: "Single command (legacy)", value: "single" },
+        { name: "Multiple commands with priority", value: "multiple" },
+      ],
+      default: "single",
     },
   ]);
 
@@ -36,8 +41,63 @@ export async function updateScriptTui() {
   if (answers.newName.trim()) {
     scriptUpdate.name = answers.newName.trim();
   }
-  if (answers.newScript.trim()) {
-    scriptUpdate.script = answers.newScript.trim();
+
+  if (answers.updateType === "single") {
+    // Legacy single command update
+    const scriptAnswer = await inquirer.customPrompt([
+      {
+        name: "newScript",
+        message: "New script command (leave empty to keep current):",
+        type: "input",
+      },
+    ]);
+
+    if (scriptAnswer.newScript.trim()) {
+      scriptUpdate.script = scriptAnswer.newScript.trim();
+    }
+  } else {
+    // New multi-command update
+    const commands: any[] = [];
+    let continueAddingCommands = true;
+    let commandPriority = 1;
+
+    while (continueAddingCommands) {
+      const commandAnswers = await inquirer.customPrompt([
+        {
+          name: "commandName",
+          message: `Command name (${commandPriority}):`,
+          type: "input",
+          validate: (input: string) =>
+            input.trim() ? true : "Command name is required",
+        },
+        {
+          name: "command",
+          message: `Command (${commandPriority}):`,
+          type: "input",
+          validate: (input: string) =>
+            input.trim() ? true : "Command is required",
+        },
+        {
+          name: "addAnotherCommand",
+          message: "Add another command?",
+          type: "confirm",
+          default: true,
+        },
+      ]);
+
+      commands.push({
+        name: commandAnswers.commandName.trim(),
+        command: commandAnswers.command.trim(),
+        priority: commandPriority,
+      });
+
+      commandPriority++;
+      continueAddingCommands = commandAnswers.addAnotherCommand;
+    }
+
+    if (commands.length > 0) {
+      scriptUpdate.commands = commands;
+    }
   }
 
   await updateScriptCommand(

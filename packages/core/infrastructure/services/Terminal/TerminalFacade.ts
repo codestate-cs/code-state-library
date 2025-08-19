@@ -4,6 +4,7 @@ import { FileLogger } from '@codestate/infrastructure/services/FileLogger';
 import { ITerminalService } from '@codestate/core/domain/ports/ITerminalService';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 import { TerminalCommand, TerminalResult, TerminalOptions } from '@codestate/core/domain/models/Terminal';
+import { TerminalCommandState } from '@codestate/core/domain/models/Session';
 import { Result } from '@codestate/core/domain/models/Result';
 import * as path from 'path';
 
@@ -45,5 +46,9 @@ export class TerminalFacade implements ITerminalService {
 
   async getShell(): Promise<Result<string>> {
     return this.service.getShell();
+  }
+
+  async getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>> {
+    return this.service.getLastCommandsFromTerminals();
   }
 } 

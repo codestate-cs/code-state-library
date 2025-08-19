@@ -1,14 +1,13 @@
 // Main entry point for CLI/IDE to interact with sessions (no DI required)
-import { SessionService } from '@codestate/core/services/session/SessionService';
-import { SessionRepository } from '@codestate/infrastructure/repositories/SessionRepository';
-import { FileLogger } from '@codestate/infrastructure/services/FileLogger';
-import { BasicEncryption } from '@codestate/infrastructure/services/BasicEncryption';
-import { FileStorage } from '@codestate/infrastructure/services/FileStorage';
 import { ISessionService } from '@codestate/core/domain/ports/ISessionService';
+import { SessionService } from './SessionService';
+import { SessionRepository } from '@codestate/infrastructure/repositories/SessionRepository';
+import { FileStorage } from '@codestate/infrastructure/services/FileStorage';
+import { BasicEncryption } from '@codestate/infrastructure/services/BasicEncryption';
+import { FileLogger } from '@codestate/infrastructure/services/FileLogger';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 import { IEncryptionService } from '@codestate/core/domain/ports/IEncryptionService';
-import { Session } from '@codestate/core/domain/models/Session';
-import { Result } from '@codestate/core/domain/models/Result';
+import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
 import * as path from 'path';
 
 export class SessionFacade implements ISessionService {
@@ -31,7 +30,8 @@ export class SessionFacade implements ISessionService {
     };
     const storage = new FileStorage(_logger, _encryption, fileStorageConfig);
     const repository = new SessionRepository(_logger, storage);
-    this.service = new SessionService(repository);
+    const terminalService = new TerminalFacade(_logger); // NEW: Terminal service for command capture
+    this.service = new SessionService(repository, terminalService); // NEW: Pass terminal service
   }
 
   async saveSession(...args: Parameters<ISessionService['saveSession']>) {

@@ -1,4 +1,5 @@
 import { TerminalCommand, TerminalResult, TerminalOptions } from '../models/Terminal';
+import { TerminalCommandState } from '../models/Session';
 import { Result } from '../models/Result';
 
 export interface ITerminalService {
@@ -12,6 +13,9 @@ export interface ITerminalService {
   // Terminal spawning
   spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
   spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
+  
+  // NEW: Terminal command capture for sessions
+  getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>>;
   
   // Utility methods
   isCommandAvailable(command: string): Promise<Result<boolean>>;

@@ -36,7 +36,21 @@ export async function showScriptsCommand() {
       logger.plainLog("─".repeat(rootPath.length + 10));
 
       pathScripts.forEach((script) => {
-        logger.plainLog(`  • ${script.name} - ${script.script}`);
+        if (script.script) {
+          // Legacy single command format
+          logger.plainLog(`  • ${script.name} - ${script.script}`);
+        } else if ((script as any).commands && (script as any).commands.length > 0) {
+          // New multi-command format
+          logger.plainLog(`  • ${script.name}:`);
+          (script as any).commands
+            .sort((a: any, b: any) => a.priority - b.priority)
+            .forEach((cmd: any) => {
+              logger.plainLog(`    ${cmd.priority}. ${cmd.name} - ${cmd.command}`);
+            });
+        } else {
+          // Fallback for empty scripts
+          logger.plainLog(`  • ${script.name} - (no commands)`);
+        }
       });
     });
 

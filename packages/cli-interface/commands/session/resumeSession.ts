@@ -10,7 +10,6 @@ import {
   UpdateSession,
   Terminal,
   ApplyStash,
-  GetScriptsByRootPath
 } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
 import {
@@ -170,39 +169,45 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       }
     }
 
-    // 5. Execute scripts for the projectRoot
-    const getScriptsByRootPath = new GetScriptsByRootPath();
-    const scriptsResult = await getScriptsByRootPath.execute(
-      session.projectRoot
-    );
-    if (scriptsResult.ok && scriptsResult.value.length > 0) {
-      // Spawn terminal windows for each script
-      for (const script of scriptsResult.value) {
-        const spawnResult = await terminal.spawnTerminal(script.script, {
-          cwd: session.projectRoot,
-          timeout: 5000, // Short timeout for spawning
-        });
+    // 5. Restore terminal commands (NEW)
+    if ((session as any).terminalCommands && (session as any).terminalCommands.length > 0) {
+      logger.plainLog("Restoring terminal commands...");
+      
+      // Sort terminals by terminalId to ensure correct order
+      const sortedTerminals = [...(session as any).terminalCommands].sort((a: any, b: any) => a.terminalId - b.terminalId);
+      
+      for (const terminalState of sortedTerminals) {
+        // Sort commands within terminal by priority
+        const sortedCommands = [...terminalState.commands].sort((a: any, b: any) => a.priority - b.priority);
+        
+        for (const terminalCmd of sortedCommands) {
+          const spawnResult = await terminal.spawnTerminal(terminalCmd.command, {
+            cwd: session.projectRoot,
+            timeout: 5000, // Short timeout for spawning
+          });
 
-        if (!spawnResult.ok) {
-          logger.error(
-            `Failed to spawn terminal for script: ${
-              script.name || script.script
-            }`,
-            {
-              error: spawnResult.error,
-            }
-          );
-        } else {
+          if (!spawnResult.ok) {
+            logger.error(
+              `Failed to spawn terminal for command: ${terminalCmd.command}`,
+              {
+                error: spawnResult.error,
+                terminalId: terminalState.terminalId,
+                commandName: terminalCmd.name,
+              }
+            );
+          } else {
+            logger.plainLog(`  Terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'}): ${terminalCmd.name} - ${terminalCmd.command}`);
+          }
+
+          // Small delay between spawning terminals to avoid overwhelming the system
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
-
-        // Small delay between spawning terminals to avoid overwhelming the system
-        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     } else {
-      logger.plainLog("No scripts to execute.");
+      logger.plainLog("No terminal commands to restore.");
     }
 
-    // 6. Open IDE and files
+    // 6. Open IDE and files (UPDATED to use position order)
 
     // Get configured IDE from config
     const getConfig = new GetConfig();
@@ -220,13 +225,21 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       if (ideResult.ok) {
         logger.log(`IDE '${configuredIDE}' opened successfully`);
 
-        // Open files if session has files
+        // Open files if session has files (UPDATED: Sort by position)
         if (session.files && session.files.length > 0) {
           const openFiles = new OpenFiles();
+          
+          // Sort files by position if available, otherwise keep original order
+          const sortedFiles = [...session.files].sort((a, b) => {
+            const posA = (a as any).position ?? Number.MAX_SAFE_INTEGER;
+            const posB = (b as any).position ?? Number.MAX_SAFE_INTEGER;
+            return posA - posB;
+          });
+
           const filesResult = await openFiles.execute({
             ide: configuredIDE,
             projectRoot: session.projectRoot,
-            files: session.files.map((file) => ({
+            files: sortedFiles.map((file) => ({
               path: file.path,
               line: file.cursor?.line,
               column: file.cursor?.column,
@@ -235,6 +248,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
           });
 
           if (filesResult.ok) {
+            logger.plainLog(`Opened ${sortedFiles.length} files in correct order`);
           } else {
             logger.error("Failed to open files in IDE", {
               error: filesResult.error,
@@ -250,6 +264,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         logger.warn("Continuing without IDE...");
       }
     } else {
+      logger.warn("No IDE configured. Files will not be opened automatically.");
     }
 
     // 7. Update session metadata (last accessed)

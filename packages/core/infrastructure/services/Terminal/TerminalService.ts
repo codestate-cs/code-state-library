@@ -1,5 +1,6 @@
 import { ITerminalService } from '@codestate/core/domain/ports/ITerminalService';
 import { TerminalCommand, TerminalResult, TerminalOptions } from '@codestate/core/domain/models/Terminal';
+import { TerminalCommandState } from '@codestate/core/domain/models/Session';
 import { Result, isFailure } from '@codestate/core/domain/models/Result';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 import { TerminalError, ErrorCode } from '@codestate/core/domain/types/ErrorTypes';
@@ -212,6 +213,96 @@ export class TerminalService implements ITerminalService {
     } catch (error) {
       this.logger.error('Failed to get shell', { error });
       return { ok: false, error: new TerminalError('Failed to get shell', ErrorCode.TERMINAL_COMMAND_FAILED) };
+    }
+  }
+
+  async getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>> {
+    this.logger.debug('TerminalService.getLastCommandsFromTerminals called');
+    
+    try {
+      const osPlatform = platform();
+      const currentCwd = process.cwd();
+      const terminalCommands: TerminalCommandState[] = [];
+      
+      if (osPlatform === 'win32') {
+        // Windows: Use tasklist to find cmd.exe processes and get their command lines
+        const result = await this.execute('tasklist /v /fo csv /nh');
+        if (result.ok) {
+          const lines = result.value.stdout.split('\n');
+          let terminalId = 1;
+          
+          for (const line of lines) {
+            if (line.includes('cmd.exe') && line.includes(currentCwd)) {
+              // Extract command from tasklist output
+              const commandMatch = line.match(/"([^"]+)"/g);
+              if (commandMatch && commandMatch.length > 1) {
+                const command = commandMatch[1].replace(/"/g, '');
+                if (command && command !== 'cmd.exe') {
+                  terminalCommands.push({
+                    terminalId: terminalId++,
+                    terminalName: `cmd-${terminalId}`,
+                    commands: [{
+                      command: command,
+                      name: `Command ${terminalId}`,
+                      priority: 1
+                    }]
+                  });
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Unix-like systems: Use ps to find terminal processes
+        const result = await this.execute('ps -eo pid,ppid,cmd --no-headers');
+        if (result.ok) {
+          const lines = result.value.stdout.split('\n');
+          let terminalId = 1;
+          
+          for (const line of lines) {
+            // Look for terminal processes (bash, zsh, etc.) in current directory
+            if ((line.includes('/bin/bash') || line.includes('/bin/zsh') || line.includes('terminal')) && 
+                line.includes(currentCwd)) {
+              // Extract the actual command being run
+              const parts = line.trim().split(/\s+/);
+              if (parts.length >= 3) {
+                const command = parts.slice(2).join(' '); // Skip pid and ppid
+                if (command && !command.includes('ps -eo')) {
+                  terminalCommands.push({
+                    terminalId: terminalId++,
+                    terminalName: `terminal-${terminalId}`,
+                    commands: [{
+                      command: command,
+                      name: `Command ${terminalId}`,
+                      priority: 1
+                    }]
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      this.logger.log('Captured terminal commands', { 
+        count: terminalCommands.length,
+        commands: terminalCommands.map(t => ({ 
+          id: t.terminalId, 
+          name: t.terminalName,
+          commandCount: t.commands.length 
+        }))
+      });
+      
+      return { ok: true, value: terminalCommands };
+    } catch (error) {
+      this.logger.error('Failed to capture terminal commands', { error });
+      return { 
+        ok: false, 
+        error: new TerminalError(
+          `Failed to capture terminal commands: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        )
+      };
     }
   }
 

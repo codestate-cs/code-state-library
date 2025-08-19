@@ -15,7 +15,7 @@ process.on("SIGINT", () => {
 
 function showHelp() {
   logger.plainLog(`
-CodeState CLI - Configuration, Script, and Git Management
+CodeState CLI - Configuration, Script, and Session Management
 
 Usage: codestate <command> [options]
 
@@ -26,18 +26,27 @@ Commands:
   config export   Export configuration to file
   config import   Import configuration from file
   
-  scripts show              Show all scripts
+  scripts show              Show all scripts (supports multi-command format)
   scripts show-by-path      Show scripts for specific root path
-  scripts create            Create scripts interactively
+  scripts create            Create scripts interactively (single or multi-command)
   scripts update            Update scripts interactively
   scripts delete            Delete scripts interactively
   scripts delete-by-path    Delete all scripts for a root path
   scripts export            Export scripts to JSON
   scripts import            Import scripts from JSON
   
-  session save              Save current session
-  session resume            Resume a saved session
+  session save              Save current session (captures terminal commands)
+  session resume            Resume a saved session (restores terminal commands & file order)
   session update            Update a saved session
+  session list              List all sessions with metadata
+  session delete            Delete a session
+
+Features:
+  • Terminal Command Capture: Sessions automatically capture running terminal commands
+  • File Position Ordering: Files are opened in the correct sequence when resuming
+  • Multi-Command Scripts: Scripts can contain multiple commands with priority
+  • Git Integration: Full Git state capture and restoration
+  • Cross-Platform: Works on Windows, macOS, and Linux
 
 Examples:
   codestate config show
@@ -45,6 +54,8 @@ Examples:
   codestate scripts show
   codestate scripts create
   codestate scripts show-by-path /home/user/project
+  codestate session save "Feature Work"
+  codestate session resume "Feature Work"
 
 Options:
   --help, -h      Show this help message

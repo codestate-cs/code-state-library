@@ -59,11 +59,11 @@ export class ScriptRepository implements IScriptRepository {
         };
       }
 
-      // Check for duplicate script command
+      // Check for duplicate script command (handle both legacy and new format)
       const existingScripts = await this.getScriptsByRootPath(
         validatedScript.rootPath
       );
-      if (existingScripts.ok) {
+      if (existingScripts.ok && validatedScript.script) {
         const duplicate = existingScripts.value.find(
           (s) => s.script === validatedScript.script
         );
@@ -170,16 +170,18 @@ export class ScriptRepository implements IScriptRepository {
           ? existingScripts.value
           : [];
 
-        // Check for duplicates across existing and new scripts
+        // Check for duplicates across existing and new scripts (handle both formats)
         const allScripts = [...existingCollection, ...rootScripts];
         const scriptCommands = new Set<string>();
         const duplicates: string[] = [];
 
         for (const script of allScripts) {
-          if (scriptCommands.has(script.script)) {
-            duplicates.push(script.script);
-          } else {
-            scriptCommands.add(script.script);
+          if (script.script) {
+            if (scriptCommands.has(script.script)) {
+              duplicates.push(script.script);
+            } else {
+              scriptCommands.add(script.script);
+            }
           }
         }
 
@@ -306,23 +308,25 @@ export class ScriptRepository implements IScriptRepository {
       const updatedScript = { ...scripts.value[scriptIndex], ...scriptUpdate };
       const validatedScript = validateScript(updatedScript);
 
-      // Check for duplicate script command (excluding the current script)
-      const duplicate = scripts.value.find(
-        (s) => s.script === validatedScript.script && s.name !== name
-      );
-      if (duplicate) {
-        this.logger.error("Duplicate script command found", {
-          script: validatedScript.script,
-          rootPath,
-        });
-        return {
-          ok: false,
-          error: new ScriptError(
-            "Script command already exists",
-            ErrorCode.SCRIPT_DUPLICATE,
-            { script: validatedScript.script, rootPath }
-          ),
-        };
+      // Check for duplicate script command (excluding the current script, handle both formats)
+      if (validatedScript.script) {
+        const duplicate = scripts.value.find(
+          (s) => s.script === validatedScript.script && s.name !== name
+        );
+        if (duplicate) {
+          this.logger.error("Duplicate script command found", {
+            script: validatedScript.script,
+            rootPath,
+          });
+          return {
+            ok: false,
+            error: new ScriptError(
+              "Script command already exists",
+              ErrorCode.SCRIPT_DUPLICATE,
+              { script: validatedScript.script, rootPath }
+            ),
+          };
+        }
       }
 
       // Update in collection
@@ -416,17 +420,19 @@ export class ScriptRepository implements IScriptRepository {
           updatedNames.add(update.name);
         }
 
-        // Check for duplicates (excluding updated scripts)
+        // Check for duplicates (excluding updated scripts, handle both formats)
         const scriptCommands = new Set<string>();
         const duplicates: string[] = [];
 
         for (const script of updatedScripts) {
-          if (scriptCommands.has(script.script)) {
-            if (!updatedNames.has(script.name)) {
-              duplicates.push(script.script);
+          if (script.script) {
+            if (scriptCommands.has(script.script)) {
+              if (!updatedNames.has(script.name)) {
+                duplicates.push(script.script);
+              }
+            } else {
+              scriptCommands.add(script.script);
             }
-          } else {
-            scriptCommands.add(script.script);
           }
         }
 
