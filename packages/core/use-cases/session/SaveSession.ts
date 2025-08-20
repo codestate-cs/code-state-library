@@ -18,6 +18,7 @@ export class SaveSession {
     files?: Session['files'];
     git: Session['git'];
     extensions?: Session['extensions'];
+    terminalCommands?: Session['terminalCommands'];
   }): Promise<Result<Session>> {
     const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
@@ -33,6 +34,7 @@ export class SaveSession {
       files: input.files || [],
       git: input.git,
       extensions: input.extensions,
+      terminalCommands: input.terminalCommands,
     });
   }
 } 

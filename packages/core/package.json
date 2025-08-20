@@ -1,6 +1,6 @@
 {
   "name": "codestate-core",
-  "version": "1.4.0",
+  "version": "1.4.2",
   "description": "Core domain models, use cases, and services for CodeState",
 
   "main": "./dist/index.cjs",

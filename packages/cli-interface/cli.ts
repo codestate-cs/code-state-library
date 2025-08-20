@@ -34,6 +34,7 @@ Commands:
   scripts delete-by-path    Delete all scripts for a root path
   scripts export            Export scripts to JSON
   scripts import            Import scripts from JSON
+  scripts resume            Execute a script by name (supports multi-command format)
   
   session save              Save current session (captures terminal commands)
   session resume            Resume a saved session (restores terminal commands & file order)
@@ -54,6 +55,8 @@ Examples:
   codestate scripts show
   codestate scripts create
   codestate scripts show-by-path /home/user/project
+  codestate scripts resume
+  codestate scripts resume "build-and-test"
   codestate session save "Feature Work"
   codestate session resume "Feature Work"
 

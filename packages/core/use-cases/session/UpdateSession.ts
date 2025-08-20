@@ -16,6 +16,7 @@ export class UpdateSession {
     files?: Session['files'];
     git?: Session['git'];
     extensions?: Session['extensions'];
+    terminalCommands?: Session['terminalCommands'];
   }): Promise<Result<Session>> {
     return this.sessionService.updateSession(idOrName, input);
   }

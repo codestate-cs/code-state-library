@@ -31,11 +31,11 @@ export interface GitState {
 export interface TerminalCommandState {
   terminalId: number;
   terminalName?: string; // Optional terminal name if available
-  commands: TerminalCommand[]; // Array of commands with priority
+  commands: SessionTerminalCommand[]; // Array of commands with priority
 }
 
 // NEW: Individual terminal command with priority
-export interface TerminalCommand {
+export interface SessionTerminalCommand {
   command: string;
   name: string;
   priority: number;

@@ -183,15 +183,18 @@ export const GitStateSchema = z.object({
   stashId: z.string().nullable().optional(),
 });
 
+// NEW: Session terminal command schema
+export const SessionTerminalCommandSchema = z.object({
+  command: z.string(),
+  name: z.string(),
+  priority: z.number().int().min(0, 'Priority must be non-negative integer'),
+});
+
 // NEW: Terminal command state schema
 export const TerminalCommandStateSchema = z.object({
   terminalId: z.number(),
   terminalName: z.string().optional(),
-  commands: z.array(z.object({
-    command: z.string(),
-    name: z.string(),
-    priority: z.number().int().min(0, 'Priority must be non-negative integer'),
-  })),
+  commands: z.array(SessionTerminalCommandSchema),
 });
 
 export const SessionSchema = z.object({
@@ -248,6 +251,7 @@ export const SchemaRegistry = {
   TerminalCommand: TerminalCommandSchema,
   TerminalResult: TerminalResultSchema,
   TerminalOptions: TerminalOptionsSchema,
+  SessionTerminalCommand: SessionTerminalCommandSchema, // NEW
   TerminalCommandState: TerminalCommandStateSchema, // NEW
   FileState: FileStateSchema,
   GitState: GitStateSchema,
@@ -278,6 +282,7 @@ export type GitStashApplyResult = z.infer<typeof GitStashApplyResultSchema>;
 export type TerminalCommand = z.infer<typeof TerminalCommandSchema>;
 export type TerminalResult = z.infer<typeof TerminalResultSchema>;
 export type TerminalOptions = z.infer<typeof TerminalOptionsSchema>;
+export type SessionTerminalCommand = z.infer<typeof SessionTerminalCommandSchema>; // NEW
 export type TerminalCommandState = z.infer<typeof TerminalCommandStateSchema>; // NEW
 export type FileState = z.infer<typeof FileStateSchema>;
 export type GitState = z.infer<typeof GitStateSchema>;
@@ -324,6 +329,10 @@ export function validateGitStash(data: unknown): GitStash {
 
 export function validateTerminalCommand(data: unknown): TerminalCommand {
   return TerminalCommandSchema.parse(data);
+}
+
+export function validateSessionTerminalCommand(data: unknown): SessionTerminalCommand {
+  return SessionTerminalCommandSchema.parse(data);
 }
 
 export function validateTerminalResult(data: unknown): TerminalResult {

@@ -1,5 +1,6 @@
 import { ConfigurableLogger } from "@codestate/core";
 import { showScriptsByRootPathCommand } from "../../commands/scripts/showScriptsByRootPath";
+import { resumeScriptCommand } from "../../commands/scripts/resumeScript";
 import { createScriptTui } from "./createScriptTui";
 import { deleteScriptTui } from "./deleteScriptTui";
 import { deleteScriptsByRootPathTui } from "./deleteScriptsByRootPathTui";
@@ -7,6 +8,7 @@ import { exportScriptsTui } from "./exportScriptsTui";
 import { importScriptsTui } from "./importScriptsTui";
 import { showScriptsTui } from "./showScriptsTui";
 import { updateScriptTui } from "./updateScriptTui";
+import { resumeScriptTui } from "./resumeScriptTui";
 
 export async function handleScriptCommand(
   subcommand: string,
@@ -44,10 +46,19 @@ export async function handleScriptCommand(
     case "import":
       await importScriptsTui();
       break;
+    case "resume":
+      if (options.length > 0) {
+        // If script name is provided as argument, use it
+        await resumeScriptCommand(options[0]);
+      } else {
+        // Otherwise, use interactive mode
+        await resumeScriptTui();
+      }
+      break;
     default:
       logger.error(`Error: Unknown scripts subcommand '${subcommand}'`);
       logger.plainLog(
-        "Available scripts subcommands: show, show-by-path, create, update, delete, delete-by-path, export, import"
+        "Available scripts subcommands: show, show-by-path, create, update, delete, delete-by-path, export, import, resume"
       );
       process.exit(1);
   }

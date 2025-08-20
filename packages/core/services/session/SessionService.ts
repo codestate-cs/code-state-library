@@ -55,6 +55,7 @@ export class SessionService implements ISessionService {
       files: input.files ?? oldSession.files,
       git: input.git ?? oldSession.git,
       extensions: input.extensions ?? oldSession.extensions,
+      terminalCommands: input.terminalCommands ?? oldSession.terminalCommands,
     };
     const result = await this.repository.save(updated);
     if (isFailure(result)) return { ok: false, error: result.error };
