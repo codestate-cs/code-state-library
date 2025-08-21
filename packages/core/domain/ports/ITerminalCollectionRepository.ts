@@ -6,6 +6,7 @@ export interface ITerminalCollectionRepository {
   createTerminalCollection(terminalCollection: TerminalCollection): Promise<Result<void>>;
   getTerminalCollection(name: string, rootPath?: string): Promise<Result<TerminalCollection>>;
   getAllTerminalCollections(): Promise<Result<TerminalCollection[]>>;
+  getTerminalCollectionById(id: string): Promise<Result<TerminalCollection>>;
   getTerminalCollectionsByRootPath(rootPath: string): Promise<Result<TerminalCollection[]>>;
   getTerminalCollectionsByLifecycle(lifecycle: LifecycleEvent, rootPath: string): Promise<Result<TerminalCollection[]>>;
   updateTerminalCollection(name: string, rootPath: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>>;
