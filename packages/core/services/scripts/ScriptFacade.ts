@@ -46,6 +46,10 @@ export class ScriptFacade implements IScriptService {
     return this.service.getAllScripts(...args);
   }
 
+  async getScriptById(...args: Parameters<IScriptService['getScriptById']>) {
+    return this.service.getScriptById(...args);
+  }
+
   async updateScript(...args: Parameters<IScriptService['updateScript']>) {
     return this.service.updateScript(...args);
   }

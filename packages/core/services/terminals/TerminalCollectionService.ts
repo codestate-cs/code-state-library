@@ -37,6 +37,18 @@ export class TerminalCollectionService implements ITerminalCollectionService {
     return result;
   }
 
+  async getTerminalCollectionById(id: string): Promise<Result<TerminalCollection>> {
+    this.logger.debug('TerminalCollectionService.getTerminalCollectionById called', { id });
+    
+    const result = await this.repository.getTerminalCollectionById(id);
+    if (isFailure(result)) {
+      this.logger.error('Failed to get terminal collection by ID', { error: result.error, id });
+    } else {
+      this.logger.log('Terminal collection retrieved successfully by ID', { id });
+    }
+    return result;
+  }
+
   async getTerminalCollectionWithScripts(name: string, rootPath?: string): Promise<Result<TerminalCollectionWithScripts>> {
     this.logger.debug('TerminalCollectionService.getTerminalCollectionWithScripts called', { name, rootPath });
     
@@ -68,13 +80,58 @@ export class TerminalCollectionService implements ITerminalCollectionService {
     }
 
     const terminalCollectionWithScripts: TerminalCollectionWithScripts = {
+      id: terminalCollection.id,
       name: terminalCollection.name,
       rootPath: terminalCollection.rootPath,
       lifecycle: terminalCollection.lifecycle,
-      scripts: scripts
+      scripts: scripts,
+      closeTerminalAfterExecution: terminalCollection.closeTerminalAfterExecution
     };
 
     this.logger.log('Terminal collection with scripts retrieved successfully', { name, rootPath, scriptCount: scripts.length });
+    return { ok: true, value: terminalCollectionWithScripts };
+  }
+
+  async getTerminalCollectionWithScriptsById(id: string): Promise<Result<TerminalCollectionWithScripts>> {
+    this.logger.debug('TerminalCollectionService.getTerminalCollectionWithScriptsById called', { id });
+    
+    // Get the terminal collection with references
+    const terminalCollectionResult = await this.getTerminalCollectionById(id);
+    if (isFailure(terminalCollectionResult)) {
+      return terminalCollectionResult;
+    }
+
+    const terminalCollection = terminalCollectionResult.value;
+    
+    // Load the actual scripts for each reference
+    const scripts = [];
+    for (const scriptRef of terminalCollection.scriptReferences) {
+      // TODO: We need to implement getScriptById in the script service
+      // For now, we'll need to get all scripts and find by ID
+      const allScriptsResult = await this.scriptService.getAllScripts();
+      if (isFailure(allScriptsResult)) {
+        this.logger.error('Failed to get scripts for terminal collection', { error: allScriptsResult.error, id });
+        return allScriptsResult;
+      }
+      
+      const script = allScriptsResult.value.find(s => s.name === scriptRef.id && s.rootPath === scriptRef.rootPath);
+      if (script) {
+        scripts.push(script);
+      } else {
+        this.logger.warn('Script not found for reference', { scriptId: scriptRef.id, rootPath: scriptRef.rootPath });
+      }
+    }
+
+    const terminalCollectionWithScripts: TerminalCollectionWithScripts = {
+      id: terminalCollection.id,
+      name: terminalCollection.name,
+      rootPath: terminalCollection.rootPath,
+      lifecycle: terminalCollection.lifecycle,
+      scripts: scripts,
+      closeTerminalAfterExecution: terminalCollection.closeTerminalAfterExecution
+    };
+
+    this.logger.log('Terminal collection with scripts retrieved successfully by ID', { id, scriptCount: scripts.length });
     return { ok: true, value: terminalCollectionWithScripts };
   }
 
@@ -207,64 +264,249 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
     // Execute each script in the terminal collection
     for (const script of terminalCollection.scripts) {
-      this.logger.debug('Executing script in terminal collection', { scriptName: script.name, terminalCollectionName: name });
+      // Get execution mode from script, default to new-terminals for terminal collections
+      const executionMode = (script as any).executionMode || 'new-terminals';
+      
+      // Terminal collection setting takes precedence over individual script settings
+      const terminalCollectionCloseAfterExecution = (terminalCollection as any).closeTerminalAfterExecution || false;
       
       if (script.commands && script.commands.length > 0) {
         // Execute commands in order of priority
         const sortedCommands = script.commands.sort((a, b) => a.priority - b.priority);
         
-        for (const command of sortedCommands) {
-          this.logger.debug('Executing command', { commandName: command.name, command: command.command });
+        if (executionMode === 'new-terminals') {
+          // Create a combined command that runs all commands in sequence
+          const combinedCommand = sortedCommands
+            .map(cmd => cmd.command)
+            .join(' && ');
           
-          const terminalResult = await this.terminalService.executeCommand({
-            command: command.command,
+          // Terminal collection setting takes precedence over individual script settings
+          const closeAfterExecution = terminalCollectionCloseAfterExecution;
+          
+          // Modify command based on close behavior
+          let finalCommand = combinedCommand;
+          if (closeAfterExecution) {
+            finalCommand = `${combinedCommand} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
+          } else {
+            finalCommand = `${combinedCommand} && echo 'Script execution completed. Terminal will remain open.'`;
+          }
+          
+          const spawnResult = await this.terminalService.spawnTerminalCommand({
+            command: finalCommand,
             cwd: targetRootPath
           });
           
-          if (isFailure(terminalResult)) {
-            this.logger.error('Failed to execute command', { error: terminalResult.error, command: command.command });
-            return terminalResult;
+          if (isFailure(spawnResult)) {
+            this.logger.error('Failed to spawn terminal for script', { error: spawnResult.error, scriptName: script.name });
+            return spawnResult;
           }
-          
-          if (!terminalResult.value.success) {
-            this.logger.error('Command execution failed', { 
-              command: command.command, 
-              exitCode: terminalResult.value.exitCode,
-              stderr: terminalResult.value.stderr 
+        } else {
+          // Execute commands in sequence in the same terminal
+          for (const command of sortedCommands) {
+            const executeResult = await this.terminalService.executeCommand({
+              command: command.command,
+              cwd: targetRootPath
             });
-            return { ok: false, error: new Error(`Command '${command.command}' failed with exit code ${terminalResult.value.exitCode}`) };
+            
+            if (isFailure(executeResult)) {
+              this.logger.error('Failed to execute command', { error: executeResult.error, command: command.command });
+              return executeResult;
+            }
+            
+            if (!executeResult.value.success) {
+              this.logger.error('Command execution failed', { 
+                command: command.command, 
+                exitCode: executeResult.value.exitCode,
+                stderr: executeResult.value.stderr 
+              });
+              return { ok: false, error: new Error(`Command '${command.command}' failed with exit code ${executeResult.value.exitCode}`) };
+            }
+            
+            // Small delay between commands
+            if (command.priority < sortedCommands.length) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
           }
-          
-          this.logger.log('Command executed successfully', { commandName: command.name, command: command.command });
         }
       } else if (script.script) {
         // Execute legacy single script
-        this.logger.debug('Executing legacy script', { script: script.script });
-        
-        const terminalResult = await this.terminalService.executeCommand({
-          command: script.script,
-          cwd: targetRootPath
-        });
-        
-        if (isFailure(terminalResult)) {
-          this.logger.error('Failed to execute legacy script', { error: terminalResult.error, script: script.script });
-          return terminalResult;
-        }
-        
-        if (!terminalResult.value.success) {
-          this.logger.error('Legacy script execution failed', { 
-            script: script.script, 
-            exitCode: terminalResult.value.exitCode,
-            stderr: terminalResult.value.stderr 
+        if (executionMode === 'new-terminals') {
+          // Terminal collection setting takes precedence over individual script settings
+          const closeAfterExecution = terminalCollectionCloseAfterExecution;
+          
+          // Modify command based on close behavior
+          let finalCommand = script.script;
+          if (closeAfterExecution) {
+            finalCommand = `${script.script} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
+          } else {
+            finalCommand = `${script.script} && echo 'Script execution completed. Terminal will remain open.'`;
+          }
+          
+          const spawnResult = await this.terminalService.spawnTerminalCommand({
+            command: finalCommand,
+            cwd: targetRootPath
           });
-          return { ok: false, error: new Error(`Script '${script.script}' failed with exit code ${terminalResult.value.exitCode}`) };
+          
+          if (isFailure(spawnResult)) {
+            this.logger.error('Failed to spawn terminal for legacy script', { error: spawnResult.error, script: script.script });
+            return spawnResult;
+          }
+        } else {
+          const executeResult = await this.terminalService.executeCommand({
+            command: script.script,
+            cwd: targetRootPath
+          });
+          
+          if (isFailure(executeResult)) {
+            this.logger.error('Failed to execute legacy script', { error: executeResult.error, script: script.script });
+            return executeResult;
+          }
+          
+          if (!executeResult.value.success) {
+            this.logger.error('Legacy script execution failed', { 
+              script: script.script, 
+              exitCode: executeResult.value.exitCode,
+              stderr: executeResult.value.stderr 
+            });
+            return { ok: false, error: new Error(`Script '${script.script}' failed with exit code ${executeResult.value.exitCode}`) };
+          }
         }
         
-        this.logger.log('Legacy script executed successfully', { script: script.script });
+        // Small delay between scripts
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 
-    this.logger.log('Terminal collection executed successfully', { name, rootPath: targetRootPath });
+    return { ok: true, value: undefined };
+  }
+
+  async executeTerminalCollectionById(id: string): Promise<Result<void>> {
+    this.logger.debug('TerminalCollectionService.executeTerminalCollectionById called', { id });
+    
+    // Get the terminal collection with loaded scripts by ID
+    const terminalCollectionResult = await this.getTerminalCollectionWithScriptsById(id);
+    if (isFailure(terminalCollectionResult)) {
+      return terminalCollectionResult;
+    }
+
+    const terminalCollection = terminalCollectionResult.value;
+    const targetRootPath = terminalCollection.rootPath;
+
+    // Execute each script in the terminal collection
+    for (const script of terminalCollection.scripts) {
+      // Get execution mode from script, default to new-terminals for terminal collections
+      const executionMode = (script as any).executionMode || 'new-terminals';
+      
+      // Terminal collection setting takes precedence over individual script settings
+      const terminalCollectionCloseAfterExecution = (terminalCollection as any).closeTerminalAfterExecution || false;
+      
+      if (script.commands && script.commands.length > 0) {
+        // Execute commands in order of priority
+        const sortedCommands = script.commands.sort((a, b) => a.priority - b.priority);
+        
+        if (executionMode === 'new-terminals') {
+          // Create a combined command that runs all commands in sequence
+          const combinedCommand = sortedCommands
+            .map(cmd => cmd.command)
+            .join(' && ');
+          
+          // Terminal collection setting takes precedence over individual script settings
+          const closeAfterExecution = terminalCollectionCloseAfterExecution;
+          
+          // Modify command based on close behavior
+          let finalCommand = combinedCommand;
+          if (closeAfterExecution) {
+            finalCommand = `${combinedCommand} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
+          } else {
+            finalCommand = `${combinedCommand} && echo 'Script execution completed. Terminal will remain open.'`;
+          }
+          
+          const spawnResult = await this.terminalService.spawnTerminalCommand({
+            command: finalCommand,
+            cwd: targetRootPath
+          });
+          
+          if (isFailure(spawnResult)) {
+            this.logger.error('Failed to spawn terminal for script', { error: spawnResult.error, scriptName: script.name });
+            return spawnResult;
+          }
+        } else {
+          // Execute commands in sequence in the same terminal
+          for (const command of sortedCommands) {
+            const executeResult = await this.terminalService.executeCommand({
+              command: command.command,
+              cwd: targetRootPath
+            });
+            
+            if (isFailure(executeResult)) {
+              this.logger.error('Failed to execute command', { error: executeResult.error, command: command.command });
+              return executeResult;
+            }
+            
+            if (!executeResult.value.success) {
+              this.logger.error('Command execution failed', { 
+                command: command.command, 
+                exitCode: executeResult.value.exitCode,
+                stderr: executeResult.value.stderr 
+              });
+              return { ok: false, error: new Error(`Command '${command.command}' failed with exit code ${executeResult.value.exitCode}`) };
+            }
+            
+            // Small delay between commands
+            if (command.priority < sortedCommands.length) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
+        }
+      } else if (script.script) {
+        // Execute legacy single script
+        if (executionMode === 'new-terminals') {
+          // Terminal collection setting takes precedence over individual script settings
+          const closeAfterExecution = terminalCollectionCloseAfterExecution;
+          
+          // Modify command based on close behavior
+          let finalCommand = script.script;
+          if (closeAfterExecution) {
+            finalCommand = `${script.script} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
+          } else {
+            finalCommand = `${script.script} && echo 'Script execution completed. Terminal will remain open.'`;
+          }
+          
+          const spawnResult = await this.terminalService.spawnTerminalCommand({
+            command: finalCommand,
+            cwd: targetRootPath
+          });
+          
+          if (isFailure(spawnResult)) {
+            this.logger.error('Failed to spawn terminal for legacy script', { error: spawnResult.error, script: script.script });
+            return spawnResult;
+          }
+        } else {
+          const executeResult = await this.terminalService.executeCommand({
+            command: script.script,
+            cwd: targetRootPath
+          });
+          
+          if (isFailure(executeResult)) {
+            this.logger.error('Failed to execute legacy script', { error: executeResult.error, script: script.script });
+            return executeResult;
+          }
+          
+          if (!executeResult.value.success) {
+            this.logger.error('Legacy script execution failed', { 
+              script: script.script, 
+              exitCode: executeResult.value.exitCode,
+              stderr: executeResult.value.stderr 
+            });
+            return { ok: false, error: new Error(`Script '${script.script}' failed with exit code ${executeResult.value.exitCode}`) };
+          }
+        }
+        
+        // Small delay between scripts
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+
     return { ok: true, value: undefined };
   }
 }

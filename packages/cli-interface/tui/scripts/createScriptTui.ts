@@ -52,10 +52,44 @@ async function createScriptsInteractively() {
         },
       ]);
 
+      // Ask for execution mode for single command scripts
+      const executionModeAnswer = await inquirer.customPrompt([
+        {
+          name: "executionMode",
+          message: "How should this command be executed?",
+          type: "list",
+          choices: [
+            { name: "Same terminal (run in current terminal)", value: "same-terminal" },
+            { name: "New terminal (open new terminal window and run)", value: "new-terminals" },
+          ],
+          default: "same-terminal",
+        },
+      ]);
+
+      // Ask about terminal close behavior only if new terminal mode is selected
+      let closeTerminalAfterExecution = false;
+      if (executionModeAnswer.executionMode === 'new-terminals') {
+        const closeAnswer = await inquirer.customPrompt([
+          {
+            name: "closeTerminalAfterExecution",
+            message: "Should the terminal close after running the command?",
+            type: "list",
+            choices: [
+              { name: "Keep terminal open (useful for debugging, manual follow-up)", value: false },
+              { name: "Close terminal automatically (clean exit)", value: true },
+            ],
+            default: false,
+          },
+        ]);
+        closeTerminalAfterExecution = closeAnswer.closeTerminalAfterExecution;
+      }
+
       scripts.push({
         name: answers.name.trim(),
         rootPath: answers.rootPath.trim(),
         script: scriptAnswer.script.trim(),
+        executionMode: executionModeAnswer.executionMode,
+        closeTerminalAfterExecution,
       });
     } else {
       // New multiple commands format
@@ -97,10 +131,44 @@ async function createScriptsInteractively() {
         continueAddingCommands = commandAnswers.addAnotherCommand;
       }
 
+      // Ask for execution mode for multi-command scripts
+      const executionModeAnswer = await inquirer.customPrompt([
+        {
+          name: "executionMode",
+          message: "How should these commands be executed?",
+          type: "list",
+          choices: [
+            { name: "Same terminal (run all commands in sequence)", value: "same-terminal" },
+            { name: "New terminal (open new terminal window and run all commands in sequence)", value: "new-terminals" },
+          ],
+          default: "same-terminal",
+        },
+      ]);
+
+      // Ask about terminal close behavior only if new terminal mode is selected
+      let closeTerminalAfterExecution = false;
+      if (executionModeAnswer.executionMode === 'new-terminals') {
+        const closeAnswer = await inquirer.customPrompt([
+          {
+            name: "closeTerminalAfterExecution",
+            message: "Should the terminal close after running all commands?",
+            type: "list",
+            choices: [
+              { name: "Keep terminal open (useful for debugging, manual follow-up)", value: false },
+              { name: "Close terminal automatically (clean exit)", value: true },
+            ],
+            default: false,
+          },
+        ]);
+        closeTerminalAfterExecution = closeAnswer.closeTerminalAfterExecution;
+      }
+
       scripts.push({
         name: answers.name.trim(),
         rootPath: answers.rootPath.trim(),
         commands: commands,
+        executionMode: executionModeAnswer.executionMode,
+        closeTerminalAfterExecution,
       });
     }
 

@@ -54,59 +54,104 @@ export async function resumeScriptCommand(scriptName?: string, rootPath?: string
       return;
     }
 
-    logger.plainLog(`\n📜 Resuming script: "${targetScript.name}"`);
-    logger.plainLog(`📍 Path: ${targetRootPath}`);
+    logger.plainLog(`📜 Resuming script: "${targetScript.name}"`);
 
-    // Execute the script
+    // Execute the script based on execution mode
+    const executionMode = (targetScript as any).executionMode || 'same-terminal';
+    
     if (targetScript.script) {
       // Legacy single command format
-      logger.plainLog(`\n🔄 Running: ${targetScript.script}`);
-      const scriptResult = await terminal.execute(targetScript.script, {
-        cwd: targetRootPath,
-        timeout: 30000, // 30 seconds timeout for script execution
-      });
-      
-      if (scriptResult.ok && scriptResult.value.success) {
-        logger.plainLog(`\n✅ Script '${targetScript.name}' completed successfully`);
-        logger.plainLog(`⏱️  Duration: ${scriptResult.value.duration}ms`);
-      } else {
-        logger.error(`\n❌ Script '${targetScript.name}' failed`, {
-          error: scriptResult.ok ? scriptResult.value : scriptResult.error,
+      if (executionMode === 'new-terminals') {
+        // Check if terminal should close after execution
+        const closeAfterExecution = (targetScript as any).closeTerminalAfterExecution || false;
+        
+        // Modify command based on close behavior
+        let finalCommand = targetScript.script;
+        if (closeAfterExecution) {
+          finalCommand = `${targetScript.script} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
+        } else {
+          finalCommand = `${targetScript.script} && echo 'Script execution completed. Terminal will remain open.'`;
+        }
+        
+        const spawnResult = await terminal.spawnTerminal(finalCommand, {
+          cwd: targetRootPath,
+          timeout: 5000,
         });
+        
+        if (spawnResult.ok) {
+          logger.plainLog(`✅ Script executed in new terminal`);
+        } else {
+          logger.error(`❌ Failed to spawn terminal`, { error: spawnResult.error });
+        }
+      } else {
+        // Same terminal execution
+        const scriptResult = await terminal.execute(targetScript.script, {
+          cwd: targetRootPath,
+          timeout: 30000,
+        });
+        
+        if (scriptResult.ok && scriptResult.value.success) {
+          logger.plainLog(`✅ Script completed successfully`);
+        } else {
+          logger.error(`❌ Script failed`, { error: scriptResult.ok ? scriptResult.value : scriptResult.error });
+        }
       }
     } else if ((targetScript as any).commands && (targetScript as any).commands.length > 0) {
-      // New multi-command format - execute commands one by one
+      // New multi-command format
       const commands = (targetScript as any).commands.sort((a: any, b: any) => a.priority - b.priority);
       
-      logger.plainLog(`\n🔄 Executing ${commands.length} command(s) in sequence:`);
-      
-      for (const cmd of commands) {
-        logger.plainLog(`\n  ${cmd.priority}. Running: ${cmd.name} - ${cmd.command}`);
-        const cmdResult = await terminal.execute(cmd.command, {
+      if (executionMode === 'new-terminals') {
+        // Create a combined command that runs all commands in sequence
+        const combinedCommand = commands
+          .sort((a: any, b: any) => a.priority - b.priority)
+          .map((cmd: any) => cmd.command)
+          .join(' && ');
+        
+        // Check if terminal should close after execution
+        const closeAfterExecution = (targetScript as any).closeTerminalAfterExecution || false;
+        
+        // Modify command based on close behavior
+        let finalCommand = combinedCommand;
+        if (closeAfterExecution) {
+          finalCommand = `${combinedCommand} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
+        } else {
+          finalCommand = `${combinedCommand} && echo 'Script execution completed. Terminal will remain open.'`;
+        }
+        
+        const spawnResult = await terminal.spawnTerminal(finalCommand, {
           cwd: targetRootPath,
-          timeout: 30000, // 30 seconds timeout per command
+          timeout: 5000,
         });
         
-        if (cmdResult.ok && cmdResult.value.success) {
-          logger.plainLog(`    ✅ Command '${cmd.name}' completed successfully`);
-          logger.plainLog(`    ⏱️  Duration: ${cmdResult.value.duration}ms`);
+        if (spawnResult.ok) {
+          logger.plainLog(`✅ Script executed in new terminal`);
         } else {
-          logger.error(`    ❌ Command '${cmd.name}' failed`, {
-            error: cmdResult.ok ? cmdResult.value : cmdResult.error,
+          logger.error(`❌ Failed to spawn terminal`, { error: spawnResult.error });
+        }
+      } else {
+        // Execute commands in sequence in the same terminal
+        for (const cmd of commands) {
+          const cmdResult = await terminal.execute(cmd.command, {
+            cwd: targetRootPath,
+            timeout: 30000,
           });
-          // Continue with next command even if this one fails
+          
+          if (!cmdResult.ok || !cmdResult.value.success) {
+            logger.error(`❌ Command '${cmd.name}' failed`, {
+              error: cmdResult.ok ? cmdResult.value : cmdResult.error,
+            });
+          }
+          
+          // Small delay between commands
+          if (cmd.priority < commands.length) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
         }
         
-        // Small delay between commands to avoid overwhelming the system
-        if (cmd.priority < commands.length) {
-          logger.plainLog(`    ⏳ Waiting 1 second before next command...`);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
+        logger.plainLog(`✅ Script completed successfully`);
       }
-      
-      logger.plainLog(`\n✅ Script '${targetScript.name}' execution completed`);
     } else {
-      logger.warn(`\n⚠️  Script '${targetScript.name}' has no commands to execute`);
+      logger.warn(`⚠️  Script has no commands to execute`);
     }
 
   } catch (error) {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 
 // Core schemas for configuration and validation
 export const LogLevelSchema = z.enum(['ERROR', 'WARN', 'LOG', 'DEBUG']);
@@ -67,6 +68,7 @@ export const ConfigSchema = z.object({
 export const LifecycleEventSchema = z.enum(['open', 'resume', 'none']);
 
 export const ScriptSchema = z.object({
+  id: z.string().uuid('Invalid UUID format').default(() => randomUUID()),
   name: z.string().min(1, 'Script name is required'),
   rootPath: z.string().min(1, 'Root path is required'),
   script: z.string().min(1, 'Script command is required').optional(), // DEPRECATED: Backward compatible
@@ -76,6 +78,8 @@ export const ScriptSchema = z.object({
     priority: z.number().int().min(0, 'Priority must be non-negative integer'),
   })).optional(), // NEW: Backward compatible
   lifecycle: z.array(LifecycleEventSchema).optional(), // NEW: Optional lifecycle for individual scripts
+  executionMode: z.enum(['same-terminal', 'new-terminals']).default('same-terminal'), // NEW: Control how commands are executed
+  closeTerminalAfterExecution: z.boolean().default(false), // NEW: Control whether to close terminal after execution
 }).refine((data) => {
   // Ensure either script or commands is provided
   return data.script !== undefined || (data.commands !== undefined && data.commands.length > 0);
@@ -92,6 +96,7 @@ export const ScriptCommandSchema = z.object({
 });
 
 export const ScriptIndexEntrySchema = z.object({
+  id: z.string().uuid('Invalid UUID format'),
   rootPath: z.string().min(1, 'Root path is required'),
   referenceFile: z.string().min(1, 'Reference file path is required'),
 });
@@ -112,13 +117,16 @@ export const ScriptReferenceSchema = z.object({
 
 // Terminal Collection schemas
 export const TerminalCollectionSchema = z.object({
+  id: z.string().uuid('Invalid UUID format').default(() => randomUUID()),
   name: z.string().min(1, 'Terminal collection name is required'),
   rootPath: z.string().min(1, 'Root path is required'),
   lifecycle: z.array(LifecycleEventSchema).min(1, 'At least one lifecycle event is required'),
   scriptReferences: z.array(ScriptReferenceSchema).min(1, 'At least one script reference is required'),
+  closeTerminalAfterExecution: z.boolean().default(false), // NEW: Control whether to close terminal after execution
 });
 
 export const TerminalCollectionIndexEntrySchema = z.object({
+  id: z.string().uuid('Invalid UUID format'),
   name: z.string().min(1, 'Terminal collection name is required'),
   rootPath: z.string().min(1, 'Root path is required'),
   referenceFile: z.string().min(1, 'Reference file path is required'),
@@ -237,6 +245,8 @@ export const SessionSchema = z.object({
   git: GitStateSchema,
   extensions: z.record(z.string(), z.unknown()).optional(),
   terminalCommands: z.array(TerminalCommandStateSchema).optional(), // NEW: Backward compatible
+  terminalCollections: z.array(z.string()).optional(), // NEW: Terminal collection IDs
+  scripts: z.array(z.string()).optional(), // NEW: Individual script IDs
 });
 
 // Session index entry schema

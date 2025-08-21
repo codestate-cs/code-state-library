@@ -2,6 +2,7 @@ export { CreateScript } from './CreateScript';
 export { CreateScripts } from './CreateScripts';
 export { GetScripts } from './GetScripts';
 export { GetScriptsByRootPath } from './GetScriptsByRootPath';
+export { ResumeScript } from './ResumeScript';
 export { UpdateScript } from './UpdateScript';
 export { DeleteScript } from './DeleteScript';
 export { DeleteScriptsByRootPath } from './DeleteScriptsByRootPath';

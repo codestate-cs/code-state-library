@@ -180,31 +180,139 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         // Sort commands within terminal by priority
         const sortedCommands = [...terminalState.commands].sort((a: any, b: any) => a.priority - b.priority);
         
-        for (const terminalCmd of sortedCommands) {
-          const spawnResult = await terminal.spawnTerminal(terminalCmd.command, {
+        // Get execution mode from terminal state, default to new-terminals for sessions
+        const executionMode = terminalState.executionMode || 'new-terminals';
+        
+        if (executionMode === 'new-terminals') {
+          // Open new terminal window and run all commands sequentially in it
+          logger.plainLog(`  Opening new terminal for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
+          
+          // Create a combined command that runs all commands in sequence
+          const combinedCommand = sortedCommands
+            .map((cmd: any) => cmd.command)
+            .join(' && ');
+          
+          const spawnResult = await terminal.spawnTerminal(combinedCommand, {
             cwd: session.projectRoot,
             timeout: 5000, // Short timeout for spawning
           });
 
           if (!spawnResult.ok) {
             logger.error(
-              `Failed to spawn terminal for command: ${terminalCmd.command}`,
+              `Failed to spawn new terminal for terminal ${terminalState.terminalId}`,
               {
                 error: spawnResult.error,
                 terminalId: terminalState.terminalId,
-                commandName: terminalCmd.name,
+                terminalName: terminalState.terminalName,
               }
             );
           } else {
-            logger.plainLog(`  Terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'}): ${terminalCmd.name} - ${terminalCmd.command}`);
+            logger.plainLog(`  ✅ New terminal spawned for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
+            logger.plainLog(`  📱 All commands will run sequentially in the new terminal window`);
           }
+        } else {
+          // Execute commands in sequence in the same terminal
+          for (const terminalCmd of sortedCommands) {
+            logger.plainLog(`  Executing in same terminal: ${terminalCmd.name} - ${terminalCmd.command}`);
+            const executeResult = await terminal.execute(terminalCmd.command, {
+              cwd: session.projectRoot,
+              timeout: 30000, // 30 seconds timeout per command
+            });
 
-          // Small delay between spawning terminals to avoid overwhelming the system
-          await new Promise((resolve) => setTimeout(resolve, 500));
+            if (!executeResult.ok) {
+              logger.error(
+                `Failed to execute command: ${terminalCmd.command}`,
+                {
+                  error: executeResult.error,
+                  terminalId: terminalState.terminalId,
+                  commandName: terminalCmd.name,
+                }
+              );
+            } else if (!executeResult.value.success) {
+              logger.error(
+                `Command failed: ${terminalCmd.command}`,
+                {
+                  exitCode: executeResult.value.exitCode,
+                  stderr: executeResult.value.stderr,
+                  terminalId: terminalState.terminalId,
+                  commandName: terminalCmd.name,
+                }
+              );
+            } else {
+              logger.plainLog(`  ✅ Command executed successfully: ${terminalCmd.name} - ${terminalCmd.command}`);
+            }
+
+            // Small delay between commands
+            if (terminalCmd.priority < sortedCommands.length) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
         }
       }
     } else {
       logger.plainLog("No terminal commands to restore.");
+    }
+
+    // 7. Execute terminal collections if any
+    if (session.terminalCollections && session.terminalCollections.length > 0) {
+      logger.plainLog(`\n🚀 Executing ${session.terminalCollections.length} terminal collection(s):`);
+      
+      const { ExecuteTerminalCollection } = await import("@codestate/core");
+      
+      for (const collectionId of session.terminalCollections) {
+        try {
+          logger.plainLog(`\n📱 Executing terminal collection: ${collectionId}`);
+          const executeTerminalCollection = new ExecuteTerminalCollection();
+          const executeResult = await executeTerminalCollection.executeById(collectionId);
+          
+          if (executeResult.ok) {
+            logger.plainLog(`✅ Terminal collection executed successfully`);
+          } else {
+            logger.error(`❌ Failed to execute terminal collection`, { 
+              error: executeResult.error,
+              collectionId 
+            });
+          }
+        } catch (error) {
+          logger.error(`❌ Error executing terminal collection`, { 
+            error, 
+            collectionId 
+          });
+        }
+      }
+    } else {
+      logger.plainLog("No terminal collections to execute.");
+    }
+
+    // 8. Execute individual scripts if any
+    if (session.scripts && session.scripts.length > 0) {
+      logger.plainLog(`\n📜 Executing ${session.scripts.length} individual script(s):`);
+      
+      const { ResumeScript } = await import("@codestate/core");
+      
+      for (const scriptName of session.scripts) {
+        try {
+          logger.plainLog(`\n📜 Executing script: ${scriptName}`);
+          const resumeScript = new ResumeScript();
+          const executeResult = await resumeScript.execute(scriptName);
+          
+          if (executeResult.ok) {
+            logger.plainLog(`✅ Script executed successfully`);
+          } else {
+            logger.error(`❌ Failed to execute script`, { 
+              error: executeResult.error,
+              scriptName 
+            });
+          }
+        } catch (error) {
+          logger.error(`❌ Error executing script`, { 
+            error, 
+            scriptName 
+          });
+        }
+      }
+    } else {
+      logger.plainLog("No individual scripts to execute.");
     }
 
     // 6. Open IDE and files (UPDATED to use position order)

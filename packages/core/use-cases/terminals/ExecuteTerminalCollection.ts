@@ -12,4 +12,8 @@ export class ExecuteTerminalCollection {
   async execute(name: string, rootPath?: string): Promise<Result<void>> {
     return this.terminalCollectionService.executeTerminalCollection(name, rootPath);
   }
+
+  async executeById(id: string): Promise<Result<void>> {
+    return this.terminalCollectionService.executeTerminalCollectionById(id);
+  }
 }

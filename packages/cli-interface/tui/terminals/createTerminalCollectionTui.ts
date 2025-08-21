@@ -1,5 +1,6 @@
 import inquirer from "@codestate/cli-interface/utils/inquirer";
 import { CreateTerminalCollection, GetScripts, CreateScript, ConfigurableLogger, isSuccess, isFailure, Script, ScriptCommand } from "@codestate/core";
+import { randomUUID } from "crypto";
 
 export async function createTerminalCollectionTui() {
   await createTerminalCollectionInteractively();
@@ -28,26 +29,19 @@ async function createTerminalCollectionInteractively() {
       process.exit(1);
     }
     
-    const existingScripts = existingScriptsResult.value;
+    let availableScripts = existingScriptsResult.value;
+    
+    // Handle script selection with dynamic script creation
+    let finalScriptSelection = false;
     const selectedScripts: Array<{ id: string; rootPath: string }> = [];
     
-    // Ask user if they want to select existing scripts or create new ones
-    const { action } = await promptForScriptSelection(existingScripts);
+    let preSelectedScriptNames: string[] = [];
     
-    if (action === 'select' && existingScripts.length > 0) {
-      // Select from existing scripts
-      const { selectedScriptNames } = await promptForExistingScriptSelection(existingScripts);
+    while (!finalScriptSelection) {
+      const { selectedScriptNames, shouldAddNewScript } = await promptForScriptSelectionWithAdd(availableScripts, preSelectedScriptNames);
       
-      for (const scriptName of selectedScriptNames) {
-        const script = existingScripts.find(s => s.name === scriptName);
-        if (script) {
-          selectedScripts.push({ id: script.name, rootPath: script.rootPath });
-        }
-      }
-    } else if (action === 'create' || existingScripts.length === 0) {
-      // Create new scripts
-      let continueCreating = true;
-      while (continueCreating) {
+      if (shouldAddNewScript) {
+        // Create new script
         const newScriptDetails = await promptForNewScript();
         
         const scriptResult = await createScript.execute(newScriptDetails);
@@ -56,19 +50,45 @@ async function createTerminalCollectionInteractively() {
           process.exit(1);
         }
         
-        selectedScripts.push({ id: newScriptDetails.name, rootPath: newScriptDetails.rootPath });
+        // Add the new script to available scripts
+        const newScript = {
+          name: newScriptDetails.name,
+          rootPath: newScriptDetails.rootPath,
+          script: newScriptDetails.script,
+          commands: newScriptDetails.commands,
+          executionMode: newScriptDetails.executionMode,
+          closeTerminalAfterExecution: newScriptDetails.closeTerminalAfterExecution
+        } as Script;
+        availableScripts.push(newScript);
         
-        const { addAnother } = await promptForAddAnotherScript();
-        continueCreating = addAnother;
+        logger.plainLog(`✅ Script '${newScriptDetails.name}' created successfully!`);
+        logger.plainLog('');
+        
+        // Add the newly created script to pre-selected list along with any previously selected scripts
+        preSelectedScriptNames = [...selectedScriptNames, newScriptDetails.name];
+        
+        // Continue the loop to show updated script list with new script pre-selected
+      } else {
+        // User made their final selection
+        selectedScripts.length = 0; // Clear previous selections
+        for (const scriptName of selectedScriptNames) {
+          const script = availableScripts.find(s => s.name === scriptName);
+          if (script) {
+            selectedScripts.push({ id: script.name, rootPath: script.rootPath });
+          }
+        }
+        finalScriptSelection = true;
       }
     }
     
     // Create the terminal collection
     const terminalCollection = {
+      id: randomUUID(),
       name: terminalCollectionDetails.name,
       rootPath: terminalCollectionDetails.rootPath,
       lifecycle: terminalCollectionDetails.lifecycle,
-      scriptReferences: selectedScripts
+      scriptReferences: selectedScripts,
+      closeTerminalAfterExecution: terminalCollectionDetails.closeTerminalAfterExecution
     };
     
     const result = await createTerminalCollection.execute(terminalCollection);
@@ -85,6 +105,7 @@ async function createTerminalCollectionInteractively() {
     logger.plainLog(`📍 Path: ${terminalCollection.rootPath}`);
     logger.plainLog(`🔄 Lifecycle: ${terminalCollection.lifecycle.join(', ')}`);
     logger.plainLog(`📜 Scripts: ${selectedScripts.length}`);
+    logger.plainLog(`🔒 Terminal close behavior: ${terminalCollection.closeTerminalAfterExecution ? 'Auto-close' : 'Keep open'}`);
     logger.plainLog('');
     logger.plainLog('💡 You can now:');
     logger.plainLog('   • Use `codestate terminals show <name>` to view details');
@@ -126,22 +147,25 @@ async function promptForTerminalCollectionDetails(currentRootPath: string) {
       validate: (input: string[]) =>
         input.length > 0 ? true : "At least one lifecycle event is required",
     },
+    {
+      name: "closeTerminalAfterExecution",
+      message: "Should terminals close automatically after execution?",
+      type: "confirm",
+      default: false,
+    },
   ]);
 
   return {
     name: answers.name.trim(),
     rootPath: answers.rootPath.trim(),
     lifecycle: answers.lifecycle,
+    closeTerminalAfterExecution: answers.closeTerminalAfterExecution,
   };
 }
 
-async function promptForScriptSelection(existingScripts: Script[]) {
-  if (existingScripts.length === 0) {
-    return { action: 'create' };
-  }
-
-  // Group scripts by rootPath
-  const scriptsByRootPath = existingScripts.reduce((groups, script) => {
+async function promptForScriptSelectionWithAdd(availableScripts: Script[], preSelectedScripts: string[] = []) {
+  // Group scripts by rootPath for better organization
+  const scriptsByRootPath = availableScripts.reduce((groups, script) => {
     if (!groups[script.rootPath]) {
       groups[script.rootPath] = [];
     }
@@ -163,82 +187,54 @@ async function promptForScriptSelection(existingScripts: Script[]) {
     logger.plainLog('');
   }
 
-  const choices = [
-    { name: "Select from existing scripts", value: "select" },
-    { name: "Create new scripts", value: "create" },
-  ];
-
-  const answers = await inquirer.customPrompt([
-    {
-      name: "action",
-      message: "How would you like to add scripts to this terminal collection?",
-      type: "list",
-      choices: choices,
-    },
-  ]);
-
-  return answers;
-}
-
-async function promptForExistingScriptSelection(existingScripts: Script[]) {
-  // Group scripts by rootPath for better organization
-  const scriptsByRootPath = existingScripts.reduce((groups, script) => {
-    if (!groups[script.rootPath]) {
-      groups[script.rootPath] = [];
-    }
-    groups[script.rootPath].push(script);
-    return groups;
-  }, {} as Record<string, Script[]>);
-
-  // Create choices with separators and grouped scripts
-  const scriptChoices: Array<{ name: string; value: string; type?: string }> = [];
+  // Create choices with scripts and the "Add new script" option
+  const scriptChoices: Array<{ name: string; value: string }> = [];
   
   for (const [rootPath, scripts] of Object.entries(scriptsByRootPath)) {
-    // Add separator for root path
-    scriptChoices.push({
-      name: `📍 ${rootPath}`,
-      value: `separator-${rootPath}`,
-      type: 'separator'
-    });
-    
-    // Add scripts for this root path
+    // Add scripts for this root path with clear grouping
     for (const script of scripts) {
       const commandCount = script.commands ? script.commands.length : (script.script ? 1 : 0);
       scriptChoices.push({
-        name: `   • ${script.name} (${commandCount} command${commandCount !== 1 ? 's' : ''})`,
-        value: script.name,
+        name: `📍 ${rootPath} • ${script.name} (${commandCount} command${commandCount !== 1 ? 's' : ''})`,
+        value: script.name
       });
     }
-    
-    // Add empty line separator
-    scriptChoices.push({
-      name: '',
-      value: `empty-${rootPath}`,
-      type: 'separator'
-    });
   }
+  
+  // Add the "Add new script" option at the bottom
+  scriptChoices.push({
+    name: '➕ Add a new script',
+    value: '__ADD_NEW_SCRIPT__'
+  });
 
   const answers = await inquirer.customPrompt([
     {
       name: "selectedScriptNames",
-      message: "Select scripts to add (use SPACE to select, ENTER to confirm):",
+      message: "Select scripts to include (use SPACE to select, ENTER to confirm):",
       type: "checkbox",
       choices: scriptChoices,
+      default: preSelectedScripts,
       validate: (input: string[]) => {
-        // Filter out separator values
-        const actualSelections = input.filter(choice => !choice.startsWith('separator-') && !choice.startsWith('empty-'));
-        return actualSelections.length > 0 ? true : "At least one script must be selected";
+        // Allow selection of scripts or just the "Add new script" option
+        if (input.length === 0) {
+          return "Please select at least one script or choose to add a new script";
+        }
+        return true;
       },
     },
   ]);
 
-  // Filter out separator values from the result
-  const filteredSelections = answers.selectedScriptNames.filter(
-    (choice: string) => !choice.startsWith('separator-') && !choice.startsWith('empty-')
-  );
+  // Separate actual script selections from the "Add new script" flag
+  const selectedScriptNames = answers.selectedScriptNames.filter((name: string) => name !== '__ADD_NEW_SCRIPT__');
+  const shouldAddNewScript = answers.selectedScriptNames.includes('__ADD_NEW_SCRIPT__');
 
-  return { selectedScriptNames: filteredSelections };
+  return {
+    selectedScriptNames,
+    shouldAddNewScript
+  };
 }
+
+
 
 async function promptForNewScript() {
   const currentPath = process.cwd();
@@ -283,10 +279,39 @@ async function promptForNewScript() {
       },
     ]);
 
+    // Get execution mode and terminal close behavior
+    const configAnswers = await inquirer.customPrompt([
+      {
+        name: "executionMode",
+        message: "How should this script be executed?",
+        type: "list",
+        choices: [
+          { name: "Same terminal (run commands sequentially)", value: "same-terminal" },
+          { name: "New terminal (open new terminal window)", value: "new-terminals" },
+        ],
+        default: "same-terminal",
+      },
+    ]);
+
+    let closeTerminalAfterExecution = false;
+    if (configAnswers.executionMode === "new-terminals") {
+      const closeAnswer = await inquirer.customPrompt([
+        {
+          name: "closeTerminalAfterExecution",
+          message: "Should the terminal close automatically after execution?",
+          type: "confirm",
+          default: false,
+        },
+      ]);
+      closeTerminalAfterExecution = closeAnswer.closeTerminalAfterExecution;
+    }
+
     return {
       name: answers.name.trim(),
       rootPath: answers.rootPath.trim(),
       script: scriptAnswer.script.trim(),
+      executionMode: configAnswers.executionMode,
+      closeTerminalAfterExecution,
     };
   } else {
     // New multiple commands format
@@ -328,10 +353,39 @@ async function promptForNewScript() {
       continueAddingCommands = commandAnswers.addAnotherCommand;
     }
 
+    // Get execution mode and terminal close behavior for multi-command scripts
+    const configAnswers = await inquirer.customPrompt([
+      {
+        name: "executionMode",
+        message: "How should this script be executed?",
+        type: "list",
+        choices: [
+          { name: "Same terminal (run commands sequentially)", value: "same-terminal" },
+          { name: "New terminal (open new terminal window)", value: "new-terminals" },
+        ],
+        default: "same-terminal",
+      },
+    ]);
+
+    let closeTerminalAfterExecution = false;
+    if (configAnswers.executionMode === "new-terminals") {
+      const closeAnswer = await inquirer.customPrompt([
+        {
+          name: "closeTerminalAfterExecution",
+          message: "Should the terminal close automatically after execution?",
+          type: "confirm",
+          default: false,
+        },
+      ]);
+      closeTerminalAfterExecution = closeAnswer.closeTerminalAfterExecution;
+    }
+
     return {
       name: answers.name.trim(),
       rootPath: answers.rootPath.trim(),
       commands: commands,
+      executionMode: configAnswers.executionMode,
+      closeTerminalAfterExecution,
     };
   }
 }

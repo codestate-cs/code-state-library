@@ -55,6 +55,39 @@ export async function updateScriptTui() {
     if (scriptAnswer.newScript.trim()) {
       scriptUpdate.script = scriptAnswer.newScript.trim();
     }
+    
+    // Ask for execution mode
+    const executionModeAnswer = await inquirer.customPrompt([
+      {
+        name: "executionMode",
+        message: "How should this command be executed?",
+        type: "list",
+        choices: [
+          { name: "Same terminal (run in current terminal)", value: "same-terminal" },
+          { name: "New terminal (open new terminal window and run)", value: "new-terminals" },
+        ],
+        default: "same-terminal",
+      },
+    ]);
+    
+    scriptUpdate.executionMode = executionModeAnswer.executionMode;
+    
+    // Ask about terminal close behavior only if new terminal mode is selected
+    if (executionModeAnswer.executionMode === 'new-terminals') {
+      const closeAnswer = await inquirer.customPrompt([
+        {
+          name: "closeTerminalAfterExecution",
+          message: "Should the terminal close after running the command?",
+          type: "list",
+          choices: [
+            { name: "Keep terminal open (useful for debugging, manual follow-up)", value: false },
+            { name: "Close terminal automatically (clean exit)", value: true },
+          ],
+          default: false,
+        },
+      ]);
+      scriptUpdate.closeTerminalAfterExecution = closeAnswer.closeTerminalAfterExecution;
+    }
   } else {
     // New multi-command update
     const commands: any[] = [];
@@ -97,6 +130,39 @@ export async function updateScriptTui() {
 
     if (commands.length > 0) {
       scriptUpdate.commands = commands;
+    }
+    
+    // Ask for execution mode
+    const executionModeAnswer = await inquirer.customPrompt([
+      {
+        name: "executionMode",
+        message: "How should these commands be executed?",
+        type: "list",
+        choices: [
+          { name: "Same terminal (run all commands in sequence)", value: "same-terminal" },
+          { name: "New terminal (open new terminal window and run all commands in sequence)", value: "new-terminals" },
+        ],
+        default: "same-terminal",
+      },
+    ]);
+    
+    scriptUpdate.executionMode = executionModeAnswer.executionMode;
+    
+    // Ask about terminal close behavior only if new terminal mode is selected
+    if (executionModeAnswer.executionMode === 'new-terminals') {
+      const closeAnswer = await inquirer.customPrompt([
+        {
+          name: "closeTerminalAfterExecution",
+          message: "Should the terminal close after running all commands?",
+          type: "list",
+          choices: [
+            { name: "Keep terminal open (useful for debugging, manual follow-up)", value: false },
+            { name: "Close terminal automatically (clean exit)", value: true },
+          ],
+          default: false,
+        },
+      ]);
+      scriptUpdate.closeTerminalAfterExecution = closeAnswer.closeTerminalAfterExecution;
     }
   }
 

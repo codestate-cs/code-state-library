@@ -36,12 +36,23 @@ export async function showScriptsCommand() {
       logger.plainLog("─".repeat(rootPath.length + 10));
 
       pathScripts.forEach((script) => {
+        const executionMode = (script as any).executionMode || 'same-terminal';
+        const modeIcon = executionMode === 'new-terminals' ? '📱' : '🖥️';
+        const modeText = executionMode === 'new-terminals' ? 'new terminal' : 'same terminal';
+        
+        // Add close behavior info for new terminal scripts
+        let closeInfo = '';
+        if (executionMode === 'new-terminals') {
+          const closeAfterExecution = (script as any).closeTerminalAfterExecution || false;
+          closeInfo = closeAfterExecution ? ' (auto-close)' : ' (keep open)';
+        }
+        
         if (script.script) {
           // Legacy single command format
-          logger.plainLog(`  • ${script.name} - ${script.script}`);
+          logger.plainLog(`  • ${script.name} - ${script.script} ${modeIcon} (${modeText}${closeInfo})`);
         } else if ((script as any).commands && (script as any).commands.length > 0) {
           // New multi-command format
-          logger.plainLog(`  • ${script.name}:`);
+          logger.plainLog(`  • ${script.name} ${modeIcon} (${modeText}${closeInfo}):`);
           (script as any).commands
             .sort((a: any, b: any) => a.priority - b.priority)
             .forEach((cmd: any) => {

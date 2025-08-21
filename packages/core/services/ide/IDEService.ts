@@ -48,8 +48,8 @@ export class IDEService implements IIDEService {
       const args = [...ide.args, projectRoot];
       const command = `${ide.command} ${args.join(' ')}`;
 
-      // Execute IDE command
-      const result = await this.terminalService.spawnTerminal(command, {
+      // Execute IDE command using spawnApplication to avoid keeping terminal open
+      const result = await this.terminalService.spawnApplication(command, {
         cwd: projectRoot,
         timeout: 10000
       });
@@ -105,8 +105,8 @@ export class IDEService implements IIDEService {
       const args = [...ide.args, request.projectRoot, ...fileArgs];
       const command = `${ide.command} ${args.join(' ')}`;
 
-      // Execute file opening command
-      const result = await this.terminalService.spawnTerminal(command, {
+      // Execute file opening command using spawnApplication to avoid keeping terminal open
+      const result = await this.terminalService.spawnApplication(command, {
         cwd: request.projectRoot,
         timeout: 10000
       });

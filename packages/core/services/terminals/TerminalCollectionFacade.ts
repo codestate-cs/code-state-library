@@ -44,8 +44,16 @@ export class TerminalCollectionFacade implements ITerminalCollectionService {
     return this.service.getTerminalCollection(name, rootPath);
   }
 
+  async getTerminalCollectionById(id: string): Promise<any> {
+    return this.service.getTerminalCollectionById(id);
+  }
+
   async getTerminalCollectionWithScripts(name: string, rootPath?: string): Promise<any> {
     return this.service.getTerminalCollectionWithScripts(name, rootPath);
+  }
+
+  async getTerminalCollectionWithScriptsById(id: string): Promise<any> {
+    return this.service.getTerminalCollectionWithScriptsById(id);
   }
 
   async getAllTerminalCollections(): Promise<any> {
@@ -82,5 +90,9 @@ export class TerminalCollectionFacade implements ITerminalCollectionService {
 
   async executeTerminalCollection(name: string, rootPath?: string): Promise<any> {
     return this.service.executeTerminalCollection(name, rootPath);
+  }
+
+  async executeTerminalCollectionById(id: string): Promise<any> {
+    return this.service.executeTerminalCollectionById(id);
   }
 }

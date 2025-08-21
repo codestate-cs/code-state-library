@@ -19,6 +19,7 @@ import {
 } from "@codestate/core/domain/types/ErrorTypes";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { randomUUID } from "crypto";
 
 const DEFAULT_SCRIPTS_DIR = path.join(
   process.env.HOME || process.env.USERPROFILE || ".",
@@ -271,6 +272,40 @@ export class ScriptRepository implements IScriptRepository {
       return { ok: true, value: allScripts };
     } catch (err: any) {
       this.logger.error("Failed to get all scripts", { error: err.message });
+      return {
+        ok: false,
+        error: new ScriptError(err.message, ErrorCode.SCRIPT_INVALID, {
+          originalError: err.message,
+        }),
+      };
+    }
+  }
+
+  async getScriptById(id: string): Promise<Result<Script>> {
+    try {
+      const allScripts = await this.getAllScripts();
+      if (isFailure(allScripts)) {
+        return { ok: false, error: allScripts.error };
+      }
+
+      const script = allScripts.value.find(s => s.id === id);
+      if (!script) {
+        return {
+          ok: false,
+          error: new ScriptError(
+            `Script with ID '${id}' not found`,
+            ErrorCode.SCRIPT_INVALID,
+            { scriptId: id }
+          ),
+        };
+      }
+
+      return { ok: true, value: script };
+    } catch (err: any) {
+      this.logger.error("Failed to get script by ID", {
+        error: err.message,
+        scriptId: id,
+      });
       return {
         ok: false,
         error: new ScriptError(err.message, ErrorCode.SCRIPT_INVALID, {
@@ -926,13 +961,36 @@ export class ScriptRepository implements IScriptRepository {
     const existingIndex = index.value.entries.findIndex(
       (e) => e.rootPath === rootPath
     );
+    
     if (existingIndex >= 0) {
+      // Update existing entry
       index.value.entries[existingIndex].referenceFile = relativePath;
     } else {
-      index.value.entries.push({ rootPath, referenceFile: relativePath });
+      // Add new entry - we'll update the ID later when we can access the collection
+      index.value.entries.push({
+        id: randomUUID(), // Generate a temporary ID
+        rootPath,
+        referenceFile: relativePath
+      });
     }
 
     await this.saveScriptIndex(index.value);
+
+    // Now try to update the ID with the actual script ID if possible
+    try {
+      const collection = await this.loadScriptCollection(rootPath);
+      if (collection.ok && collection.value.scripts.length > 0) {
+        const actualScriptId = collection.value.scripts[0].id;
+        const entryIndex = index.value.entries.findIndex(e => e.rootPath === rootPath);
+        if (entryIndex >= 0) {
+          index.value.entries[entryIndex].id = actualScriptId;
+          await this.saveScriptIndex(index.value);
+        }
+      }
+    } catch (error) {
+      // If we can't load the collection, that's okay - the index entry exists
+      this.logger.debug("Could not update script ID in index", { rootPath, error });
+    }
   }
 
   private async removeFromIndex(rootPath: string): Promise<void> {

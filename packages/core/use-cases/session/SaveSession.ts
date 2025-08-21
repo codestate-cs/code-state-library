@@ -19,6 +19,8 @@ export class SaveSession {
     git: Session['git'];
     extensions?: Session['extensions'];
     terminalCommands?: Session['terminalCommands'];
+    terminalCollections?: Session['terminalCollections'];
+    scripts?: Session['scripts'];
   }): Promise<Result<Session>> {
     const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
@@ -35,6 +37,8 @@ export class SaveSession {
       git: input.git,
       extensions: input.extensions,
       terminalCommands: input.terminalCommands,
+      terminalCollections: input.terminalCollections,
+      scripts: input.scripts,
     });
   }
 } 

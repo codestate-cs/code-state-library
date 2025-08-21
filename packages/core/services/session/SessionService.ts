@@ -37,6 +37,8 @@ export class SessionService implements ISessionService {
       git: input.git!,
       extensions: input.extensions,
       terminalCommands, // NEW: Terminal commands captured from open terminals
+      terminalCollections: input.terminalCollections, // NEW: Terminal collection IDs
+      scripts: input.scripts, // NEW: Individual script IDs
     };
     const result = await this.repository.save(session);
     if (isFailure(result)) return { ok: false, error: result.error };

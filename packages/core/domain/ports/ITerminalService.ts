@@ -13,6 +13,7 @@ export interface ITerminalService {
   // Terminal spawning
   spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
   spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
+  spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
   
   // NEW: Terminal command capture for sessions
   getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>>;

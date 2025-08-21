@@ -53,6 +53,17 @@ export class ScriptService implements IScriptService {
     return result;
   }
 
+  async getScriptById(id: string): Promise<Result<Script>> {
+    this.logger.debug('ScriptService.getScriptById called', { id });
+    const result = await this.repository.getScriptById(id);
+    if (isFailure(result)) {
+      this.logger.error('Failed to get script by ID', { error: result.error, id });
+    } else {
+      this.logger.log('Script retrieved by ID', { id, name: result.value.name });
+    }
+    return result;
+  }
+
   async updateScript(name: string, rootPath: string, scriptUpdate: Partial<Script>): Promise<Result<void>> {
     this.logger.debug('ScriptService.updateScript called', { name, rootPath, scriptUpdate });
     const result = await this.repository.updateScript(name, rootPath, scriptUpdate);

@@ -40,6 +40,10 @@ export class TerminalFacade implements ITerminalService {
     return this.service.spawnTerminalCommand(command);
   }
 
+  async spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>> {
+    return this.service.spawnApplication(command, options);
+  }
+
   async isCommandAvailable(command: string): Promise<Result<boolean>> {
     return this.service.isCommandAvailable(command);
   }

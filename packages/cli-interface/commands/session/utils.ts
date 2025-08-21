@@ -5,8 +5,10 @@ export async function promptSessionDetails(defaults?: {
   name?: string;
   notes?: string;
   tags?: string;
+  terminalCollectionChoices?: Array<{ name: string; value: string }>;
+  scriptChoices?: Array<{ name: string; value: string }>;
 }) {
-  return inquirer.customPrompt([
+  const prompts = [
     {
       type: "input",
       name: "sessionName",
@@ -31,7 +33,49 @@ export async function promptSessionDetails(defaults?: {
       message: "Enter session tags (comma-separated, optional):",
       default: defaults?.tags || "",
     },
-  ]);
+  ];
+
+  // Only add terminal collections prompt if there are choices available
+  if (defaults?.terminalCollectionChoices && defaults.terminalCollectionChoices.length > 0) {
+    prompts.push({
+      type: "checkbox",
+      name: "terminalCollections",
+      message: "Select terminal collections to include in this session:",
+      choices: defaults.terminalCollectionChoices,
+      default: [],
+    });
+  }
+
+  // Only add scripts prompt if there are choices available
+  if (defaults?.scriptChoices && defaults.scriptChoices.length > 0) {
+    prompts.push({
+      type: "checkbox",
+      name: "scripts",
+      message: "Select individual scripts to include in this session:",
+      choices: defaults.scriptChoices,
+      default: [],
+    });
+  }
+
+  const result = await inquirer.customPrompt(prompts);
+  
+  // Ensure terminalCollections is always present in the result
+  if (!result.terminalCollections) {
+    result.terminalCollections = [];
+  }
+
+  // Ensure scripts is always present in the result
+  if (!result.scripts) {
+    result.scripts = [];
+  }
+  
+  return result as {
+    sessionName: string;
+    sessionNotes: string;
+    sessionTags: string;
+    terminalCollections: string[];
+    scripts: string[];
+  };
 }
 
 export async function promptDirtyState(gitStatus: any, canStash: boolean) {
@@ -87,6 +131,8 @@ export async function handleSessionSave({
     sessionName: string;
     sessionNotes: string;
     sessionTags: string;
+    terminalCollections: string[];
+    scripts: string[];
   };
   projectRoot: string;
   git: {
@@ -109,6 +155,8 @@ export async function handleSessionSave({
     files: [],
     git,
     extensions: {},
+    terminalCollections: sessionDetails.terminalCollections || [],
+    scripts: sessionDetails.scripts || [],
   });
   if (result.ok) {
     logger.log(

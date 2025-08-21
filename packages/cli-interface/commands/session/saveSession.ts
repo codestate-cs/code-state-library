@@ -3,6 +3,7 @@ import {
   GitService,
   SaveSession,
   Terminal,
+  ListTerminalCollections,
 } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
 import {
@@ -34,7 +35,33 @@ export async function saveSessionCommand() {
         logger.warn("Session save cancelled.");
         return;
       }
-      const sessionDetails = await promptSessionDetails();
+      // Get available terminal collections for selection
+      const listTerminalCollections = new ListTerminalCollections();
+      const terminalCollectionsResult = await listTerminalCollections.execute();
+      const terminalCollectionChoices = terminalCollectionsResult.ok 
+        ? terminalCollectionsResult.value.map(tc => ({ 
+            name: `${tc.name} (${tc.rootPath})`, 
+            value: tc.id 
+          }))
+        : [];
+
+      // Get available scripts for selection
+      const { GetScripts } = await import("@codestate/core");
+      const getScripts = new GetScripts();
+      const scriptsResult = await getScripts.execute();
+      const scriptChoices = scriptsResult.ok 
+        ? scriptsResult.value.map(script => ({ 
+            name: `${script.name} (${script.rootPath})`, 
+            value: script.id 
+          }))
+        : [];
+
+
+
+      const sessionDetails = await promptSessionDetails({ 
+        terminalCollectionChoices,
+        scriptChoices 
+      });
       const projectRoot = process.cwd();
       await handleSessionSave({
         sessionDetails,
@@ -218,8 +245,32 @@ export async function saveSessionCommand() {
     const gitState = await getCurrentGitState(gitService, logger);
     if (!gitState) return;
 
-    // 4. Get user input for session details
-    const sessionDetails = await promptSessionDetails();
+    // 4. Get available terminal collections for selection
+    const listTerminalCollections = new ListTerminalCollections();
+    const terminalCollectionsResult = await listTerminalCollections.execute();
+    const terminalCollectionChoices = terminalCollectionsResult.ok 
+      ? terminalCollectionsResult.value.map(tc => ({ 
+          name: `${tc.name} (${tc.rootPath})`, 
+          value: tc.id 
+        }))
+      : [];
+
+    // 5. Get available scripts for selection
+    const { GetScripts } = await import("@codestate/core");
+    const getScripts = new GetScripts();
+    const scriptsResult = await getScripts.execute();
+    const scriptChoices = scriptsResult.ok 
+      ? scriptsResult.value.map(script => ({ 
+          name: `${script.name} (${script.rootPath})`, 
+          value: script.id 
+        }))
+      : [];
+
+    // 6. Get user input for session details
+    const sessionDetails = await promptSessionDetails({ 
+      terminalCollectionChoices,
+      scriptChoices 
+    });
     const projectRoot = process.cwd();
     await handleSessionSave({
       sessionDetails,

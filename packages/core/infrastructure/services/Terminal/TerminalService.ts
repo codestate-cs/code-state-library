@@ -138,7 +138,22 @@ export class TerminalService implements ITerminalService {
       const [cmd, args] = this.parseCommand(command.command);
       
       // Create the full command string for the terminal
-      const fullCommand = `${cmd} ${args.join(' ')}`;
+      let fullCommand = `${cmd} ${args.join(' ')}`;
+      
+      // For Linux, modify the command to ensure terminal stays open
+      const osPlatform = platform();
+      if (osPlatform === 'linux') {
+        if (terminalCmd.includes('gnome-terminal')) {
+          fullCommand = `${shell} -c "${fullCommand}; exec ${shell}"`;
+        } else if (terminalCmd.includes('xterm')) {
+          // xterm will use -hold flag in getTerminalArgs
+        } else if (terminalCmd.includes('konsole')) {
+          // konsole will use --hold flag in getTerminalArgs
+        } else {
+          // fallback: force bash read trick
+          fullCommand = `${shell} -c "${fullCommand}; echo 'Press Enter to close terminal...'; read"`;
+        }
+      }
       
       // Spawn the terminal with the command
       const terminalArgs = this.getTerminalArgs(terminalCmd, shell, fullCommand, command.cwd);
@@ -162,6 +177,80 @@ export class TerminalService implements ITerminalService {
         ok: false, 
         error: new TerminalError(
           `Failed to spawn terminal: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        ) 
+      };
+    }
+  }
+
+  async spawnApplication(command: string, options?: SpawnOptions): Promise<Result<boolean>> {
+    this.logger.debug('TerminalService.spawnApplication called', { command });
+    
+    try {
+      // Validate command
+      if (!command || command.trim().length === 0) {
+        return { ok: false, error: new TerminalError('Command cannot be empty', ErrorCode.TERMINAL_COMMAND_FAILED) };
+      }
+
+      // Get the appropriate terminal command for the current platform
+      const terminalCmd = this.getTerminalCommand();
+      const shell = this.getDefaultShell();
+      
+      // Prepare spawn options
+      const spawnOptions: SpawnOptions = {
+        cwd: options?.cwd || process.cwd(),
+        env: { ...process.env, ...options?.env },
+        detached: true, // Important: run in detached mode so it opens in a new window
+        stdio: 'ignore', // Ignore stdio to prevent hanging
+      };
+
+      // Parse the command to execute
+      const [cmd, args] = this.parseCommand(command);
+      
+      // Create the full command string for the terminal
+      let fullCommand = `${cmd} ${args.join(' ')}`;
+      
+      // For Linux, modify the command to ensure terminal closes after launching the app
+      const osPlatform = platform();
+      if (osPlatform === 'linux') {
+        if (terminalCmd.includes('gnome-terminal')) {
+          // For gnome-terminal, use -- bash -c "command && exit" to close after execution
+          fullCommand = `${shell} -c "${fullCommand} && exit"`;
+        } else if (terminalCmd.includes('xterm')) {
+          // xterm will use -e flag without -hold
+          fullCommand = `${shell} -c "${fullCommand} && exit"`;
+        } else if (terminalCmd.includes('konsole')) {
+          // konsole will use -e flag without --hold
+          fullCommand = `${shell} -c "${fullCommand} && exit"`;
+        } else {
+          // fallback: force exit after command
+          fullCommand = `${shell} -c "${fullCommand} && exit"`;
+        }
+      }
+      
+      // Spawn the terminal with the command
+      const cwd = options?.cwd && typeof options.cwd === 'string' ? options.cwd : undefined;
+      const terminalArgs = this.getTerminalArgsForApp(terminalCmd, shell, fullCommand, cwd);
+      
+      const child = spawn(terminalCmd, terminalArgs, spawnOptions);
+      
+      // Don't wait for the process to complete since it's a new terminal window
+      child.unref();
+      
+      this.logger.log('Application launched successfully', { 
+        command: command, 
+        terminalCmd,
+        terminalArgs 
+      });
+      
+      return { ok: true, value: true };
+    } catch (error) {
+      this.logger.error('Failed to launch application', { command: command, error });
+      
+      return { 
+        ok: false, 
+        error: new TerminalError(
+          `Failed to launch application: ${error instanceof Error ? error.message : 'Unknown error'}`,
           ErrorCode.TERMINAL_COMMAND_FAILED
         ) 
       };
@@ -341,9 +430,51 @@ export class TerminalService implements ITerminalService {
       // macOS
       args.push('-a', 'Terminal', command);
     } else {
-      // Linux - gnome-terminal
-      args.push('--', shell, '-c', command);
-      if (cwd) {
+      // Linux - handle different terminal emulators
+      if (terminalCmd.includes('gnome-terminal')) {
+        args.push('--', shell, '-c', command);
+      } else if (terminalCmd.includes('xterm')) {
+        args.push('-hold', '-e', shell, '-c', command);
+      } else if (terminalCmd.includes('konsole')) {
+        args.push('--hold', '-e', shell, '-c', command);
+      } else {
+        // fallback to gnome-terminal style
+        args.push('--', shell, '-c', command);
+      }
+      
+      if (cwd && typeof cwd === 'string') {
+        args.unshift('--working-directory', cwd);
+      }
+    }
+    
+    return args;
+  }
+
+  private getTerminalArgsForApp(terminalCmd: string, shell: string, command: string, cwd?: string): string[] {
+    const args: string[] = [];
+    
+    if (terminalCmd === 'cmd.exe') {
+      // Windows - use /c to execute and close
+      args.push('/c', command);
+    } else if (terminalCmd === 'open') {
+      // macOS
+      args.push('-a', 'Terminal', command);
+    } else {
+      // Linux - handle different terminal emulators without hold flags
+      if (terminalCmd.includes('gnome-terminal')) {
+        args.push('--', shell, '-c', command);
+      } else if (terminalCmd.includes('xterm')) {
+        // Use -e without -hold to allow terminal to close
+        args.push('-e', shell, '-c', command);
+      } else if (terminalCmd.includes('konsole')) {
+        // Use -e without --hold to allow terminal to close
+        args.push('-e', shell, '-c', command);
+      } else {
+        // fallback to gnome-terminal style
+        args.push('--', shell, '-c', command);
+      }
+      
+      if (cwd && typeof cwd === 'string') {
         args.unshift('--working-directory', cwd);
       }
     }

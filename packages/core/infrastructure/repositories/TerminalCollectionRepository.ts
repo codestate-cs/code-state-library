@@ -77,6 +77,7 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
 
     // Add new entry
     index.entries.push({
+      id: terminalCollection.id,
       name: terminalCollection.name,
       rootPath: terminalCollection.rootPath,
       referenceFile: fileName
@@ -133,6 +134,39 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
     try {
       const validatedTerminalCollection = validateTerminalCollection(JSON.parse(readResult.value));
       this.logger.log('Terminal collection retrieved successfully', { name, rootPath });
+      return { ok: true, value: validatedTerminalCollection };
+    } catch (error) {
+      this.logger.error('Failed to parse or validate terminal collection JSON', { error });
+      return { ok: false, error: new StorageError('Invalid terminal collection data format', undefined, { error }) };
+    }
+  }
+
+  async getTerminalCollectionById(id: string): Promise<Result<TerminalCollection>> {
+    this.logger.debug('TerminalCollectionRepository.getTerminalCollectionById called', { id });
+
+    const indexResult = await this.getIndex();
+    if (isFailure(indexResult)) {
+      return indexResult;
+    }
+
+    // Find entry by ID
+    const entry = indexResult.value.entries.find(e => e.id === id);
+
+    if (!entry) {
+      this.logger.error('Terminal collection not found by ID', { id });
+      return { ok: false, error: new StorageError(`Terminal collection with ID '${id}' not found`, undefined, { id }) };
+    }
+
+    // Read file
+    const readResult = await this.storage.read(entry.referenceFile);
+    if (isFailure(readResult)) {
+      this.logger.error('Failed to read terminal collection file', { error: readResult.error });
+      return readResult;
+    }
+
+    try {
+      const validatedTerminalCollection = validateTerminalCollection(JSON.parse(readResult.value));
+      this.logger.log('Terminal collection retrieved successfully by ID', { id });
       return { ok: true, value: validatedTerminalCollection };
     } catch (error) {
       this.logger.error('Failed to parse or validate terminal collection JSON', { error });
