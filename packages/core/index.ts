@@ -2,6 +2,7 @@
 // Core domain models
 export * from '@codestate/core/domain/models/Session';
 export * from '@codestate/core/domain/models/Script';
+export * from '@codestate/core/domain/models/TerminalCollection';
 export * from '@codestate/core/domain/models/Config';
 export * from '@codestate/core/domain/models/Result';
 
@@ -11,6 +12,7 @@ export * from '@codestate/core/use-cases/scripts';
 export * from '@codestate/core/use-cases/session';
 export * from '@codestate/core/use-cases/git';
 export * from '@codestate/core/use-cases/ide';
+export * from '@codestate/core/use-cases/terminals';
 
 // Error types and registry
 export * from '@codestate/core/domain/types/ErrorTypes';

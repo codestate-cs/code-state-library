@@ -63,6 +63,9 @@ export const ConfigSchema = z.object({
   extensions: z.record(z.string(), z.unknown()).optional(),
 });
 
+// NEW: Lifecycle events for scripts and terminals
+export const LifecycleEventSchema = z.enum(['open', 'resume', 'none']);
+
 export const ScriptSchema = z.object({
   name: z.string().min(1, 'Script name is required'),
   rootPath: z.string().min(1, 'Root path is required'),
@@ -72,6 +75,7 @@ export const ScriptSchema = z.object({
     name: z.string().min(1, 'Command name is required'),
     priority: z.number().int().min(0, 'Priority must be non-negative integer'),
   })).optional(), // NEW: Backward compatible
+  lifecycle: z.array(LifecycleEventSchema).optional(), // NEW: Optional lifecycle for individual scripts
 }).refine((data) => {
   // Ensure either script or commands is provided
   return data.script !== undefined || (data.commands !== undefined && data.commands.length > 0);
@@ -98,6 +102,30 @@ export const ScriptIndexSchema = z.object({
 
 export const ScriptCollectionSchema = z.object({
   scripts: z.array(ScriptSchema),
+});
+
+// Script Reference schema
+export const ScriptReferenceSchema = z.object({
+  id: z.string().min(1, 'Script ID is required'),
+  rootPath: z.string().min(1, 'Root path is required'),
+});
+
+// Terminal Collection schemas
+export const TerminalCollectionSchema = z.object({
+  name: z.string().min(1, 'Terminal collection name is required'),
+  rootPath: z.string().min(1, 'Root path is required'),
+  lifecycle: z.array(LifecycleEventSchema).min(1, 'At least one lifecycle event is required'),
+  scriptReferences: z.array(ScriptReferenceSchema).min(1, 'At least one script reference is required'),
+});
+
+export const TerminalCollectionIndexEntrySchema = z.object({
+  name: z.string().min(1, 'Terminal collection name is required'),
+  rootPath: z.string().min(1, 'Root path is required'),
+  referenceFile: z.string().min(1, 'Reference file path is required'),
+});
+
+export const TerminalCollectionIndexSchema = z.object({
+  entries: z.array(TerminalCollectionIndexEntrySchema),
 });
 
 // Git schemas
@@ -270,9 +298,14 @@ export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 export type Script = z.infer<typeof ScriptSchema>;
 export type ScriptCommand = z.infer<typeof ScriptCommandSchema>; // NEW
+export type ScriptReference = z.infer<typeof ScriptReferenceSchema>; // NEW
 export type ScriptIndexEntry = z.infer<typeof ScriptIndexEntrySchema>;
 export type ScriptIndex = z.infer<typeof ScriptIndexSchema>;
 export type ScriptCollection = z.infer<typeof ScriptCollectionSchema>;
+export type LifecycleEvent = z.infer<typeof LifecycleEventSchema>;
+export type TerminalCollection = z.infer<typeof TerminalCollectionSchema>;
+export type TerminalCollectionIndexEntry = z.infer<typeof TerminalCollectionIndexEntrySchema>;
+export type TerminalCollectionIndex = z.infer<typeof TerminalCollectionIndexSchema>;
 export type GitFileStatus = z.infer<typeof GitFileStatusSchema>;
 export type GitFile = z.infer<typeof GitFileSchema>;
 export type GitStatus = z.infer<typeof GitStatusSchema>;
@@ -351,6 +384,18 @@ export function validateScriptCommand(data: unknown): ScriptCommand {
   return ScriptCommandSchema.parse(data);
 }
 
+export function validateScriptReference(data: unknown): ScriptReference {
+  return ScriptReferenceSchema.parse(data);
+}
+
 export function validateTerminalCommandState(data: unknown): TerminalCommandState {
   return TerminalCommandStateSchema.parse(data);
+}
+
+export function validateTerminalCollection(data: unknown): TerminalCollection {
+  return TerminalCollectionSchema.parse(data);
+}
+
+export function validateTerminalCollectionIndex(data: unknown): TerminalCollectionIndex {
+  return TerminalCollectionIndexSchema.parse(data);
 } 

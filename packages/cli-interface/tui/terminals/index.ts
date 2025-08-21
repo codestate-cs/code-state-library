@@ -1,0 +1,1 @@
+export { handleTerminalCommand } from './cliHandler';

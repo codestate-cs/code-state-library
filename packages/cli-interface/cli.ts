@@ -41,6 +41,11 @@ Commands:
   session update            Update a saved session
   session list              List all sessions with metadata
   session delete            Delete a session
+  
+  terminals list            List all terminal collections
+  terminals create          Create a new terminal collection interactively
+  terminals show <name>     Show specific terminal collection details
+  terminals resume <name>   Execute a terminal collection
 
 Features:
   • Terminal Command Capture: Sessions automatically capture running terminal commands
@@ -59,6 +64,10 @@ Examples:
   codestate scripts resume "build-and-test"
   codestate session save "Feature Work"
   codestate session resume "Feature Work"
+  codestate terminals list
+  codestate terminals create
+  codestate terminals show "my-project"
+  codestate terminals resume "my-project"
 
 Options:
   --help, -h      Show this help message
