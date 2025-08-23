@@ -4,6 +4,19 @@ A powerful command-line interface for CodeState - a developer context engine for
 
 Visit [codestate.dev](https://www.codestate.dev/) for more information about CodeState.
 
+## Version 1.4.6 Updates
+
+### What's New
+- **Enhanced Functionality**: Improved CLI commands and interface consistency
+- **Better Integration**: Updated to work with core package v1.4.5
+- **Build Improvements**: Enhanced build system and dependency management
+- **Package Updates**: Updated to v1.4.5 with improved stability
+
+### Changes from v1.4.2
+- 🔧 **Core Integration**: Updated to use codestate-core v1.4.5
+- 🏗️ **Build Improvements**: Enhanced build system with better dependency resolution
+- 📦 **Package Updates**: Updated to v1.4.5 with improved functionality
+
 ## Overview
 
 CodeState CLI provides a comprehensive command-line interface for managing your development context, including scripts, sessions, configurations, and git operations. It features both traditional CLI commands and an interactive TUI (Text User Interface) for enhanced user experience.
@@ -41,6 +54,12 @@ CodeState CLI provides a comprehensive command-line interface for managing your 
 - **Multi-IDE Support**: Works with VS Code, WebStorm, and more
 - **Open Projects**: Launch projects in your preferred IDE
 - **File Management**: Open specific files in IDE
+
+### 🖥️ Terminal Collections
+- **Create Terminal Collections**: Group related terminal commands
+- **Execute Collections**: Run multiple commands in sequence
+- **List Collections**: View all terminal collections
+- **Manage Collections**: Update and delete collections
 
 ## Installation
 
@@ -132,6 +151,19 @@ codestate config import --input config.json
 codestate config reset
 ```
 
+### Terminal Collection Commands
+
+```bash
+# List all terminal collections
+codestate terminals list
+
+# Get details of a specific collection
+codestate terminals get <collection-name>
+
+# Execute a terminal collection
+codestate terminals execute <collection-name>
+```
+
 ## Interactive Mode
 
 CodeState CLI includes an interactive TUI for enhanced user experience:
@@ -145,6 +177,9 @@ codestate session
 
 # Launch interactive mode for configuration
 codestate config
+
+# Launch interactive mode for terminal collections
+codestate terminals
 ```
 
 ## Examples
@@ -188,6 +223,17 @@ codestate config show
 # Update settings interactively
 codestate config update
 # Follow prompts to modify configuration
+```
+
+### Working with Terminal Collections
+
+```bash
+# List all terminal collections
+codestate terminals list
+
+# Execute a collection of commands
+codestate terminals execute setup-project
+# This will run all commands in the collection sequentially
 ```
 
 ## Configuration
