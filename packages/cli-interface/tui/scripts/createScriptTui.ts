@@ -1,6 +1,7 @@
 import inquirer from "@codestate/cli-interface/utils/inquirer";
 import { Script, ScriptCommand } from "@codestate/core";
 import { createScriptCommand } from "../../commands/scripts/createScript";
+import { randomUUID } from "crypto";
 
 export async function createScriptTui() {
   await createScriptsInteractively();
@@ -85,6 +86,7 @@ async function createScriptsInteractively() {
       }
 
       scripts.push({
+        id: randomUUID(),
         name: answers.name.trim(),
         rootPath: answers.rootPath.trim(),
         script: scriptAnswer.script.trim(),
@@ -164,6 +166,7 @@ async function createScriptsInteractively() {
       }
 
       scripts.push({
+        id: randomUUID(),
         name: answers.name.trim(),
         rootPath: answers.rootPath.trim(),
         commands: commands,

@@ -8,7 +8,7 @@ export async function promptSessionDetails(defaults?: {
   terminalCollectionChoices?: Array<{ name: string; value: string }>;
   scriptChoices?: Array<{ name: string; value: string }>;
 }) {
-  const prompts = [
+  const prompts: any[] = [
     {
       type: "input",
       name: "sessionName",

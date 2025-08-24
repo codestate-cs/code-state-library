@@ -1,6 +1,6 @@
 {
   "name": "codestate-core",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Core domain models, use cases, and services for CodeState",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -3,6 +3,7 @@ import { handleConfigCommand } from "../tui/config";
 import { handleScriptCommand } from "../tui/scripts";
 import { handleSessionCommand } from "../tui/session";
 import { handleTerminalCommand } from "../tui/terminals";
+import { handleResetCommand } from "../tui/reset";
 
 export async function handleCommand(
   command: string,
@@ -24,9 +25,12 @@ export async function handleCommand(
     case "terminals":
       await handleTerminalCommand(subcommand, options);
       break;
+    case "reset":
+      await handleResetCommand(subcommand, options);
+      break;
     default:
       logger.error(`Error: Unknown command '${command}'`);
-      logger.plainLog("Available commands: config, scripts, session, terminals");
+      logger.plainLog("Available commands: config, scripts, session, terminals, reset");
       process.exit(1);
   }
 }

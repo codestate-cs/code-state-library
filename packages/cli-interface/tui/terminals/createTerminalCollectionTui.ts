@@ -52,6 +52,7 @@ async function createTerminalCollectionInteractively() {
         
         // Add the new script to available scripts
         const newScript = {
+          id: randomUUID(),
           name: newScriptDetails.name,
           rootPath: newScriptDetails.rootPath,
           script: newScriptDetails.script,
@@ -307,6 +308,7 @@ async function promptForNewScript() {
     }
 
     return {
+      id: randomUUID(),
       name: answers.name.trim(),
       rootPath: answers.rootPath.trim(),
       script: scriptAnswer.script.trim(),
@@ -381,6 +383,7 @@ async function promptForNewScript() {
     }
 
     return {
+      id: randomUUID(),
       name: answers.name.trim(),
       rootPath: answers.rootPath.trim(),
       commands: commands,
