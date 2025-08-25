@@ -1,6 +1,6 @@
 {
   "name": "@codestate/core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Core domain models, use cases, and services for CodeState",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

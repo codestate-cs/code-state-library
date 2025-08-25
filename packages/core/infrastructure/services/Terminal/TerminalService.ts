@@ -123,7 +123,7 @@ export class TerminalService implements ITerminalService {
       }
 
       // Get the appropriate terminal command for the current platform
-      const terminalCmd = this.getTerminalCommand();
+      const terminalCmd = await this.getTerminalCommand();
       const shell = this.getDefaultShell();
       
       // Prepare spawn options
@@ -193,7 +193,7 @@ export class TerminalService implements ITerminalService {
       }
 
       // Get the appropriate terminal command for the current platform
-      const terminalCmd = this.getTerminalCommand();
+      const terminalCmd = await this.getTerminalCommand();
       const shell = this.getDefaultShell();
       
       // Prepare spawn options
@@ -408,16 +408,54 @@ export class TerminalService implements ITerminalService {
     }
   }
 
-  private getTerminalCommand(): string {
+  private async getTerminalCommand(): Promise<string> {
     const osPlatform = platform();
     if (osPlatform === 'win32') {
       return 'cmd.exe';
     } else if (osPlatform === 'darwin') {
       return 'open';
     } else {
-      // Linux - try common terminal emulators
-      return 'gnome-terminal';
+      // Linux - detect available terminal emulators
+      return this.detectLinuxTerminal();
     }
+  }
+
+  private async detectLinuxTerminal(): Promise<string> {
+    // Common terminal emulators to try, in order of preference
+    const terminals = [
+      'gnome-terminal',
+      'xterm',
+      'konsole',
+      'xfce4-terminal',
+      'mate-terminal',
+      'tilix',
+      'terminator',
+      'alacritty',
+      'kitty'
+    ];
+
+    this.logger.debug('Detecting available Linux terminals', { terminals });
+
+    for (const terminal of terminals) {
+      try {
+        const result = await this.executeCommand({ 
+          command: `which ${terminal}`, 
+          timeout: 2000 
+        });
+        if (result.ok && result.value.success) {
+          this.logger.debug(`Linux terminal detected: ${terminal}`);
+          return terminal;
+        }
+      } catch (error) {
+        this.logger.debug(`Terminal ${terminal} not available`, { error });
+        // Continue to next terminal
+        continue;
+      }
+    }
+
+    // Fallback to gnome-terminal if none detected (will fail gracefully)
+    this.logger.warn('No common terminal emulator detected, falling back to gnome-terminal');
+    return 'gnome-terminal';
   }
 
   private getTerminalArgs(terminalCmd: string, shell: string, command: string, cwd?: string): string[] {
@@ -437,13 +475,35 @@ export class TerminalService implements ITerminalService {
         args.push('-hold', '-e', shell, '-c', command);
       } else if (terminalCmd.includes('konsole')) {
         args.push('--hold', '-e', shell, '-c', command);
+      } else if (terminalCmd.includes('xfce4-terminal')) {
+        args.push('--execute', shell, '-c', command);
+      } else if (terminalCmd.includes('mate-terminal')) {
+        args.push('--execute', shell, '-c', command);
+      } else if (terminalCmd.includes('tilix')) {
+        args.push('--new-process', '-e', shell, '-c', command);
+      } else if (terminalCmd.includes('terminator')) {
+        args.push('--new-tab', '-e', shell, '-c', command);
+      } else if (terminalCmd.includes('alacritty')) {
+        args.push('-e', shell, '-c', command);
+      } else if (terminalCmd.includes('kitty')) {
+        args.push('--', shell, '-c', command);
       } else {
         // fallback to gnome-terminal style
         args.push('--', shell, '-c', command);
       }
       
       if (cwd && typeof cwd === 'string') {
-        args.unshift('--working-directory', cwd);
+        // Add working directory argument for terminals that support it
+        if (terminalCmd.includes('gnome-terminal') || 
+            terminalCmd.includes('xfce4-terminal') || 
+            terminalCmd.includes('mate-terminal') ||
+            terminalCmd.includes('tilix')) {
+          args.unshift('--working-directory', cwd);
+        } else if (terminalCmd.includes('xterm') || terminalCmd.includes('konsole')) {
+          // xterm and konsole don't have working directory flags, use cd command
+          const cdCommand = `cd "${cwd}" && ${command}`;
+          args.splice(-1, 1, cdCommand); // Replace the last argument (command) with cdCommand
+        }
       }
     }
     
@@ -469,13 +529,35 @@ export class TerminalService implements ITerminalService {
       } else if (terminalCmd.includes('konsole')) {
         // Use -e without --hold to allow terminal to close
         args.push('-e', shell, '-c', command);
+      } else if (terminalCmd.includes('xfce4-terminal')) {
+        args.push('--execute', shell, '-c', command);
+      } else if (terminalCmd.includes('mate-terminal')) {
+        args.push('--execute', shell, '-c', command);
+      } else if (terminalCmd.includes('tilix')) {
+        args.push('--new-process', '-e', shell, '-c', command);
+      } else if (terminalCmd.includes('terminator')) {
+        args.push('--new-tab', '-e', shell, '-c', command);
+      } else if (terminalCmd.includes('alacritty')) {
+        args.push('-e', shell, '-c', command);
+      } else if (terminalCmd.includes('kitty')) {
+        args.push('--', shell, '-c', command);
       } else {
         // fallback to gnome-terminal style
         args.push('--', shell, '-c', command);
       }
       
       if (cwd && typeof cwd === 'string') {
-        args.unshift('--working-directory', cwd);
+        // Add working directory argument for terminals that support it
+        if (terminalCmd.includes('gnome-terminal') || 
+            terminalCmd.includes('xfce4-terminal') || 
+            terminalCmd.includes('mate-terminal') ||
+            terminalCmd.includes('tilix')) {
+          args.unshift('--working-directory', cwd);
+        } else if (terminalCmd.includes('xterm') || terminalCmd.includes('konsole')) {
+          // xterm and konsole don't have working directory flags, use cd command
+          const cdCommand = `cd "${cwd}" && ${command}`;
+          args.splice(-1, 1, cdCommand); // Replace the last argument (command) with cdCommand
+        }
       }
     }
     
