@@ -47,7 +47,7 @@ Commands:
   terminals show <name>     Show specific terminal collection details
   terminals resume <name>   Execute a terminal collection
   
-  reset [options]           Reset CodeState data (sessions, scripts, terminals, config)
+  reset [options]           Reset CodeState data (sessions, scripts, terminals, config, all)
 
 Features:
   • Terminal Command Capture: Sessions automatically capture running terminal commands
@@ -82,22 +82,6 @@ function showVersion() {
 }
 
 async function main() {
-  try {
-    // Check for version upgrade and perform automatic reset if needed
-    const { CheckVersionUpgrade } = await import("@codestate/core");
-    const versionChecker = new CheckVersionUpgrade();
-    const versionResult = await versionChecker.execute();
-    
-    if (!versionResult.ok) {
-      logger.warn("Version check failed, continuing with normal operation", { 
-        error: versionResult.error 
-      });
-    }
-  } catch (error) {
-    // If version check fails, continue with normal operation
-    logger.log("Version check failed, continuing with normal operation", { error });
-  }
-
   // Parse command first
   const [command, subcommand, ...options] = args;
 

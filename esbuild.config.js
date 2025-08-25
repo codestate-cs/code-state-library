@@ -12,7 +12,7 @@ const isCliOnly = args.includes('--cli-only');
 const commonOptions = {
   platform: 'node',
   target: 'node18',
-  format: 'esm',
+  format: 'cjs',
   bundle: true,
   minify: false,
   sourcemap: true,
@@ -21,7 +21,7 @@ const commonOptions = {
 
 // Core package build configuration
 const coreBuild = async () => {
-  console.log('🔨 Building codestate-core...');
+  console.log('🔨 Building @codestate/core...');
 
   // Build with esbuild
   const result = await esbuild.build({
@@ -73,7 +73,7 @@ const coreBuild = async () => {
     }
   });
 
-  console.log('✅ codestate-core built successfully');
+  console.log('✅ @codestate/core built successfully');
   return result;
 };
 
@@ -83,11 +83,10 @@ const cliBuild = async () => {
   
   const result = await esbuild.build({
     ...commonOptions,
-    format: 'cjs',
     entryPoints: ['packages/cli-interface/cli.ts'],
     outfile: 'packages/cli-interface/dist/cli.js',
     external: [
-      'codestate-core',
+      '@codestate/core',
       'inquirer',
       'fs',
       'path',
@@ -134,10 +133,10 @@ const cliBuild = async () => {
           {
             name: 'import-transformer',
             setup(build) {
-              // Transform imports from @codestate/core to codestate-core
+              // Transform imports from @codestate/core to @codestate/core
               build.onResolve({ filter: /^@codestate\/core$/ }, args => {
                 return {
-                  path: 'codestate-core',
+                  path: '@codestate/core',
                   external: true
                 };
               });
@@ -196,15 +195,14 @@ const watch = async () => {
     });
     
     await context.watch();
-    console.log('👀 Watching codestate-core...');
+    console.log('👀 Watching @codestate/core...');
       } else if (isCliOnly) {
       const context = await esbuild.context({
         ...commonOptions,
-        format: 'cjs',
         entryPoints: ['packages/cli-interface/cli.ts'],
         outfile: 'packages/cli-interface/dist/cli.js',
         external: [
-          'codestate-core',
+          '@codestate/core',
           'inquirer',
           'fs', 'path', 'os', 'crypto', 'child_process', 'util', 'events', 'stream',
           'buffer', 'url', 'querystring', 'http', 'https', 'net', 'tls', 'dns',
@@ -218,9 +216,9 @@ const watch = async () => {
           {
             name: 'import-transformer',
             setup(build) {
-              // Transform imports from @codestate/core to codestate-core
+              // Transform imports from @codestate/core to @codestate/core
               build.onResolve({ filter: /^@codestate\/core$/ }, args => {
-                return { path: 'codestate-core', external: true };
+                return { path: '@codestate/core', external: true };
               });
             }
           }
@@ -249,11 +247,10 @@ const watch = async () => {
     
     const cliContext = await esbuild.context({
       ...commonOptions,
-      format: 'cjs',
       entryPoints: ['packages/cli-interface/cli.ts'],
       outfile: 'packages/cli-interface/dist/cli.js',
       external: [
-        'codestate-core', 'inquirer',
+        '@codestate/core', 'inquirer',
         'fs', 'path', 'os', 'crypto', 'child_process', 'util', 'events', 'stream',
         'buffer', 'url', 'querystring', 'http', 'https', 'net', 'tls', 'dns',
         'dgram', 'cluster', 'worker_threads', 'perf_hooks', 'async_hooks',
@@ -266,9 +263,9 @@ const watch = async () => {
         {
           name: 'import-transformer',
           setup(build) {
-            // Transform imports from @codestate/core to codestate-core
+            // Transform imports from @codestate/core to @codestate/core
             build.onResolve({ filter: /^@codestate\/core$/ }, args => {
-              return { path: 'codestate-core', external: true };
+              return { path: '@codestate/core', external: true };
             });
           }
         }
