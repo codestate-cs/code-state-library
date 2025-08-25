@@ -1,15 +1,14 @@
 {
-  "name": "codestate-core",
-  "version": "1.4.7",
+  "name": "@codestate/core",
+  "version": "1.0.0",
   "description": "Core domain models, use cases, and services for CodeState",
-  "module": "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "default": "./dist/index.cjs"
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "files": [
@@ -18,8 +17,8 @@
   "scripts": {
     "build:types": "tsc --project ./tsconfig.json",
     "build:dts": "dts-bundle-generator --external-inlines @babel/types -o dist/index.d.ts index.ts",
-    "build": "npm run build:types && npm run build:dts && cd ../.. && node esbuild.config.js --core-only && cd packages/core && npm run postbuild",
-    "build:dev": "npm run build:types && npm run build:dts && cd ../.. && node esbuild.config.js --core-only --dev && cd packages/core && npm run postbuild",
+    "build": "npm run clean && npm run build:types && npm run build:dts && cd ../.. && node esbuild.config.js --core-only && cd packages/core && npm run postbuild",
+    "build:dev": "npm run clean && npm run build:types && npm run build:dts && cd ../.. && node esbuild.config.js --core-only --dev && cd packages/core && npm run postbuild",
     "postbuild": "rimraf dist/domain dist/infrastructure dist/services dist/use-cases /packages",
     "build:watch": "node ../../esbuild.config.js --core-only --watch",
     "build:watch:dev": "node ../../esbuild.config.js --core-only --watch --dev",

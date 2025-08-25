@@ -1,21 +1,6 @@
-# CodeState CLI
+# @codestate/cli
 
 A powerful command-line interface for CodeState - a developer context engine for saving and resuming your full development environment.
-
-Visit [codestate.dev](https://www.codestate.dev/) for more information about CodeState.
-
-## Version 1.4.6 Updates
-
-### What's New
-- **Enhanced Functionality**: Improved CLI commands and interface consistency
-- **Better Integration**: Updated to work with core package v1.4.5
-- **Build Improvements**: Enhanced build system and dependency management
-- **Package Updates**: Updated to v1.4.5 with improved stability
-
-### Changes from v1.4.2
-- 🔧 **Core Integration**: Updated to use codestate-core v1.4.5
-- 🏗️ **Build Improvements**: Enhanced build system with better dependency resolution
-- 📦 **Package Updates**: Updated to v1.4.5 with improved functionality
 
 ## Overview
 
@@ -24,28 +9,29 @@ CodeState CLI provides a comprehensive command-line interface for managing your 
 ## Features
 
 ### 🚀 Script Management
-- **Create Scripts**: Define reusable development scripts
+- **Create Scripts**: Define reusable development scripts with interactive prompts
 - **Update Scripts**: Modify existing scripts with ease
 - **Delete Scripts**: Remove scripts by ID or root path
 - **List Scripts**: View all scripts or filter by project
 - **Import/Export**: Share scripts across environments
+- **Resume Scripts**: Execute saved scripts with full context
 
 ### 💾 Session Management
-- **Save Sessions**: Capture your current development state
-- **Resume Sessions**: Restore previous development contexts
-- **List Sessions**: View all saved sessions
-- **Update Sessions**: Modify session metadata
+- **Save Sessions**: Capture your current development state including open files, git status, and terminal commands
+- **Resume Sessions**: Restore previous development contexts with file positions and terminal state
+- **List Sessions**: View all saved sessions with metadata
+- **Update Sessions**: Modify session metadata and notes
 - **Delete Sessions**: Clean up old sessions
 
 ### ⚙️ Configuration Management
-- **Show Config**: Display current configuration
+- **Show Config**: Display current configuration settings
 - **Update Config**: Modify settings interactively
-- **Export Config**: Backup your configuration
+- **Export Config**: Backup your configuration to file
 - **Import Config**: Restore configuration from backup
 - **Reset Config**: Restore default settings
 
 ### 🔧 Git Integration
-- **Git Status**: Check repository state
+- **Git Status**: Check repository state and changes
 - **Stash Management**: Create, list, and apply stashes
 - **Commit Changes**: Stage and commit modifications
 - **Dirty Data**: Track uncommitted changes
@@ -61,10 +47,15 @@ CodeState CLI provides a comprehensive command-line interface for managing your 
 - **List Collections**: View all terminal collections
 - **Manage Collections**: Update and delete collections
 
+### 🔄 Reset Operations
+- **Comprehensive Reset**: Reset sessions, scripts, terminals, config, or all data
+- **Interactive Reset**: User-friendly interface with confirmation prompts
+- **CLI Flags**: Support for `--all`, `--sessions`, `--scripts`, `--terminals`, `--config` flags
+
 ## Installation
 
 ```bash
-npm install -g codestate-cli
+npm install -g @codestate/cli
 ```
 
 ## Quick Start
@@ -95,7 +86,7 @@ codestate scripts create
 codestate scripts show
 
 # Show scripts for specific project
-codestate scripts show --root-path /path/to/project
+codestate scripts show-by-path /path/to/project
 
 # Update a script
 codestate scripts update <script-id>
@@ -111,6 +102,9 @@ codestate scripts export --output scripts.json
 
 # Import scripts from file
 codestate scripts import --input scripts.json
+
+# Resume a script
+codestate scripts resume <script-name>
 ```
 
 ### Session Commands
@@ -157,11 +151,30 @@ codestate config reset
 # List all terminal collections
 codestate terminals list
 
+# Create a new terminal collection
+codestate terminals create
+
 # Get details of a specific collection
-codestate terminals get <collection-name>
+codestate terminals show <collection-name>
 
 # Execute a terminal collection
-codestate terminals execute <collection-name>
+codestate terminals resume <collection-name>
+```
+
+### Reset Commands
+
+```bash
+# Reset everything (interactive)
+codestate reset
+
+# Reset everything (non-interactive)
+codestate reset --all
+
+# Reset specific data types
+codestate reset --sessions
+codestate reset --scripts
+codestate reset --terminals
+codestate reset --config
 ```
 
 ## Interactive Mode
@@ -232,8 +245,21 @@ codestate config update
 codestate terminals list
 
 # Execute a collection of commands
-codestate terminals execute setup-project
+codestate terminals resume setup-project
 # This will run all commands in the collection sequentially
+```
+
+### Resetting Data
+
+```bash
+# Interactive reset with confirmation prompts
+codestate reset
+
+# Reset everything without prompts
+codestate reset --all
+
+# Reset only sessions
+codestate reset --sessions
 ```
 
 ## Configuration
@@ -248,11 +274,18 @@ CodeState CLI uses a configuration file to store settings. The default location 
 
 ```json
 {
-  "defaultIDE": "vscode",
-  "scriptsDirectory": "~/.codestate/scripts",
-  "sessionsDirectory": "~/.codestate/sessions",
-  "gitAutoCommit": false,
-  "sessionAutoSave": true
+  "ide": "vscode",
+  "version": "1.0.0",
+  "encryption": {
+    "enabled": false
+  },
+  "storagePath": "~/.codestate",
+  "logger": {
+    "level": "LOG",
+    "sinks": ["file"]
+  },
+  "experimental": {},
+  "extensions": {}
 }
 ```
 
@@ -261,16 +294,25 @@ CodeState CLI uses a configuration file to store settings. The default location 
 CodeState CLI integrates with popular IDEs:
 
 - **VS Code**: Open projects and files directly
-  - Install the [CodeState IDE Extension](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide) for seamless IDE integration - manage scripts, sessions, and configurations directly from VS Code
+  - Install the [CodeState IDE Extension](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide) for seamless IDE integration
 - **WebStorm/IntelliJ**: Launch projects in JetBrains IDEs
 - **Sublime Text**: Open files in Sublime
 - **Vim/Neovim**: Open files in terminal editors
 
-> **Tip**: You can use both the CLI and IDE extension for most tasks. However, for saving sessions, we recommend using the IDE extension as it can capture file contents and open files, while the CLI can only save metadata. The CLI is great for terminal workflows and automation, while the IDE extension provides a native VS Code experience for managing your development context.
+> **Tip**: You can use both the CLI and IDE extension for most tasks. The CLI is great for terminal workflows and automation, while the IDE extension provides a native VS Code experience for managing your development context.
+
+## Error Handling
+
+CodeState CLI provides comprehensive error handling:
+
+- **Graceful Error Messages**: Clear, actionable error messages
+- **Exit Codes**: Proper exit codes for automation
+- **Logging**: Detailed logging for debugging
+- **Recovery**: Automatic recovery from common errors
 
 ## Development
 
-This package is part of the CodeState monorepo. For development setup, see the main [CodeState repository](https://github.com/codestate-cs/code-state-library).
+This package is part of the CodeState monorepo. For development setup and contributing, see the main [CodeState repository](https://github.com/codestate-cs/code-state-library).
 
 ### Building from Source
 
