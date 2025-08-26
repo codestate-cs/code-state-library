@@ -4,9 +4,11 @@ import {
   ListSessions,
 } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
+import { CLISpinner } from "../../utils/CLISpinner";
 
 export async function deleteSessionCommand(sessionIdOrName?: string) {
   const logger = new ConfigurableLogger();
+  const spinner = new CLISpinner();
   const deleteSession = new DeleteSession();
   const listSessions = new ListSessions();
 
@@ -19,7 +21,7 @@ export async function deleteSessionCommand(sessionIdOrName?: string) {
       const listResult = await listSessions.execute();
 
       if (!listResult.ok) {
-        logger.error("Failed to list sessions", { error: listResult.error });
+        logger.error("Failed to list sessions");
         return;
       }
 
@@ -64,14 +66,18 @@ export async function deleteSessionCommand(sessionIdOrName?: string) {
     }
 
     // Delete the session
+    spinner.start("🗑️  Deleting session...");
+    
     const result = await deleteSession.execute(sessionIdOrName!);
 
     if (result.ok) {
-      logger.log(` Session "${sessionIdOrName}" deleted successfully!`);
+      spinner.succeed("Session deleted successfully!");
+      logger.log(`Session "${sessionIdOrName}" deleted successfully!`);
     } else {
-      logger.error("Failed to delete session", { error: result.error });
+      spinner.fail("Failed to delete session");
+      logger.error("Failed to delete session");
     }
   } catch (error) {
-    logger.error("Unexpected error while deleting session", { error });
+    logger.error("Unexpected error while deleting session");
   }
 }

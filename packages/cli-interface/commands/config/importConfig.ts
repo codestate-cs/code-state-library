@@ -5,8 +5,8 @@ export async function importConfigCommand(json: string) {
   const importConfig = new ImportConfig();
   const result = await importConfig.execute(json);
   if (result.ok) {
-    logger.log("Config imported:", { config: result.value });
+    logger.log("Config imported");
   } else {
-    logger.error("Failed to import config", { error: result.error });
+    logger.error("Failed to import config");
   }
 }

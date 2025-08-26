@@ -30,9 +30,16 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
   private async getIndex(): Promise<Result<TerminalCollectionIndex>> {
     const readResult = await this.storage.read(TERMINAL_INDEX_PATH);
     if (isFailure(readResult)) {
-      // If file not found, return an empty index (don't create the file yet)
+      // If file not found, create a new empty index
       if (readResult.error.code === 'STORAGE_READ_FAILED') {
         const emptyIndex: TerminalCollectionIndex = { entries: [] };
+        // Create the index file automatically
+        const writeResult = await this.storage.write(TERMINAL_INDEX_PATH, JSON.stringify(emptyIndex));
+        if (isFailure(writeResult)) {
+          this.logger.error('Failed to create terminal collection index', { error: writeResult.error });
+          return { ok: false, error: writeResult.error };
+        }
+        this.logger.debug('Created new terminal collection index');
         return { ok: true, value: emptyIndex };
       }
       return { ok: false, error: readResult.error };

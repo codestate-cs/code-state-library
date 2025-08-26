@@ -61,7 +61,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     // 1. Load session file and validate
     const sessionResult = await resumeSession.execute(targetSession);
     if (!sessionResult.ok) {
-      logger.error("Failed to load session", { error: sessionResult.error });
+      logger.error("Failed to load session");
       return;
     }
 
@@ -101,9 +101,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
 
     const gitStatusResult = await gitService.getStatus();
     if (!gitStatusResult.ok) {
-      logger.error("Failed to get Git status", {
-        error: gitStatusResult.error,
-      });
+      logger.error("Failed to get Git status");
       return;
     }
     const gitStatus = gitStatusResult.value;
@@ -163,9 +161,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       const stashResult = await applyStash.execute(session.git.stashId);
       if (stashResult.ok && stashResult.value.success) {
       } else {
-        logger.error("Failed to apply stash", {
-          error: stashResult.ok ? stashResult.value.error : stashResult.error,
-        });
+        logger.error("Failed to apply stash");
       }
     }
 
@@ -207,7 +203,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
               }
             );
           } else {
-            logger.plainLog(`  ✅ New terminal spawned for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
+            logger.plainLog(`  New terminal spawned for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
             logger.plainLog(`  📱 All commands will run sequentially in the new terminal window`);
           }
         } else {
@@ -239,7 +235,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
                 }
               );
             } else {
-              logger.plainLog(`  ✅ Command executed successfully: ${terminalCmd.name} - ${terminalCmd.command}`);
+              logger.plainLog(`  Command executed successfully: ${terminalCmd.name} - ${terminalCmd.command}`);
             }
 
             // Small delay between commands
@@ -266,18 +262,12 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
           const executeResult = await executeTerminalCollection.executeById(collectionId);
           
           if (executeResult.ok) {
-            logger.plainLog(`✅ Terminal collection executed successfully`);
+            logger.plainLog(`Terminal collection executed successfully`);
           } else {
-            logger.error(`❌ Failed to execute terminal collection`, { 
-              error: executeResult.error,
-              collectionId 
-            });
+            logger.error(`Failed to execute terminal collection`);
           }
         } catch (error) {
-          logger.error(`❌ Error executing terminal collection`, { 
-            error, 
-            collectionId 
-          });
+          logger.error(`Error executing terminal collection`);
         }
       }
     } else {
@@ -297,18 +287,12 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
           const executeResult = await resumeScript.execute(scriptName);
           
           if (executeResult.ok) {
-            logger.plainLog(`✅ Script executed successfully`);
+            logger.plainLog(`Script executed successfully`);
           } else {
-            logger.error(`❌ Failed to execute script`, { 
-              error: executeResult.error,
-              scriptName 
-            });
+            logger.error(`Failed to execute script`);
           }
         } catch (error) {
-          logger.error(`❌ Error executing script`, { 
-            error, 
-            scriptName 
-          });
+          logger.error(`Error executing script`);
         }
       }
     } else {
@@ -358,17 +342,13 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
           if (filesResult.ok) {
             logger.plainLog(`Opened ${sortedFiles.length} files in correct order`);
           } else {
-            logger.error("Failed to open files in IDE", {
-              error: filesResult.error,
-            });
+            logger.error("Failed to open files in IDE");
           }
         } else {
           logger.plainLog("No files to open from session");
         }
       } else {
-        logger.error(`Failed to open IDE '${configuredIDE}'`, {
-          error: ideResult.error,
-        });
+        logger.error(`Failed to open IDE '${configuredIDE}'`);
         logger.warn("Continuing without IDE...");
       }
     } else {
@@ -379,7 +359,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
 
     // TODO: Implement session metadata update
 
-    logger.log(`\n✅ Session "${session.name}" resumed successfully!`);
+    logger.log(`\nSession "${session.name}" resumed successfully!`);
     if (session.notes) {
       logger.plainLog(`\n📝 Notes: ${session.notes}`);
     }
@@ -387,6 +367,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       logger.plainLog(`🏷️  Tags: ${session.tags.join(", ")}`);
     }
   } catch (error) {
-    logger.error("Unexpected error during session resume", { error });
+    logger.error("Unexpected error during session resume");
   }
 }

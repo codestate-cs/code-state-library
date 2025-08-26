@@ -1,6 +1,7 @@
 import inquirer from "@codestate/cli-interface/utils/inquirer";
 import { CreateTerminalCollection, GetScripts, CreateScript, ConfigurableLogger, isSuccess, isFailure, Script, ScriptCommand } from "@codestate/core";
 import { randomUUID } from "crypto";
+import { CLISpinner } from "../../utils/CLISpinner";
 
 export async function createTerminalCollectionTui() {
   await createTerminalCollectionInteractively();
@@ -25,7 +26,7 @@ async function createTerminalCollectionInteractively() {
     // Get existing scripts for selection
     const existingScriptsResult = await getScripts.execute();
     if (isFailure(existingScriptsResult)) {
-      logger.error('Failed to get existing scripts', { error: existingScriptsResult.error });
+      logger.error('Failed to get existing scripts');
       process.exit(1);
     }
     
@@ -44,11 +45,17 @@ async function createTerminalCollectionInteractively() {
         // Create new script
         const newScriptDetails = await promptForNewScript();
         
+        const scriptSpinner = new CLISpinner();
+        scriptSpinner.start("📜 Creating script...");
+        
         const scriptResult = await createScript.execute(newScriptDetails);
         if (isFailure(scriptResult)) {
-          logger.error('Failed to create script', { error: scriptResult.error });
+          scriptSpinner.fail("Failed to create script");
+          logger.error('Failed to create script');
           process.exit(1);
         }
+        
+        scriptSpinner.succeed("Script created successfully!");
         
         // Add the new script to available scripts
         const newScript = {
@@ -62,7 +69,7 @@ async function createTerminalCollectionInteractively() {
         } as Script;
         availableScripts.push(newScript);
         
-        logger.plainLog(`✅ Script '${newScriptDetails.name}' created successfully!`);
+        logger.plainLog(`Script '${newScriptDetails.name}' created successfully!`);
         logger.plainLog('');
         
         // Add the newly created script to pre-selected list along with any previously selected scripts
@@ -92,15 +99,21 @@ async function createTerminalCollectionInteractively() {
       closeTerminalAfterExecution: terminalCollectionDetails.closeTerminalAfterExecution
     };
     
+    const spinner = new CLISpinner();
+    spinner.start("🚀 Creating terminal collection...");
+    
     const result = await createTerminalCollection.execute(terminalCollection);
     
     if (isFailure(result)) {
-      logger.error('Failed to create terminal collection', { error: result.error });
+      spinner.fail("Failed to create terminal collection");
+      logger.error('Failed to create terminal collection');
       process.exit(1);
     }
     
+    spinner.succeed("Terminal collection created successfully!");
+    
     logger.plainLog('');
-    logger.plainLog('✅ Terminal collection created successfully!');
+    logger.plainLog('Terminal collection created successfully!');
     logger.plainLog('');
     logger.plainLog(`📁 Name: ${terminalCollection.name}`);
     logger.plainLog(`📍 Path: ${terminalCollection.rootPath}`);
@@ -114,7 +127,7 @@ async function createTerminalCollectionInteractively() {
     logger.plainLog('   • Use `codestate terminals list` to see all collections');
     
   } catch (error) {
-    logger.error('Failed to create terminal collection', { error });
+    logger.error('Failed to create terminal collection');
     process.exit(1);
   }
 }

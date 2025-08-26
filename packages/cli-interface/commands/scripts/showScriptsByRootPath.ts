@@ -35,9 +35,6 @@ export async function showScriptsByRootPathCommand(rootPath: string) {
 
     logger.plainLog("");
   } else {
-    logger.error("Failed to load scripts for root path", {
-      error: result.error,
-      rootPath,
-    });
+    logger.error("Failed to load scripts for root path");
   }
 }

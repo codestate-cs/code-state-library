@@ -18,7 +18,7 @@ export async function showConfigCommand() {
     if (config.experimental && Object.keys(config.experimental).length > 0) {
       logger.plainLog("\n🔬 Experimental Features:");
       Object.entries(config.experimental).forEach(([key, value]) => {
-        logger.plainLog(`  ${key}: ${value ? "✅" : "❌"}`);
+        logger.plainLog(`  ${key}: ${value ? "Enabled" : "Disabled"}`);
       });
     }
 
@@ -30,6 +30,6 @@ export async function showConfigCommand() {
     }
     logger.plainLog("");
   } else {
-    logger.error("Failed to load config", { error: result.error });
+    logger.error("Failed to load config");
   }
 }

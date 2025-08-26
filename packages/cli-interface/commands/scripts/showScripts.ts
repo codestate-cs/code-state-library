@@ -1,10 +1,18 @@
 import { ConfigurableLogger, GetScripts } from "@codestate/core";
+import { CLISpinner } from "../../utils/CLISpinner";
 
 export async function showScriptsCommand() {
   const logger = new ConfigurableLogger();
+  const spinner = new CLISpinner();
   const getScripts = new GetScripts();
+  
+  spinner.start("📋 Loading scripts...");
+  
   const result = await getScripts.execute();
+  
   if (result.ok) {
+    spinner.succeed("Scripts loaded");
+    
     const scripts = result.value;
 
     if (scripts.length === 0) {
@@ -67,6 +75,7 @@ export async function showScriptsCommand() {
 
     logger.plainLog("");
   } else {
+    spinner.fail("Failed to load scripts");
     logger.error("Failed to load scripts", { error: result.error });
   }
 }

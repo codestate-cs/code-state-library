@@ -5,8 +5,8 @@ export async function exportConfigCommand() {
   const exportConfig = new ExportConfig();
   const result = await exportConfig.execute();
   if (result.ok) {
-    logger.log("Exported config:", { config: result.value });
+    logger.log("Exported config");
   } else {
-    logger.error("Failed to export config", { error: result.error });
+    logger.error("Failed to export config");
   }
 }

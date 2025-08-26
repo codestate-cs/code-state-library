@@ -7,6 +7,6 @@ export async function importScriptsCommand(json: string) {
   if (result.ok) {
     logger.log("Scripts imported successfully");
   } else {
-    logger.error("Failed to import scripts", { error: result.error });
+    logger.error("Failed to import scripts");
   }
 }

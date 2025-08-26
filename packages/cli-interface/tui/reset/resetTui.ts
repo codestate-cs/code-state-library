@@ -38,7 +38,7 @@ export async function resetTui() {
   ]);
 
   if (!answers.confirm) {
-    logger.plainLog("❌ Reset cancelled.");
+    logger.plainLog("Reset cancelled.");
     return;
   }
 
@@ -68,7 +68,7 @@ export async function resetTui() {
   ]);
 
   if (!finalConfirm.finalConfirm) {
-    logger.plainLog("❌ Reset cancelled.");
+    logger.plainLog("Reset cancelled.");
     return;
   }
 
@@ -77,11 +77,11 @@ export async function resetTui() {
   const result = await resetAll.execute(options);
   
   if (result.ok) {
-    logger.log(` Successfully reset: ${result.value.resetItems.join(', ')}`);
+    logger.log(`Successfully reset: ${result.value.resetItems.join(', ')}`);
     if (options.all) {
       logger.plainLog("🎉 CodeState has been completely reset to a fresh state!");
     }
   } else {
-    logger.error("Failed to reset CodeState", { error: result.error });
+    logger.error("Failed to reset CodeState");
   }
 } 

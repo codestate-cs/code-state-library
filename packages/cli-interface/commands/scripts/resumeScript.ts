@@ -1,8 +1,10 @@
 import { ConfigurableLogger, GetScriptsByRootPath, Terminal } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
+import { CLISpinner } from "../../utils/CLISpinner";
 
 export async function resumeScriptCommand(scriptName?: string, rootPath?: string) {
   const logger = new ConfigurableLogger();
+  const spinner = new CLISpinner();
   const getScriptsByRootPath = new GetScriptsByRootPath();
   const terminal = new Terminal();
 
@@ -43,7 +45,7 @@ export async function resumeScriptCommand(scriptName?: string, rootPath?: string
     // Get scripts for the target path
     const scriptsResult = await getScriptsByRootPath.execute(targetRootPath);
     if (!scriptsResult.ok) {
-      logger.error("Failed to get scripts", { error: scriptsResult.error });
+      logger.error("Failed to get scripts");
       return;
     }
 
@@ -62,6 +64,8 @@ export async function resumeScriptCommand(scriptName?: string, rootPath?: string
     if (targetScript.script) {
       // Legacy single command format
       if (executionMode === 'new-terminals') {
+        spinner.start("🚀 Spawning new terminal...");
+        
         // Check if terminal should close after execution
         const closeAfterExecution = (targetScript as any).closeTerminalAfterExecution || false;
         
@@ -79,21 +83,27 @@ export async function resumeScriptCommand(scriptName?: string, rootPath?: string
         });
         
         if (spawnResult.ok) {
-          logger.plainLog(`✅ Script executed in new terminal`);
+          spinner.succeed("Script executed in new terminal");
+          logger.log("Script executed in new terminal");
         } else {
-          logger.error(`❌ Failed to spawn terminal`, { error: spawnResult.error });
+          spinner.fail("Failed to spawn terminal");
+          logger.error("Failed to spawn terminal");
         }
       } else {
         // Same terminal execution
+        spinner.start("⚡ Executing script...");
+        
         const scriptResult = await terminal.execute(targetScript.script, {
           cwd: targetRootPath,
           timeout: 30000,
         });
         
         if (scriptResult.ok && scriptResult.value.success) {
-          logger.plainLog(`✅ Script completed successfully`);
+          spinner.succeed("Script completed successfully");
+          logger.log("Script completed successfully");
         } else {
-          logger.error(`❌ Script failed`, { error: scriptResult.ok ? scriptResult.value : scriptResult.error });
+          spinner.fail("Script failed");
+          logger.error("Script failed");
         }
       }
     } else if ((targetScript as any).commands && (targetScript as any).commands.length > 0) {
@@ -101,6 +111,8 @@ export async function resumeScriptCommand(scriptName?: string, rootPath?: string
       const commands = (targetScript as any).commands.sort((a: any, b: any) => a.priority - b.priority);
       
       if (executionMode === 'new-terminals') {
+        spinner.start("🚀 Spawning new terminal...");
+        
         // Create a combined command that runs all commands in sequence
         const combinedCommand = commands
           .sort((a: any, b: any) => a.priority - b.priority)
@@ -124,22 +136,28 @@ export async function resumeScriptCommand(scriptName?: string, rootPath?: string
         });
         
         if (spawnResult.ok) {
-          logger.plainLog(`✅ Script executed in new terminal`);
+          spinner.succeed("Script executed in new terminal");
+          logger.log("Script executed in new terminal");
         } else {
-          logger.error(`❌ Failed to spawn terminal`, { error: spawnResult.error });
+          spinner.fail("Failed to spawn terminal");
+          logger.error("Failed to spawn terminal");
         }
       } else {
         // Execute commands in sequence in the same terminal
+        spinner.start("⚡ Executing script commands...");
+        
         for (const cmd of commands) {
+          spinner.update(`⚡ Executing command: ${cmd.name}`);
+          
           const cmdResult = await terminal.execute(cmd.command, {
             cwd: targetRootPath,
             timeout: 30000,
           });
           
           if (!cmdResult.ok || !cmdResult.value.success) {
-            logger.error(`❌ Command '${cmd.name}' failed`, {
-              error: cmdResult.ok ? cmdResult.value : cmdResult.error,
-            });
+            spinner.fail(`Command '${cmd.name}' failed`);
+            logger.error(`Command '${cmd.name}' failed`);
+            return;
           }
           
           // Small delay between commands
@@ -148,13 +166,14 @@ export async function resumeScriptCommand(scriptName?: string, rootPath?: string
           }
         }
         
-        logger.plainLog(`✅ Script completed successfully`);
+        spinner.succeed("Script completed successfully");
+        logger.log("Script completed successfully");
       }
     } else {
-      logger.warn(`⚠️  Script has no commands to execute`);
+      logger.warn("Script has no commands to execute");
     }
 
   } catch (error) {
-    logger.error("Unexpected error during script resume", { error });
+    logger.error("Unexpected error during script resume");
   }
 }

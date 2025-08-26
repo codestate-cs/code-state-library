@@ -6,6 +6,7 @@ import {
   ListTerminalCollections,
 } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
+import { CLISpinner } from "../../utils/CLISpinner";
 import {
   getCurrentGitState,
   handleSessionSave,
@@ -81,16 +82,14 @@ export async function saveSessionCommand() {
     // 1. Check current Git status
     const gitStatusResult = await gitService.getStatus();
     if (!gitStatusResult.ok) {
-      logger.error("Failed to get Git status", {
-        error: gitStatusResult.error,
-      });
+      logger.error("Failed to get Git status");
       return;
     }
     const gitStatus = gitStatusResult.value;
 
     // 2. Handle dirty repository
     if (gitStatus.isDirty) {
-      logger.warn("⚠️ Repository has uncommitted changes:");
+      logger.warn("Repository has uncommitted changes:");
       gitStatus.dirtyFiles.forEach((file) => {
         logger.plainLog(`  ${file.status}: ${file.path}`);
       });
@@ -108,9 +107,7 @@ export async function saveSessionCommand() {
         // Check if Git is properly configured first
         const configResult = await gitService.isGitConfigured();
         if (!configResult.ok) {
-          logger.error("Failed to check Git configuration", {
-            error: configResult.error,
-          });
+          logger.error("Failed to check Git configuration");
           logger.warn("Session save cancelled.");
           return;
         }
@@ -186,10 +183,7 @@ export async function saveSessionCommand() {
         logger.plainLog(" Committing changes...");
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
-          logger.error("Failed to commit changes", {
-            error: commitResult.error,
-            message: commitResult.error.message,
-          });
+          logger.error("Failed to commit changes");
 
           // Provide more specific error messages
           logger.warn("Git commit failed. This might be due to:");
@@ -218,9 +212,7 @@ export async function saveSessionCommand() {
               "Session save stash"
             );
             if (!stashResult.ok) {
-              logger.error("Failed to stash changes", {
-                error: stashResult.error,
-              });
+              logger.error("Failed to stash changes");
               logger.warn("Session save cancelled.");
               return;
             }
@@ -235,7 +227,7 @@ export async function saveSessionCommand() {
       } else if (dirtyAction === "stash") {
         const stashResult = await gitService.createStash("Session save stash");
         if (!stashResult.ok) {
-          logger.error("Failed to stash changes", { error: stashResult.error });
+          logger.error("Failed to stash changes");
           return;
         }
       }
@@ -284,6 +276,6 @@ export async function saveSessionCommand() {
       logger,
     });
   } catch (error) {
-    logger.error("Unexpected error during session save", { error });
+    logger.error("Unexpected error during session save");
   }
 }

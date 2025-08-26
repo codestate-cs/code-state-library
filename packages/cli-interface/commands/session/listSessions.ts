@@ -1,26 +1,33 @@
 import { ConfigurableLogger, ListSessions } from "@codestate/core";
+import { CLISpinner } from "../../utils/CLISpinner";
 
 export async function listSessionsCommand() {
   const logger = new ConfigurableLogger();
+  const spinner = new CLISpinner();
   const listSessions = new ListSessions();
 
   try {
-    logger.plainLog("📋 Available Sessions:");
-    logger.plainLog("─────────────────────");
-
+    spinner.start("📋 Loading sessions...");
+    
     const result = await listSessions.execute();
 
     if (!result.ok) {
-      logger.error("Failed to list sessions", { error: result.error });
+      spinner.fail("Failed to load sessions");
+      logger.error("Failed to list sessions");
       return;
     }
 
+    spinner.succeed("Sessions loaded");
+    
     const sessions = result.value;
 
     if (sessions.length === 0) {
       logger.plainLog("No sessions found.");
       return;
     }
+
+    logger.plainLog("📋 Available Sessions:");
+    logger.plainLog("─────────────────────");
 
     // Group sessions by project path
     const sessionsByProject = sessions.reduce((acc, session) => {
@@ -84,6 +91,6 @@ export async function listSessionsCommand() {
       `\nTotal: ${sessions.length} session${sessions.length > 1 ? "s" : ""}`
     );
   } catch (error) {
-    logger.error("Unexpected error while listing sessions", { error });
+    logger.error("Unexpected error while listing sessions");
   }
 }

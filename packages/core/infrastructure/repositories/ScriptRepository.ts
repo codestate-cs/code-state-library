@@ -545,6 +545,9 @@ export class ScriptRepository implements IScriptRepository {
         return { ok: false, error: saveResult.error };
       }
 
+      // Update index to reflect the changes
+      await this.updateIndexForRootPath(rootPath);
+
       this.logger.log("Script deleted successfully", { name, rootPath });
       return { ok: true, value: undefined };
     } catch (err: any) {
@@ -624,6 +627,9 @@ export class ScriptRepository implements IScriptRepository {
         if (isFailure(saveResult)) {
           return { ok: false, error: saveResult.error };
         }
+
+        // Update index to reflect the changes
+        await this.updateIndexForRootPath(rootPath);
       }
 
       this.logger.log("Multiple scripts deleted successfully", {

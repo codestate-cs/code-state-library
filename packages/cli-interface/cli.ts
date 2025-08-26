@@ -103,9 +103,7 @@ async function main() {
   try {
     await handleCommand(command, subcommand, options);
   } catch (error) {
-    logger.error("Error:", {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    logger.error("Error: An unexpected error occurred");
     process.exit(1);
   }
 }

@@ -1,5 +1,6 @@
 import { ConfigurableLogger, SaveSession } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
+import { CLISpinner } from "../../utils/CLISpinner";
 
 export async function promptSessionDetails(defaults?: {
   name?: string;
@@ -100,15 +101,7 @@ export async function getCurrentGitState(gitService: any, logger: any) {
   const isDirtyResult = await gitService.getIsDirty();
 
   if (!currentBranchResult.ok || !currentCommitResult.ok || !isDirtyResult.ok) {
-    logger.error("Failed to get Git state", {
-      branchError: currentBranchResult.ok
-        ? undefined
-        : currentBranchResult.error,
-      commitError: currentCommitResult.ok
-        ? undefined
-        : currentCommitResult.error,
-      isDirtyError: isDirtyResult.ok ? undefined : isDirtyResult.error,
-    });
+    logger.error("Failed to get Git state");
     return null;
   }
 
@@ -144,6 +137,9 @@ export async function handleSessionSave({
   saveSession: typeof SaveSession.prototype;
   logger: typeof ConfigurableLogger.prototype;
 }) {
+  const spinner = new CLISpinner();
+  spinner.start("💾 Saving session...");
+  
   const result = await saveSession.execute({
     name: sessionDetails.sessionName,
     projectRoot,
@@ -158,12 +154,15 @@ export async function handleSessionSave({
     terminalCollections: sessionDetails.terminalCollections || [],
     scripts: sessionDetails.scripts || [],
   });
+  
   if (result.ok) {
+    spinner.succeed("Session saved successfully!");
     logger.log(
-      `✅ Session "${sessionDetails.sessionName}" saved successfully!`
+      `Session "${sessionDetails.sessionName}" saved successfully!`
     );
   } else {
-    logger.error("Failed to save session", { error: result.error });
+    spinner.fail("Failed to save session");
+    logger.error("Failed to save session");
   }
   return result;
 }

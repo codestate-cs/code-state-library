@@ -48,7 +48,7 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     // 1. Load existing session and validate
     const sessionResult = await updateSession.execute(targetSession, {});
     if (!sessionResult.ok) {
-      logger.error("Failed to load session", { error: sessionResult.error });
+      logger.error("Failed to load session");
       return;
     }
 
@@ -89,16 +89,14 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
 
     const gitStatusResult = await gitService.getStatus();
     if (!gitStatusResult.ok) {
-      logger.error("Failed to get Git status", {
-        error: gitStatusResult.error,
-      });
+      logger.error("Failed to get Git status");
       return;
     }
     const gitStatus = gitStatusResult.value;
 
     // 3. Handle current repository dirty state
     if (gitStatus.isDirty) {
-      logger.warn("⚠️ Current repository has uncommitted changes:");
+      logger.warn("Current repository has uncommitted changes:");
       gitStatus.dirtyFiles.forEach((file) => {
         logger.plainLog(`  ${file.status}: ${file.path}`);
       });
@@ -133,9 +131,7 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
         logger.plainLog(" Committing changes...");
         const commitResult = await gitService.commitChanges(commitMessage);
         if (!commitResult.ok) {
-          logger.error("Failed to commit changes", {
-            error: commitResult.error,
-          });
+          logger.error("Failed to commit changes");
           logger.warn("Session update cancelled.");
           return;
         }
@@ -146,12 +142,12 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
           "Session update stash"
         );
         if (!stashResult.ok) {
-          logger.error("Failed to stash changes", { error: stashResult.error });
+          logger.error("Failed to stash changes");
           logger.warn("Session update cancelled.");
           return;
         }
         if (!stashResult.value.success) {
-          logger.error("Failed to stash changes", { error: stashResult.value.error });
+          logger.error("Failed to stash changes");
           logger.warn("Session update cancelled.");
           return;
         }
@@ -186,12 +182,12 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     });
 
     if (!updateResult.ok) {
-      logger.error("Failed to update session", { error: updateResult.error });
+      logger.error("Failed to update session");
       return;
     }
 
     const updatedSession = updateResult.value;
-    logger.log(`\n✅ Session "${updatedSession.name}" updated successfully!`);
+    logger.log(`\nSession "${updatedSession.name}" updated successfully!`);
 
     if (updatedSession.notes) {
       logger.plainLog(`\n📝 Notes: ${updatedSession.notes}`);
@@ -200,6 +196,6 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
       logger.plainLog(`🏷️  Tags: ${updatedSession.tags.join(", ")}`);
     }
   } catch (error) {
-    logger.error("Unexpected error during session update", { error });
+    logger.error("Unexpected error during session update");
   }
 }

@@ -5,8 +5,8 @@ export async function resetConfigCommand() {
   const resetConfig = new ResetConfig();
   const result = await resetConfig.execute();
   if (result.ok) {
-    logger.log("Config reset to defaults:", { config: result.value });
+    logger.log("Config reset to defaults");
   } else {
-    logger.error("Failed to reset config", { error: result.error });
+    logger.error("Failed to reset config");
   }
 }

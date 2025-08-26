@@ -22,16 +22,16 @@ export async function resetCommand(options: {
     return;
   }
 
-  logger.warn(`⚠️  This will permanently delete the following: ${resetItems.join(', ')}`);
+  logger.warn(`This will permanently delete the following: ${resetItems.join(', ')}`);
   logger.warn("This action cannot be undone!");
 
   const result = await resetAll.execute(options);
   if (result.ok) {
-    logger.log(`✅ Successfully reset: ${result.value.resetItems.join(', ')}`);
+    logger.log(`Successfully reset: ${result.value.resetItems.join(', ')}`);
     if (options.all) {
       logger.log("🎉 CodeState has been completely reset to a fresh state!");
     }
   } else {
-    logger.error("Failed to reset CodeState", { error: result.error });
+    logger.error("Failed to reset CodeState");
   }
 } 

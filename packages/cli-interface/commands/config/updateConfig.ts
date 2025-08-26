@@ -19,7 +19,7 @@ export async function updateConfigCommand(partial: Partial<Config>) {
     if (config.experimental && Object.keys(config.experimental).length > 0) {
       logger.plainLog("\n🔬 Experimental Features:");
       Object.entries(config.experimental).forEach(([key, value]) => {
-        logger.plainLog(`  ${key}: ${value ? "✅" : "❌"}`);
+        logger.plainLog(`  ${key}: ${value ? "Enabled" : "Disabled"}`);
       });
     }
 
@@ -31,6 +31,6 @@ export async function updateConfigCommand(partial: Partial<Config>) {
     }
     logger.plainLog("");
   } else {
-    logger.error("Failed to update config", { error: result.error });
+    logger.error("Failed to update config");
   }
 }

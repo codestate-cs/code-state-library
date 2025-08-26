@@ -12,6 +12,6 @@ export async function updateScriptCommand(
     const updatedFields = Object.keys(scriptUpdate).join(", ");
     logger.log(`Script '${name}' updated successfully (${updatedFields})`);
   } else {
-    logger.error(`Failed to update script '${name}'`, { error: result.error });
+    logger.error(`Failed to update script '${name}'`);
   }
 }
