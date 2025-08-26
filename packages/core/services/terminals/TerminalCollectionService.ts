@@ -71,7 +71,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
         return allScriptsResult;
       }
       
-      const script = allScriptsResult.value.find(s => s.name === scriptRef.id && s.rootPath === scriptRef.rootPath);
+      const script = allScriptsResult.value.find(s => s.id === scriptRef.id && s.rootPath === scriptRef.rootPath);
       if (script) {
         scripts.push(script);
       } else {
@@ -114,7 +114,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
         return allScriptsResult;
       }
       
-      const script = allScriptsResult.value.find(s => s.name === scriptRef.id && s.rootPath === scriptRef.rootPath);
+      const script = allScriptsResult.value.find(s => s.id === scriptRef.id && s.rootPath === scriptRef.rootPath);
       if (script) {
         scripts.push(script);
       } else {

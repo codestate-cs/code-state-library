@@ -36,10 +36,10 @@ async function createTerminalCollectionInteractively() {
     let finalScriptSelection = false;
     const selectedScripts: Array<{ id: string; rootPath: string }> = [];
     
-    let preSelectedScriptNames: string[] = [];
+    let preSelectedScriptIds: string[] = [];  // Changed from preSelectedScriptNames
     
     while (!finalScriptSelection) {
-      const { selectedScriptNames, shouldAddNewScript } = await promptForScriptSelectionWithAdd(availableScripts, preSelectedScriptNames);
+      const { selectedScriptIds, shouldAddNewScript } = await promptForScriptSelectionWithAdd(availableScripts, preSelectedScriptIds);
       
       if (shouldAddNewScript) {
         // Create new script
@@ -73,16 +73,16 @@ async function createTerminalCollectionInteractively() {
         logger.plainLog('');
         
         // Add the newly created script to pre-selected list along with any previously selected scripts
-        preSelectedScriptNames = [...selectedScriptNames, newScriptDetails.name];
+        preSelectedScriptIds = [...selectedScriptIds, newScript.id];  // Use newScript.id instead of newScriptDetails.name
         
         // Continue the loop to show updated script list with new script pre-selected
       } else {
         // User made their final selection
         selectedScripts.length = 0; // Clear previous selections
-        for (const scriptName of selectedScriptNames) {
-          const script = availableScripts.find(s => s.name === scriptName);
+        for (const scriptId of selectedScriptIds) {
+          const script = availableScripts.find(s => s.id === scriptId);
           if (script) {
-            selectedScripts.push({ id: script.name, rootPath: script.rootPath });
+            selectedScripts.push({ id: script.id, rootPath: script.rootPath });
           }
         }
         finalScriptSelection = true;
@@ -202,6 +202,7 @@ async function promptForScriptSelectionWithAdd(availableScripts: Script[], preSe
   }
 
   // Create choices with scripts and the "Add new script" option
+  // Use script.id as value instead of script.name for proper ID references
   const scriptChoices: Array<{ name: string; value: string }> = [];
   
   for (const [rootPath, scripts] of Object.entries(scriptsByRootPath)) {
@@ -210,7 +211,7 @@ async function promptForScriptSelectionWithAdd(availableScripts: Script[], preSe
       const commandCount = script.commands ? script.commands.length : (script.script ? 1 : 0);
       scriptChoices.push({
         name: `📍 ${rootPath} • ${script.name} (${commandCount} command${commandCount !== 1 ? 's' : ''})`,
-        value: script.name
+        value: script.id  // Use script.id instead of script.name
       });
     }
   }
@@ -223,7 +224,7 @@ async function promptForScriptSelectionWithAdd(availableScripts: Script[], preSe
 
   const answers = await inquirer.customPrompt([
     {
-      name: "selectedScriptNames",
+      name: "selectedScriptIds",  // Changed from selectedScriptNames to selectedScriptIds
       message: "Select scripts to include (use SPACE to select, ENTER to confirm):",
       type: "checkbox",
       choices: scriptChoices,
@@ -239,11 +240,12 @@ async function promptForScriptSelectionWithAdd(availableScripts: Script[], preSe
   ]);
 
   // Separate actual script selections from the "Add new script" flag
-  const selectedScriptNames = answers.selectedScriptNames.filter((name: string) => name !== '__ADD_NEW_SCRIPT__');
-  const shouldAddNewScript = answers.selectedScriptNames.includes('__ADD_NEW_SCRIPT__');
+  // Now working with script IDs instead of names
+  const selectedScriptIds = answers.selectedScriptIds.filter((id: string) => id !== '__ADD_NEW_SCRIPT__');
+  const shouldAddNewScript = answers.selectedScriptIds.includes('__ADD_NEW_SCRIPT__');
 
   return {
-    selectedScriptNames,
+    selectedScriptIds,  // Changed from selectedScriptNames
     shouldAddNewScript
   };
 }

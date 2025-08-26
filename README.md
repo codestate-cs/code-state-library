@@ -46,19 +46,18 @@ A developer context engine for saving and resuming your full development environ
 ## Structure
 
 - `packages/core` - Domain models, use-cases, ports, services, and facades
-- `packages/infrastructure` - Adapters, repositories, services
 - `packages/cli-interface` - CLI and TUI with comprehensive command support
 - `tests` - Unit and integration tests
 
 ## Key Features
 
-### Core Package (`codestate-core`)
+### Core Package (`@codestate/core`)
 - **Domain Models**: Scripts, Sessions, Configurations, Git state, IDE integrations
 - **Use Cases**: Business logic for all CodeState operations
 - **Services**: Git management, IDE integration, terminal operations, file storage
 - **Type Safety**: Full TypeScript support with Zod validation schemas
 
-### CLI Package (`codestate-cli`)
+### CLI Package (`@codestate/cli`)
 - **Script Management**: Create, update, delete, and manage development scripts
 - **Session Management**: Save and resume development sessions
 - **Configuration Management**: Export, import, and manage settings
