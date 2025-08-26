@@ -45,12 +45,24 @@ CodeState CLI provides a comprehensive command-line interface for managing your 
 - **Create Terminal Collections**: Group related terminal commands
 - **Execute Collections**: Run multiple commands in sequence
 - **List Collections**: View all terminal collections
+- **Show Collections**: Get detailed information about specific collections
+- **Delete Collections**: Remove terminal collections with interactive TUI
 - **Manage Collections**: Update and delete collections
 
 ### 🔄 Reset Operations
 - **Comprehensive Reset**: Reset sessions, scripts, terminals, config, or all data
 - **Interactive Reset**: User-friendly interface with confirmation prompts
 - **CLI Flags**: Support for `--all`, `--sessions`, `--scripts`, `--terminals`, `--config` flags
+
+### ✨ Enhanced User Experience
+- **CLI Spinners**: Professional loading animations for all operations
+  - Visual feedback during long-running commands
+  - Smooth 10-frame animations with consistent timing
+  - Cross-platform compatibility (Windows, Linux, macOS)
+- **Professional Logging**: Clean, consistent output formatting
+  - Automatic symbol addition (✅, ❌, ⚠️) by logger methods
+  - User-friendly error messages without technical details
+  - Consistent experience across all CLI commands
 
 ## Installation
 
@@ -159,6 +171,9 @@ codestate terminals show <collection-name>
 
 # Execute a terminal collection
 codestate terminals resume <collection-name>
+
+# Delete a terminal collection
+codestate terminals delete [collection-name]
 ```
 
 ### Reset Commands
@@ -260,6 +275,45 @@ codestate reset --all
 
 # Reset only sessions
 codestate reset --sessions
+```
+
+## CLI Spinners and Enhanced UX
+
+### Professional Loading Animations
+CodeState CLI includes smooth, professional loading animations for all operations:
+
+- **Visual Feedback**: Spinners show progress during long-running operations
+- **Consistent Timing**: 10-frame animations with 80ms refresh rate
+- **Cross-Platform**: Works seamlessly on Windows, Linux, and macOS
+- **State Management**: Support for start, update, succeed, and fail states
+
+### Professional Logging
+All CLI output is designed for professional use:
+
+- **Automatic Symbols**: Logger methods automatically add appropriate symbols
+  - `logger.log()` → ✅ Success messages
+  - `logger.error()` → ❌ Error messages
+  - `logger.warn()` → ⚠️ Warning messages
+- **Clean Messages**: User-friendly output without technical metadata
+- **Consistent Formatting**: Professional appearance across all commands
+
+### Examples of Enhanced UX
+
+```bash
+# Terminal collection creation with spinner
+codestate terminals create
+# Shows: 🚀 Creating terminal collection...
+# Then: ✅ Terminal collection created successfully!
+
+# Script execution with progress updates
+codestate scripts resume my-script
+# Shows: ⚡ Executing script...
+# Then: ✅ Script completed successfully!
+
+# Session loading with visual feedback
+codestate session list
+# Shows: 📋 Loading sessions...
+# Then: ✅ Sessions loaded
 ```
 
 ## Configuration

@@ -2,29 +2,46 @@
 
 A developer context engine for saving and resuming your full development environment.
 
-## Recent Updates (v1.4.7)
+## Recent Updates (v1.0.2)
 
-### What's New in Version 1.4.7
-- **🚀 Automatic Version Upgrade & Reset**: Smart detection and automatic reset for breaking changes
-- **🔄 Unified Reset System**: Comprehensive `codestate reset` command with granular options
-- **⚡ Enhanced CLI Commands**: New reset functionality with interactive TUI and CLI flags
-- **🔧 Improved Configuration Management**: Shared default config utilities and version consistency
-- **🐛 Bug Fixes**: Resolved TypeScript compilation errors and improved type safety
+### What's New in Version 1.0.2
+- **🎯 CLI Spinners**: Professional loading animations for all CLI operations
+- **🧹 Logger Cleanup**: Clean, user-friendly logging without technical metadata
+- **🗑️ Delete Terminal Collections**: New CLI command for managing terminal collections
+- **🔧 Repository Fixes**: Automatic index.json creation and proper data consistency
+- **💫 Enhanced User Experience**: Consistent, professional CLI interface across all commands
 
-### New Features in v1.4.7
-- **Automatic Reset on Upgrade**: When upgrading from v1.4.5 or below, automatically resets all data
-- **Reset Command**: `codestate reset` with options for sessions, scripts, terminals, config, or all
-- **Interactive TUI**: User-friendly interface for reset operations with confirmation prompts
-- **CLI Flags**: Support for `--all`, `--sessions`, `--scripts`, `--terminals`, `--config` flags
-- **Version Management**: Consistent version handling across all packages with build-time injection
+### New Features in v1.0.2
+- **CLI Spinners**: Visual feedback during long-running operations
+  - Spinners for terminal, script, and session commands
+  - 10-frame animation with smooth transitions
+  - Cross-platform compatibility (Windows, Linux, macOS)
+- **Delete Terminal Collections**: `codestate terminals delete` command
+  - Interactive TUI for selecting collections to delete
+  - Non-interactive mode with direct name specification
+  - Proper cleanup of both data files and index files
+- **Professional Logging**: Clean, consistent output formatting
+  - Automatic symbol addition (✅, ❌, ⚠️) by logger methods
+  - User-friendly error messages without internal details
+  - Consistent experience across all CLI commands
 
-### Changes from v1.4.6 to v1.4.7
-- ✅ **Core Package**: Updated to v1.4.7 with reset functionality and version management
-- ✅ **CLI Package**: Updated to v1.4.7 with comprehensive reset commands
-- 🆕 **ResetAll Use Case**: New use case for comprehensive data reset operations
-- 🆕 **CheckVersionUpgrade**: Automatic version upgrade detection and reset
-- 🔧 **Configuration Utils**: Shared default config utilities for consistency
-- 🐛 **TypeScript Fixes**: Resolved compilation errors and improved type safety
+### Improvements in v1.0.2
+- **Data Integrity**: Enhanced repository management
+  - TerminalCollectionRepository creates missing `index.json` automatically
+  - ScriptRepository updates index after deletions
+  - Proper backup file creation for all operations
+- **Error Handling**: Improved user experience
+  - Clear, actionable error messages
+  - Graceful fallbacks for common failures
+  - Professional error presentation
+
+### Changes from v1.0.1 to v1.0.2
+- ✅ **Core Package**: Updated to v1.0.2 with repository fixes and improvements
+- ✅ **CLI Package**: Updated to v1.0.2 with spinners and enhanced UX
+- 🆕 **CLISpinner Utility**: New reusable spinner component for CLI operations
+- 🆕 **Delete Terminal Collections**: New CLI command for terminal collection management
+- 🔧 **Repository Fixes**: Automatic index.json creation and data consistency
+- 🎨 **Logger Cleanup**: Professional logging without manual symbols or metadata
 
 ## Structure
 

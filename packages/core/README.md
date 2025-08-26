@@ -6,6 +6,28 @@ The core domain models, use cases, and services for CodeState - a developer cont
 
 CodeState Core provides the foundational building blocks for managing development context, including domain models, use cases, and services that power the CodeState ecosystem.
 
+## Recent Updates (v1.0.2)
+
+### What's New in Version 1.0.2
+- **🔧 Repository Improvements**: Enhanced data integrity and consistency
+- **📁 Automatic Index Management**: Automatic creation and updates of index files
+- **💾 Backup System**: Comprehensive backup file creation for all operations
+- **🔄 Data Consistency**: Proper synchronization between data files and indexes
+
+### Improvements in v1.0.2
+- **TerminalCollectionRepository**: Automatic `index.json` creation
+  - Creates missing index files automatically when needed
+  - Follows consistent pattern with other repositories
+  - Prevents errors from missing index files
+- **ScriptRepository**: Enhanced index management
+  - Updates `scripts/index.json` after deletions
+  - Maintains data consistency between files and indexes
+  - Proper cleanup of orphaned references
+- **File Storage**: Enhanced backup and safety
+  - `.bak` files created for all operations
+  - Atomic file operations using `fs.rename`
+  - Consistent backup strategy across repositories
+
 ## Features
 
 ### 🏗️ Domain Models
@@ -38,6 +60,13 @@ CodeState Core provides the foundational building blocks for managing developmen
 - Zod validation schemas for all data models
 - Comprehensive error handling with typed error registry
 - Strict type checking for all operations
+
+### 💾 Data Integrity & Backup
+- **Automatic Index Management**: Index files created and updated automatically
+- **Backup System**: `.bak` files created for all file operations
+- **Atomic Operations**: Safe file updates using `fs.rename`
+- **Data Consistency**: Proper synchronization between data and index files
+- **Error Recovery**: Graceful handling of corrupted or missing files
 
 ## Installation
 
@@ -93,6 +122,32 @@ const session = await saveSession.execute({
 ## API Reference
 
 ### Core Services
+
+#### Repository Improvements (v1.0.2)
+
+##### Automatic Index Management
+```typescript
+import { TerminalCollectionRepository, ScriptRepository } from '@codestate/core';
+
+// TerminalCollectionRepository now creates index.json automatically
+const terminalRepo = new TerminalCollectionRepository();
+const index = await terminalRepo.getIndex(); // Creates index.json if missing
+
+// ScriptRepository updates index after deletions
+const scriptRepo = new ScriptRepository();
+await scriptRepo.deleteScript('script-name', '/path/to/project');
+// Automatically updates scripts/index.json
+```
+
+##### Backup and Data Safety
+```typescript
+import { FileStorage } from '@codestate/core';
+
+// All file operations create .bak files automatically
+const storage = new FileStorage();
+await storage.write('/path/to/file.json', data); // Creates file.json.bak
+await storage.delete('/path/to/file.json'); // Creates file.json.bak before deletion
+```
 
 #### Use Cases
 
