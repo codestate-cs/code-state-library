@@ -1,6 +1,22 @@
 # @codestate/cli
 
-A powerful command-line interface for CodeState - a developer context engine for saving and resuming your full development environment.
+Command-line interface for CodeState.
+
+## 🚀 Latest Release: v1.0.4
+
+### ✨ New in v1.0.4
+- **Enhanced Session Updates**: `codestate session update` now supports terminal collections and scripts
+- **Complete Feature Parity**: Update sessions with the same comprehensive options as creating new sessions
+- **Improved User Experience**: Better session management workflow with consistent create/update operations
+- **Enhanced CLI Feedback**: Better visual feedback during operations
+
+### 🔧 Previous Features
+- **Session Management**: Save, resume, update, list, and delete development sessions
+- **Script Management**: Create, execute, and manage development scripts
+- **Terminal Collections**: Create, manage, and delete terminal setup groups
+- **Configuration Management**: View and manage CodeState configuration
+- **Interactive Prompts**: User-friendly TUI for complex operations
+- **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
 
 ## Overview
 

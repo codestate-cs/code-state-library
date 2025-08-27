@@ -1,6 +1,21 @@
 # @codestate/core
 
-The core domain models, use cases, and services for CodeState - a developer context engine for saving and resuming your full development environment.
+Core domain models, services, and infrastructure for CodeState.
+
+## 🚀 Latest Release: v1.0.4
+
+### ✨ New in v1.0.4
+- **Enhanced Session Updates**: Session update operations now support terminal collections and scripts
+- **Complete Feature Parity**: Update sessions with the same comprehensive options as creating new sessions
+- **Improved Interface Consistency**: `ISessionService.updateSession` now supports all session fields
+
+### 🔧 Previous Features
+- **Session Management**: Complete session lifecycle management with Git state tracking
+- **Script Management**: Script creation, execution, and management
+- **Terminal Collections**: Terminal setup grouping and management
+- **Cross-Platform Terminal Support**: Intelligent terminal detection for Windows, macOS, and Linux
+- **File Storage**: Secure file persistence with atomic writes and automatic backups
+- **Repository Pattern**: Clean data access layer with automatic index management
 
 ## Overview
 

@@ -1,6 +1,22 @@
 # CodeState Monorepo
 
-A developer context engine for saving and resuming your full development environment.
+A powerful development environment management tool that helps developers save, resume, and manage their development sessions with scripts, terminal collections, and Git state tracking.
+
+## 🚀 Latest Release: v1.0.4
+
+### ✨ New in v1.0.4
+- **Enhanced Session Updates**: Session update command now supports terminal collections and scripts, providing full parity with session creation
+- **Complete Feature Parity**: Update sessions with the same comprehensive options as creating new sessions
+- **Improved User Experience**: Better session management workflow with consistent create/update operations
+
+### 🔧 Previous Features
+- **Session Management**: Save, resume, update, and delete development sessions
+- **Script Management**: Create, manage, and execute development scripts
+- **Terminal Collections**: Group and manage terminal setups for different projects
+- **Git State Tracking**: Automatic capture of Git status, branches, and changes
+- **Cross-Platform Support**: Works on Windows, macOS, and Linux with intelligent terminal detection
+- **CLI Interface**: Powerful command-line interface with interactive prompts
+- **File State Tracking**: Monitor project file changes and extensions
 
 ## Recent Updates (v1.0.3)
 

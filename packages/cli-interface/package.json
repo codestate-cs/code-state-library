@@ -1,7 +1,8 @@
 {
   "name": "@codestate/cli",
-  "version": "1.0.3",
-  "description": "CodeState CLI - Configuration, Script, and Git Management",
+  "version": "1.0.4",
+  "description": "Command-line interface for CodeState",
+  "main": "./dist/cli.js",
   "bin": {
     "codestate": "./dist/cli.js"
   },
@@ -32,7 +33,7 @@
     "tsx": "^4.20.3"
   },
   "dependencies": {
-    "@codestate/core": "^1.0.3",
+    "@codestate/core": "1.0.4",
     "inquirer": "^12.9.0"
   }
 } 
