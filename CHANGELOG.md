@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Advanced script templating system
 - Cloud synchronization capabilities
 
+## [1.0.3] - 2024-12-19
+
+### Fixed
+- **Script ID References**: Fixed terminal collection creation to use proper script IDs
+  - Terminal collections now use actual script UUIDs instead of script names
+  - Eliminated incorrect usage of `script.name` as ID in `scriptReferences`
+  - Improved data integrity and schema compliance
+- **Script Lookup**: Enhanced TerminalCollectionService to find scripts by ID
+  - Fixed script finding logic in `getTerminalCollectionWithScripts` methods
+  - Proper script resolution using stable UUID references
+  - Eliminated potential issues with script name changes
+
+### Technical Improvements
+- **Data Integrity**: Script references now use stable UUIDs instead of changeable names
+- **Performance**: Eliminated unnecessary name-based script searches
+- **Schema Compliance**: Proper adherence to `ScriptReferenceSchema` requirements
+- **Future-Proofing**: Script name changes won't break existing terminal collections
+
 ## [1.0.2] - 2024-12-19
 
 ### Added

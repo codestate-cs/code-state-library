@@ -2,46 +2,37 @@
 
 A developer context engine for saving and resuming your full development environment.
 
-## Recent Updates (v1.0.2)
+## Recent Updates (v1.0.3)
 
-### What's New in Version 1.0.2
-- **🎯 CLI Spinners**: Professional loading animations for all CLI operations
-- **🧹 Logger Cleanup**: Clean, user-friendly logging without technical metadata
-- **🗑️ Delete Terminal Collections**: New CLI command for managing terminal collections
-- **🔧 Repository Fixes**: Automatic index.json creation and proper data consistency
-- **💫 Enhanced User Experience**: Consistent, professional CLI interface across all commands
+### What's New in Version 1.0.3
+- **🔧 Script ID Fixes**: Proper script ID usage in terminal collections
+- **💾 Data Integrity**: Enhanced data consistency and schema compliance
+- **⚡ Performance**: Eliminated unnecessary script name searches
+- **🛡️ Future-Proofing**: Script name changes won't break collections
+- **🎯 Schema Compliance**: Proper adherence to ScriptReferenceSchema
 
-### New Features in v1.0.2
-- **CLI Spinners**: Visual feedback during long-running operations
-  - Spinners for terminal, script, and session commands
-  - 10-frame animation with smooth transitions
-  - Cross-platform compatibility (Windows, Linux, macOS)
-- **Delete Terminal Collections**: `codestate terminals delete` command
-  - Interactive TUI for selecting collections to delete
-  - Non-interactive mode with direct name specification
-  - Proper cleanup of both data files and index files
-- **Professional Logging**: Clean, consistent output formatting
-  - Automatic symbol addition (✅, ❌, ⚠️) by logger methods
-  - User-friendly error messages without internal details
-  - Consistent experience across all CLI commands
+### New Features in v1.0.3
+- **Script ID References**: Terminal collections now use actual script UUIDs
+  - Proper script linking using stable identifiers
+  - Eliminated incorrect usage of script names as IDs
+  - Enhanced data integrity and reliability
+- **Enhanced Script Lookup**: Improved TerminalCollectionService
+  - Fixed script finding logic in all methods
+  - Proper script resolution using UUID references
+  - Better error handling and logging
 
-### Improvements in v1.0.2
-- **Data Integrity**: Enhanced repository management
-  - TerminalCollectionRepository creates missing `index.json` automatically
-  - ScriptRepository updates index after deletions
-  - Proper backup file creation for all operations
-- **Error Handling**: Improved user experience
-  - Clear, actionable error messages
-  - Graceful fallbacks for common failures
-  - Professional error presentation
+### Improvements in v1.0.3
+- **Data Integrity**: Script references use stable UUIDs instead of changeable names
+- **Performance**: Eliminated unnecessary name-based script searches
+- **Schema Compliance**: Proper adherence to ScriptReferenceSchema requirements
+- **Future-Proofing**: Script name changes won't break existing terminal collections
 
-### Changes from v1.0.1 to v1.0.2
-- ✅ **Core Package**: Updated to v1.0.2 with repository fixes and improvements
-- ✅ **CLI Package**: Updated to v1.0.2 with spinners and enhanced UX
-- 🆕 **CLISpinner Utility**: New reusable spinner component for CLI operations
-- 🆕 **Delete Terminal Collections**: New CLI command for terminal collection management
-- 🔧 **Repository Fixes**: Automatic index.json creation and data consistency
-- 🎨 **Logger Cleanup**: Professional logging without manual symbols or metadata
+### Changes from v1.0.2 to v1.0.3
+- ✅ **Core Package**: Updated to v1.0.3 with script ID fixes and improved data integrity
+- ✅ **CLI Package**: Updated to v1.0.3 with enhanced terminal collection creation
+- 🔧 **Script ID References**: Fixed terminal collection creation to use proper script IDs
+- 🚀 **TerminalCollectionService**: Enhanced script lookup and resolution
+- 🛡️ **Data Integrity**: Improved schema compliance and reference stability
 
 ## Structure
 
