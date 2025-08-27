@@ -1,4 +1,4 @@
-import { ConfigurableLogger, GitService, UpdateSession, ListSessions, Terminal } from "@codestate/core";
+import { ConfigurableLogger, GitService, UpdateSession, ListSessions, Terminal, ListTerminalCollections, GetScripts } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
 import {
   getCurrentGitState,
@@ -162,14 +162,36 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
       return;
     }
 
-    // 5. Ask user for new notes and tags (pre-populate with existing values)
+    // 5. Get available terminal collections for selection
+    const listTerminalCollections = new ListTerminalCollections();
+    const terminalCollectionsResult = await listTerminalCollections.execute();
+    const terminalCollectionChoices = terminalCollectionsResult.ok 
+      ? terminalCollectionsResult.value.map(tc => ({ 
+          name: `${tc.name} (${tc.rootPath})`, 
+          value: tc.id 
+        }))
+      : [];
+
+    // 6. Get available scripts for selection
+    const getScripts = new GetScripts();
+    const scriptsResult = await getScripts.execute();
+    const scriptChoices = scriptsResult.ok 
+      ? scriptsResult.value.map(script => ({ 
+          name: `${script.name} (${script.rootPath})`, 
+          value: script.id 
+        }))
+      : [];
+
+    // 7. Ask user for new notes, tags, terminal collections, and scripts (pre-populate with existing values)
     const sessionDetails = await promptSessionDetails({
       name: session.name, // Session name is immutable
       notes: session.notes || "",
       tags: session.tags.join(", "), // Convert array to string for prompt
+      terminalCollectionChoices,
+      scriptChoices,
     });
 
-    // 6. Update session with new data (keep same ID and name)
+    // 8. Update session with new data (keep same ID and name)
     const updateResult = await updateSession.execute(targetSession, {
       notes: sessionDetails.sessionNotes,
       tags: sessionDetails.sessionTags
@@ -179,6 +201,8 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
       git: gitState,
       files: [], // Empty array in CLI mode
       extensions: {},
+      terminalCollections: sessionDetails.terminalCollections || [],
+      scripts: sessionDetails.scripts || [],
     });
 
     if (!updateResult.ok) {
@@ -194,6 +218,12 @@ export async function updateSessionCommand(sessionIdOrName?: string) {
     }
     if (updatedSession.tags.length > 0) {
       logger.plainLog(`🏷️  Tags: ${updatedSession.tags.join(", ")}`);
+    }
+    if (updatedSession.terminalCollections && updatedSession.terminalCollections.length > 0) {
+      logger.plainLog(`🖥️  Terminal Collections: ${updatedSession.terminalCollections.length} collection(s)`);
+    }
+    if (updatedSession.scripts && updatedSession.scripts.length > 0) {
+      logger.plainLog(`📜 Scripts: ${updatedSession.scripts.length} script(s)`);
     }
   } catch (error) {
     logger.error("Unexpected error during session update");

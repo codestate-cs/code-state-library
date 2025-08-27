@@ -45,7 +45,7 @@ export class SessionService implements ISessionService {
     return { ok: true, value: session };
   }
 
-  async updateSession(idOrName: string, input: Partial<Session> & { notes?: string; tags?: string[] }): Promise<Result<Session>> {
+  async updateSession(idOrName: string, input: Partial<Session> & { notes?: string; tags?: string[]; terminalCollections?: string[]; scripts?: string[] }): Promise<Result<Session>> {
     const loadResult = await this.repository.load(idOrName);
     if (isFailure(loadResult)) return { ok: false, error: loadResult.error };
     const oldSession = loadResult.value;
@@ -58,6 +58,8 @@ export class SessionService implements ISessionService {
       git: input.git ?? oldSession.git,
       extensions: input.extensions ?? oldSession.extensions,
       terminalCommands: input.terminalCommands ?? oldSession.terminalCommands,
+      terminalCollections: input.terminalCollections ?? oldSession.terminalCollections,
+      scripts: input.scripts ?? oldSession.scripts,
     };
     const result = await this.repository.save(updated);
     if (isFailure(result)) return { ok: false, error: result.error };
@@ -88,7 +90,7 @@ export class SessionService implements ISessionService {
     return this.repository.delete(idOrName);
   }
 
-  exportSession(idOrName: string, outputPath: string): Promise<Result<string>> {
+  exportSession(idOrName: string, outputPath: string): Promise<Result<void>> {
     throw new Error('Method not implemented.');
   }
 
