@@ -5,104 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.4] - 2024-12-19
+## [1.0.5] - 2025-01-29
 
-### Added
+### ✨ **Major Improvements**
+- **Complete UUID Migration**: All entities (scripts, terminal collections, sessions) now use consistent UUID-based file naming
+  - Scripts: `scripts/{uuid}.json` instead of `scripts/script-{name}-{rootPath}.json`
+  - Terminal Collections: `terminals/{uuid}.json` instead of `terminals/terminal-{name}-{rootPath}.json`
+  - Sessions: `sessions/{uuid}.json` instead of `sessions/session-{timestamp}-{random}.json`
+- **Enhanced Windows Terminal Support**: Added detection for Windows Terminal, PowerShell, WSL, Git Bash, and more
+  - Windows Terminal (`wt.exe`) with proper tab management
+  - PowerShell with enhanced command execution
+  - WSL integration for Linux-like experience
+  - Git Bash and MinTTY support
+- **Improved File Storage Strategy**: Atomic writes with backup files for all data operations
+  - Automatic `.bak` file creation for all write operations
+  - Backup file cleanup during deletion operations
+  - Enhanced data integrity and recovery
+
+### 🔧 **Technical Enhancements**
+- **Unified File Naming**: Consistent `{uuid}.json` format across all entity types
+- **Enhanced Terminal Detection**: OS-aware terminal spawning for Windows, macOS, and Linux
+  - Linux: gnome-terminal, xterm, konsole, xfce4-terminal, mate-terminal, tilix, terminator, alacritty, kitty
+  - Windows: Windows Terminal, PowerShell, WSL, Git Bash, MinTTY, Command Prompt
+  - macOS: Terminal.app with proper working directory support
+- **Robust Error Handling**: Better backup file management and cleanup
+- **Performance Improvements**: Direct UUID lookups instead of path-based searches
+- **Repository Layer Updates**: All repositories now use UUID-based operations
+  - `deleteById()` methods for efficient deletion
+  - Enhanced index management with UUID references
+  - Better data consistency and integrity
+
+### 🐛 **Bug Fixes**
+- **Linux Terminal Conflicts**: Resolved "same terminal" execution conflicts on Linux systems
+- **File Naming Inconsistencies**: Eliminated path-dependent file naming that caused brittleness
+- **Backup File Management**: Proper cleanup of backup files during deletion operations
+- **Session ID Generation**: Fixed timestamp-based session IDs to use proper UUIDs
+
+### 📚 **Documentation Updates**
+- Updated all README files to reflect v1.0.5 features
+- Enhanced CLI usage examples and command reference
+- Added comprehensive feature documentation for UUID migration
+- Updated technical architecture documentation
+
+## [1.0.4] - 2025-01-28
+
+### ✨ **New Features**
 - **Enhanced Session Updates**: Session update command now supports terminal collections and scripts
 - **Complete Feature Parity**: Update sessions with the same comprehensive options as creating new sessions
 - **Improved User Experience**: Better session management workflow with consistent create/update operations
 
-### Changed
-- **Session Update Interface**: `ISessionService.updateSession` now supports `terminalCollections` and `scripts` parameters
-- **Session Update Implementation**: `SessionService.updateSession` now handles and saves terminal collections and scripts
-- **CLI Session Update**: `codestate session update` now provides full session editing capabilities
+### 🔧 **Improvements**
+- **Session Update Interface**: `ISessionService.updateSession` now supports all session fields
+- **Terminal Collection Integration**: Sessions can now include terminal collection references
+- **Script Integration**: Sessions can now include individual script references
+- **Better CLI Feedback**: Enhanced visual feedback during session operations
 
-### Technical Improvements
-- Enhanced type safety for session update operations
-- Consistent interface design across session create and update operations
-- Improved session update flow with terminal collections and scripts selection
+## [1.0.3] - 2025-01-27
 
-## [1.0.3] - 2024-12-19
-
-### Fixed
-- **Script ID References**: Fixed terminal collection creation to use proper script IDs
-  - Terminal collections now use actual script UUIDs instead of script names
-  - Eliminated incorrect usage of `script.name` as ID in `scriptReferences`
-  - Improved data integrity and schema compliance
-- **Script Lookup**: Enhanced TerminalCollectionService to find scripts by ID
-  - Fixed script finding logic in `getTerminalCollectionWithScripts` methods
-  - Proper script resolution using stable UUID references
-  - Eliminated potential issues with script name changes
-
-### Technical Improvements
-- **Data Integrity**: Script references now use stable UUIDs instead of changeable names
-- **Performance**: Eliminated unnecessary name-based script searches
-- **Schema Compliance**: Proper adherence to `ScriptReferenceSchema` requirements
+### ✨ **New Features**
+- **Script ID References**: Terminal collections now use actual script UUIDs instead of names
+- **Enhanced Data Integrity**: Proper script linking using stable identifiers
 - **Future-Proofing**: Script name changes won't break existing terminal collections
 
-## [1.0.2] - 2024-12-19
+### 🔧 **Improvements**
+- **Script Lookup Logic**: Fixed script finding logic in all TerminalCollectionService methods
+- **Schema Compliance**: Proper adherence to ScriptReferenceSchema requirements
+- **Performance**: Eliminated unnecessary name-based script searches
 
-### Added
-- **CLI Spinners**: Professional loading animations for all CLI operations
-  - Spinners for terminal, script, and session commands
-  - Visual feedback during long-running operations
-  - Consistent user experience across all CLI commands
-- **Delete Terminal Collections**: New CLI command `codestate terminals delete`
-  - Interactive TUI for selecting collections to delete
-  - Non-interactive mode with direct name specification
-  - Proper cleanup of both data files and index files
+## [1.0.2] - 2025-01-26
 
-### Changed
-- **Logger Cleanup**: Removed all manual symbol additions (✅, ❌, ⚠️)
-  - `logger.log()` automatically adds ✅ symbols
-  - `logger.error()` automatically adds ❌ symbols  
-  - `logger.warn()` automatically adds ⚠️ symbols
-- **User Experience**: Clean, professional logging without technical metadata
-  - Removed extra parameters from all logger calls
-  - User-friendly error messages without internal details
-  - Consistent output formatting across all commands
+### ✨ **New Features**
+- **Automatic Index Management**: All repositories now create missing index files automatically
+- **Enhanced Backup System**: Comprehensive backup file creation for all operations
+- **Data Consistency**: Proper synchronization between data files and indexes
 
-### Fixed
-- **TerminalCollectionRepository**: Automatic `index.json` creation
-  - Creates missing `index.json` files automatically
-  - Follows same pattern as ScriptRepository and SessionRepository
-  - Prevents errors when index files don't exist
-- **ScriptRepository**: Index updates after deletions
-  - `deleteScript()` now updates `scripts/index.json` after modifications
-  - `deleteScripts()` now updates `scripts/index.json` after modifications
-  - Ensures data consistency between actual files and indexes
-- **Data Integrity**: Proper backup file creation
-  - `.bak` files created for all `index.json` and data files
-  - Safe atomic file operations using `fs.rename`
-  - Consistent backup strategy across all repositories
+### 🔧 **Improvements**
+- **TerminalCollectionRepository**: Automatic `index.json` creation when missing
+- **ScriptRepository**: Enhanced index management with proper cleanup
+- **File Storage**: Enhanced backup and safety with atomic operations
 
-### Technical Improvements
-- **CLISpinner Utility**: Reusable spinner component
-  - 10-frame animation with 80ms refresh rate
-  - Support for start, update, succeed, and fail states
-  - Cross-platform compatibility (Windows, Linux, macOS)
-- **Error Handling**: Improved error messages and recovery
-  - Clear, actionable error messages for users
-  - Proper exit codes for automation scenarios
-  - Graceful fallbacks for common failure modes
+## [1.0.1] - 2025-01-25
 
-## [1.0.1] - 2024-12-19
+### ✨ **New Features**
+- **Terminal Collection Management**: Create, manage, and delete terminal collections
+- **Enhanced Script Management**: Better script creation and management workflows
+- **Improved Error Handling**: More robust error handling and user feedback
 
-### Added
-- **Linux Terminal Support**: Robust terminal detection and spawning
-  - Automatic detection of available terminal emulators
-  - Platform-specific argument handling for Linux
-  - Support for gnome-terminal, konsole, xterm, and more
-- **Cross-Platform Compatibility**: Enhanced terminal support
-  - Windows: cmd, PowerShell, Windows Terminal
-  - macOS: Terminal.app, iTerm2
-  - Linux: Multiple terminal emulator detection
+### 🔧 **Improvements**
+- **CLI Interface**: Enhanced command-line interface with better user experience
+- **Data Validation**: Improved data validation and error reporting
+- **Performance**: Better performance for large datasets
 
-### Fixed
-- **Terminal Spawning**: Resolved Linux terminal opening issues
-  - Fixed hardcoded `gnome-terminal` dependency
-  - Implemented fallback terminal detection
-  - Added proper error handling for unsupported terminals
+## [1.0.0] - 2025-01-24
+
+### 🎉 **Initial Release**
+- **Core Functionality**: Script management, session management, and configuration
+- **Cross-Platform Support**: Works on Windows, macOS, and Linux
+- **CLI Interface**: Comprehensive command-line interface with interactive prompts
+- **Type Safety**: Full TypeScript support with comprehensive type definitions
 
 ## [1.0.0] - 2024-12-19
 

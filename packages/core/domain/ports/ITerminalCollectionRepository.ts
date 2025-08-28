@@ -11,6 +11,7 @@ export interface ITerminalCollectionRepository {
   getTerminalCollectionsByLifecycle(lifecycle: LifecycleEvent, rootPath: string): Promise<Result<TerminalCollection[]>>;
   updateTerminalCollection(name: string, rootPath: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>>;
   deleteTerminalCollection(name: string, rootPath: string): Promise<Result<void>>;
+  deleteTerminalCollectionById(id: string): Promise<Result<void>>;
   deleteTerminalCollectionsByRootPath(rootPath: string): Promise<Result<void>>;
   getTerminalCollectionIndex(): Promise<Result<TerminalCollectionIndex>>;
   updateTerminalCollectionIndex(index: TerminalCollectionIndex): Promise<Result<void>>;

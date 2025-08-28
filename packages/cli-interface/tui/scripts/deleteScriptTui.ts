@@ -1,25 +1,28 @@
 import inquirer from "@codestate/cli-interface/utils/inquirer";
-import { ConfigurableLogger } from "@codestate/core";
+import { ConfigurableLogger, GetScripts } from "@codestate/core";
 import { deleteScriptCommand } from "../../commands/scripts/deleteScript";
 
 export async function deleteScriptTui() {
   const logger = new ConfigurableLogger();
-  const currentPath = process.cwd();
-  const answers = await inquirer.customPrompt([
+  const getScripts = new GetScripts();
+  
+  // Get all available scripts
+  const scriptsResult = await getScripts.execute();
+  if (!scriptsResult.ok || scriptsResult.value.length === 0) {
+    logger.warn("No scripts found to delete.");
+    return;
+  }
+
+  const scripts = scriptsResult.value;
+  const { selectedScript, confirm } = await inquirer.customPrompt([
     {
-      name: "name",
-      message: "Script name to delete:",
-      type: "input",
-      validate: (input: string) =>
-        input.trim() ? true : "Script name is required",
-    },
-    {
-      name: "rootPath",
-      message: `Root path (current: ${currentPath}):`,
-      type: "input",
-      default: currentPath,
-      validate: (input: string) =>
-        input.trim() ? true : "Root path is required",
+      type: "list",
+      name: "selectedScript",
+      message: "Select a script to delete:",
+      choices: scripts.map((script: any) => ({
+        name: `${script.name} (${script.rootPath})`,
+        value: script.id,
+      })),
     },
     {
       name: "confirm",
@@ -29,8 +32,8 @@ export async function deleteScriptTui() {
     },
   ]);
 
-  if (answers.confirm) {
-    await deleteScriptCommand(answers.name.trim(), answers.rootPath.trim());
+  if (confirm) {
+    await deleteScriptCommand(selectedScript);
   } else {
     logger.plainLog("Script deletion cancelled.");
   }

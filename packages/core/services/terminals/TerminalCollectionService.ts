@@ -238,6 +238,17 @@ export class TerminalCollectionService implements ITerminalCollectionService {
     return result;
   }
 
+  async deleteTerminalCollectionById(id: string): Promise<Result<void>> {
+    this.logger.debug('TerminalCollectionService.deleteTerminalCollectionById called', { id });
+    const result = await this.repository.deleteTerminalCollectionById(id);
+    if (isFailure(result)) {
+      this.logger.error('Failed to delete terminal collection by ID', { error: result.error, id });
+    } else {
+      this.logger.log('Terminal collection deleted successfully by ID', { id });
+    }
+    return result;
+  }
+
   async deleteTerminalCollectionsByRootPath(rootPath: string): Promise<Result<void>> {
     this.logger.debug('TerminalCollectionService.deleteTerminalCollectionsByRootPath called', { rootPath });
     const result = await this.repository.deleteTerminalCollectionsByRootPath(rootPath);

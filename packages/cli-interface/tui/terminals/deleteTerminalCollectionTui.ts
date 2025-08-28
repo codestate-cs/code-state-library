@@ -22,14 +22,14 @@ export async function deleteTerminalCollectionTui() {
 
     // Create choices for inquirer
     const choices = terminalCollections.map((tc: any) => ({
-      name: `${tc.name} (${tc.rootPath})`,
-      value: { name: tc.name, rootPath: tc.rootPath }
+      name: `${tc.name} (${tc.rootPath}) - ID: ${tc.id}`,
+      value: { id: tc.id, name: tc.name, rootPath: tc.rootPath }
     }));
 
     // Add a cancel option
     choices.push({
       name: "Cancel",
-      value: { name: null, rootPath: null }
+      value: { id: null, name: null, rootPath: null }
     });
 
     const answers = await inquirer.prompt([
@@ -45,13 +45,13 @@ export async function deleteTerminalCollectionTui() {
         name: "confirm",
         message: "Are you sure you want to delete this terminal collection? This action cannot be undone.",
         default: false,
-        when: (answers) => answers.terminalCollection.name !== null
+        when: (answers) => answers.terminalCollection.id !== null
       }
     ]);
 
-    if (answers.terminalCollection && answers.terminalCollection.name && answers.confirm) {
-      const { name, rootPath } = answers.terminalCollection;
-      await deleteTerminalCollectionCommand(name, rootPath);
+    if (answers.terminalCollection && answers.terminalCollection.id && answers.confirm) {
+      const { id } = answers.terminalCollection;
+      await deleteTerminalCollectionCommand(id);
     } else {
       logger.log("Operation cancelled.");
     }

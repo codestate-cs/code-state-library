@@ -1,21 +1,29 @@
 # @codestate/cli
 
-Command-line interface for CodeState.
+**Version 1.0.5** - CLI interface for CodeState - A powerful development environment management tool
 
-## 🚀 Latest Release: v1.0.4
+## 🚀 What's New in v1.0.5
 
-### ✨ New in v1.0.4
-- **Enhanced Session Updates**: `codestate session update` now supports terminal collections and scripts
-- **Complete Feature Parity**: Update sessions with the same comprehensive options as creating new sessions
-- **Improved User Experience**: Better session management workflow with consistent create/update operations
-- **Enhanced CLI Feedback**: Better visual feedback during operations
+### ✨ **Major Improvements**
+- **Complete UUID Migration**: All entities (scripts, terminal collections, sessions) now use consistent UUID-based file naming
+- **Enhanced Windows Terminal Support**: Added detection for Windows Terminal, PowerShell, WSL, Git Bash, and more
+- **Improved File Storage Strategy**: Atomic writes with backup files for all data operations
+- **Better Linux Terminal Handling**: Resolved terminal spawning conflicts on Linux systems
 
-### 🔧 Previous Features
-- **Session Management**: Save, resume, update, list, and delete development sessions
-- **Script Management**: Create, execute, and manage development scripts
-- **Terminal Collections**: Create, manage, and delete terminal setup groups
-- **Configuration Management**: View and manage CodeState configuration
-- **Interactive Prompts**: User-friendly TUI for complex operations
+### 🔧 **Technical Enhancements**
+- **Unified File Naming**: `{uuid}.json` format for all entity types
+- **Enhanced Terminal Detection**: OS-aware terminal spawning for Windows, macOS, and Linux
+- **Robust Error Handling**: Better backup file management and cleanup
+- **Performance Improvements**: Direct UUID lookups instead of path-based searches
+
+## 🌟 CLI Features
+
+- **Script Management**: Create, update, delete, and manage development scripts
+- **Session Management**: Save and resume development sessions
+- **Configuration Management**: Export, import, and manage settings
+- **Terminal Collections**: Group and execute related terminal commands
+- **Git Integration**: Status checking, stash management, commit operations
+- **IDE Integration**: Multi-IDE support for project and file management
 - **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
 
 ## Overview

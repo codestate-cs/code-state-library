@@ -9,7 +9,7 @@ export class DeleteTerminalCollection {
     this.terminalCollectionService = terminalCollectionService || new TerminalCollectionFacade();
   }
   
-  async execute(name: string, rootPath: string): Promise<Result<void>> {
-    return this.terminalCollectionService.deleteTerminalCollection(name, rootPath);
+  async execute(id: string): Promise<Result<void>> {
+    return this.terminalCollectionService.deleteTerminalCollectionById(id);
   }
 }

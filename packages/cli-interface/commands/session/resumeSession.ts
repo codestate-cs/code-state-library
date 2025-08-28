@@ -257,7 +257,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       
       for (const collectionId of session.terminalCollections) {
         try {
-          logger.plainLog(`\n📱 Executing terminal collection: ${collectionId}`);
           const executeTerminalCollection = new ExecuteTerminalCollection();
           const executeResult = await executeTerminalCollection.executeById(collectionId);
           
@@ -282,7 +281,6 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       
       for (const scriptName of session.scripts) {
         try {
-          logger.plainLog(`\n📜 Executing script: ${scriptName}`);
           const resumeScript = new ResumeScript();
           const executeResult = await resumeScript.execute(scriptName);
           
@@ -345,7 +343,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
             logger.error("Failed to open files in IDE");
           }
         } else {
-          logger.plainLog("No files to open from session");
+          logger.warn("No files to open from session");
         }
       } else {
         logger.error(`Failed to open IDE '${configuredIDE}'`);
@@ -359,7 +357,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
 
     // TODO: Implement session metadata update
 
-    logger.log(`\nSession "${session.name}" resumed successfully!`);
+    logger.log(`Session "${session.name}" resumed successfully!`);
     if (session.notes) {
       logger.plainLog(`\n📝 Notes: ${session.notes}`);
     }

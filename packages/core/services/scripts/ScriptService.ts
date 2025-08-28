@@ -86,24 +86,24 @@ export class ScriptService implements IScriptService {
     return result;
   }
 
-  async deleteScript(name: string, rootPath: string): Promise<Result<void>> {
-    this.logger.debug('ScriptService.deleteScript called', { name, rootPath });
-    const result = await this.repository.deleteScript(name, rootPath);
+  async deleteScript(scriptId: string): Promise<Result<void>> {
+    this.logger.debug('ScriptService.deleteScript called', { scriptId });
+    const result = await this.repository.deleteScript(scriptId);
     if (isFailure(result)) {
-      this.logger.error('Failed to delete script', { error: result.error, name, rootPath });
+      this.logger.error('Failed to delete script', { error: result.error, scriptId });
     } else {
-      this.logger.log('Script deleted successfully', { name, rootPath });
+      this.logger.log('Script deleted successfully', { scriptId });
     }
     return result;
   }
 
-  async deleteScripts(scripts: Array<{ name: string; rootPath: string }>): Promise<Result<void>> {
-    this.logger.debug('ScriptService.deleteScripts called', { count: scripts.length });
-    const result = await this.repository.deleteScripts(scripts);
+  async deleteScripts(scriptIds: string[]): Promise<Result<void>> {
+    this.logger.debug('ScriptService.deleteScripts called', { count: scriptIds.length });
+    const result = await this.repository.deleteScripts(scriptIds);
     if (isFailure(result)) {
-      this.logger.error('Failed to delete scripts', { error: result.error, count: scripts.length });
+      this.logger.error('Failed to delete scripts', { error: result.error, count: scriptIds.length });
     } else {
-      this.logger.log('Scripts deleted successfully', { count: scripts.length });
+      this.logger.log('Scripts deleted successfully', { count: scriptIds.length });
     }
     return result;
   }

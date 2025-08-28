@@ -87,31 +87,54 @@ export class ScriptRepository implements IScriptRepository {
         }
       }
 
-      // Get or create script collection for this rootPath
-      const collection = await this.getOrCreateScriptCollection(
-        validatedScript.rootPath
-      );
-      if (isFailure(collection)) {
-        return { ok: false, error: collection.error };
+      // Create individual script file using UUID-based naming
+      const scriptFileName = `${validatedScript.id}.json`;
+      const scriptFilePath = path.join(this.scriptsDir, scriptFileName);
+      
+      // Save individual script
+      let data = JSON.stringify(validatedScript, null, 2);
+      let encrypted = false;
+
+      // Check if encryption is enabled
+      const config = await this.configService.getConfig();
+      if (
+        config.ok &&
+        config.value.encryption?.enabled &&
+        config.value.encryption.encryptionKey
+      ) {
+        const encResult = await this.encryption.encrypt(
+          data,
+          config.value.encryption.encryptionKey
+        );
+        if (isFailure(encResult)) {
+          this.logger.error("Failed to encrypt script", { error: encResult.error });
+          return { ok: false, error: encResult.error };
+        }
+        data = encResult.value;
+        encrypted = true;
       }
 
-      // Add script to collection
-      collection.value.scripts.push(validatedScript);
-
-      // Save collection
-      const saveResult = await this.saveScriptCollection(
-        validatedScript.rootPath,
-        collection.value
-      );
-      if (isFailure(saveResult)) {
-        return { ok: false, error: saveResult.error };
+      // Write script file with backup
+      const tempPath = `${scriptFilePath}${TEMP_SUFFIX}`;
+      await fs.writeFile(tempPath, data, { encoding: "utf8" });
+      
+      // Create backup if file exists
+      try {
+        await fs.access(scriptFilePath);
+        await fs.copyFile(scriptFilePath, `${scriptFilePath}${BACKUP_SUFFIX}`);
+      } catch {
+        // File doesn't exist, no backup needed
       }
+      
+      // Atomic move
+      await fs.rename(tempPath, scriptFilePath);
 
-      // Update index
-      await this.updateIndexForRootPath(validatedScript.rootPath);
+      // Update index to include this script
+      await this.updateIndexForScript(validatedScript);
 
       this.logger.log("Script created successfully", {
         name: validatedScript.name,
+        id: validatedScript.id,
         rootPath: validatedScript.rootPath,
       });
       return { ok: true, value: undefined };
@@ -137,82 +160,13 @@ export class ScriptRepository implements IScriptRepository {
 
       this.logger.debug("Creating multiple scripts", { count: scripts.length });
 
-      // Group scripts by rootPath for efficient processing
-      const scriptsByRootPath = new Map<string, Script[]>();
+      // Create each script individually using the new UUID-based approach
       for (const script of scripts) {
-        const validatedScript = validateScript(script);
-
-        // Check if rootPath exists
-        if (!(await this.pathExists(validatedScript.rootPath))) {
-          this.logger.error("Root path does not exist", {
-            rootPath: validatedScript.rootPath,
-          });
-          return {
-            ok: false,
-            error: new ScriptError(
-              "Root path does not exist",
-              ErrorCode.SCRIPT_PATH_INVALID,
-              { rootPath: validatedScript.rootPath }
-            ),
-          };
+        const createResult = await this.createScript(script);
+        if (isFailure(createResult)) {
+          this.logger.error("Failed to create script", { script, error: createResult.error });
+          return createResult;
         }
-
-        if (!scriptsByRootPath.has(validatedScript.rootPath)) {
-          scriptsByRootPath.set(validatedScript.rootPath, []);
-        }
-        scriptsByRootPath.get(validatedScript.rootPath)!.push(validatedScript);
-      }
-
-      // Process each rootPath group
-      for (const [rootPath, rootScripts] of scriptsByRootPath) {
-        // Get existing scripts for this rootPath
-        const existingScripts = await this.getScriptsByRootPath(rootPath);
-        const existingCollection = existingScripts.ok
-          ? existingScripts.value
-          : [];
-
-        // Check for duplicates across existing and new scripts (handle both formats)
-        const allScripts = [...existingCollection, ...rootScripts];
-        const scriptCommands = new Set<string>();
-        const duplicates: string[] = [];
-
-        for (const script of allScripts) {
-          if (script.script) {
-            if (scriptCommands.has(script.script)) {
-              duplicates.push(script.script);
-            } else {
-              scriptCommands.add(script.script);
-            }
-          }
-        }
-
-        if (duplicates.length > 0) {
-          this.logger.error("Duplicate script commands found", {
-            duplicates,
-            rootPath,
-          });
-          return {
-            ok: false,
-            error: new ScriptError(
-              "Duplicate script commands found",
-              ErrorCode.SCRIPT_DUPLICATE,
-              { duplicates, rootPath }
-            ),
-          };
-        }
-
-        // Create or update collection
-        const collection: ScriptCollection = { scripts: allScripts };
-        const saveResult = await this.saveScriptCollection(
-          rootPath,
-          collection
-        );
-        if (isFailure(saveResult)) {
-          return { ok: false, error: saveResult.error };
-        }
-
-        // Update index
-        await this.updateIndexForRootPath(rootPath);
       }
 
       this.logger.log("Multiple scripts created successfully", {
@@ -235,11 +189,14 @@ export class ScriptRepository implements IScriptRepository {
 
   async getScriptsByRootPath(rootPath: string): Promise<Result<Script[]>> {
     try {
-      const collection = await this.loadScriptCollection(rootPath);
-      if (isFailure(collection)) {
-        return { ok: true, value: [] }; // Return empty array if no scripts exist
+      const allScripts = await this.getAllScripts();
+      if (isFailure(allScripts)) {
+        return { ok: true, value: [] };
       }
-      return { ok: true, value: collection.value.scripts };
+      
+      // Filter scripts by rootPath
+      const scriptsForPath = allScripts.value.filter(s => s.rootPath === rootPath);
+      return { ok: true, value: scriptsForPath };
     } catch (err: any) {
       this.logger.error("Failed to get scripts by root path", {
         error: err.message,
@@ -263,9 +220,41 @@ export class ScriptRepository implements IScriptRepository {
 
       const allScripts: Script[] = [];
       for (const entry of index.value.entries) {
-        const scripts = await this.getScriptsByRootPath(entry.rootPath);
-        if (scripts.ok) {
-          allScripts.push(...scripts.value);
+        try {
+          const scriptFilePath = path.join(this.scriptsDir, entry.referenceFile);
+          const raw = await fs.readFile(scriptFilePath, { encoding: "utf8" });
+          let data = raw;
+
+          // Check if encrypted
+          if (raw.startsWith("ENCRYPTED_v1")) {
+            const config = await this.configService.getConfig();
+            if (
+              config.ok &&
+              config.value.encryption?.enabled &&
+              config.value.encryption.encryptionKey
+            ) {
+              const decrypted = await this.encryption.decrypt(
+                raw,
+                config.value.encryption.encryptionKey
+              );
+              if (isFailure(decrypted)) {
+                this.logger.error("Failed to decrypt script", { error: decrypted.error });
+                continue; // Skip this script if decryption fails
+              }
+              data = decrypted.value;
+            }
+          }
+
+          const parsed = JSON.parse(data);
+          const script = validateScript(parsed);
+          allScripts.push(script);
+        } catch (error) {
+          this.logger.error("Failed to load script file", { 
+            referenceFile: entry.referenceFile, 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          });
+          // Continue loading other scripts even if one fails
+          continue;
         }
       }
 
@@ -515,46 +504,44 @@ export class ScriptRepository implements IScriptRepository {
     }
   }
 
-  async deleteScript(name: string, rootPath: string): Promise<Result<void>> {
+  async deleteScript(scriptId: string): Promise<Result<void>> {
     try {
-      const scripts = await this.getScriptsByRootPath(rootPath);
-      if (isFailure(scripts)) {
-        return { ok: false, error: scripts.error };
+      // Get script by ID first to verify it exists
+      const script = await this.getScriptById(scriptId);
+      if (isFailure(script)) {
+        return { ok: false, error: script.error };
       }
 
-      const scriptIndex = scripts.value.findIndex((s) => s.name === name);
-      if (scriptIndex === -1) {
-        this.logger.error("Script not found", { name, rootPath });
-        return {
-          ok: false,
-          error: new ScriptError(
-            "Script not found",
-            ErrorCode.SCRIPT_NOT_FOUND,
-            { name, rootPath }
-          ),
-        };
+      // Delete the individual script file
+      const scriptFileName = `${scriptId}.json`;
+      const scriptFilePath = path.join(this.scriptsDir, scriptFileName);
+      
+      try {
+        await fs.unlink(scriptFilePath);
+      } catch (error) {
+        if ((error as any).code !== 'ENOENT') {
+          this.logger.error("Failed to delete script file", { error, scriptFilePath });
+          return {
+            ok: false,
+            error: new ScriptError(
+              "Failed to delete script file",
+              ErrorCode.SCRIPT_INVALID,
+              { originalError: error instanceof Error ? error.message : 'Unknown error' }
+            ),
+          };
+        }
+        // File doesn't exist, which is fine for deletion
       }
 
-      // Remove script from collection
-      scripts.value.splice(scriptIndex, 1);
-      const collection: ScriptCollection = { scripts: scripts.value };
+      // Remove from index
+      await this.removeScriptFromIndex(scriptId);
 
-      // Save collection
-      const saveResult = await this.saveScriptCollection(rootPath, collection);
-      if (isFailure(saveResult)) {
-        return { ok: false, error: saveResult.error };
-      }
-
-      // Update index to reflect the changes
-      await this.updateIndexForRootPath(rootPath);
-
-      this.logger.log("Script deleted successfully", { name, rootPath });
+      this.logger.log("Script deleted successfully", { scriptId });
       return { ok: true, value: undefined };
     } catch (err: any) {
       this.logger.error("Failed to delete script", {
         error: err.message,
-        name,
-        rootPath,
+        scriptId,
       });
       return {
         ok: false,
@@ -565,81 +552,30 @@ export class ScriptRepository implements IScriptRepository {
     }
   }
 
-  async deleteScripts(
-    scripts: Array<{ name: string; rootPath: string }>
-  ): Promise<Result<void>> {
+  async deleteScripts(scriptIds: string[]): Promise<Result<void>> {
     try {
-      if (scripts.length === 0) {
+      if (scriptIds.length === 0) {
         return { ok: true, value: undefined };
       }
 
-      this.logger.debug("Deleting multiple scripts", { count: scripts.length });
+      this.logger.debug("Deleting multiple scripts", { count: scriptIds.length });
 
-      // Group deletions by rootPath for efficient processing
-      const deletionsByRootPath = new Map<string, string[]>();
-      for (const script of scripts) {
-        if (!deletionsByRootPath.has(script.rootPath)) {
-          deletionsByRootPath.set(script.rootPath, []);
+      for (const scriptId of scriptIds) {
+        const deleteResult = await this.deleteScript(scriptId);
+        if (isFailure(deleteResult)) {
+          this.logger.error("Failed to delete script", { scriptId, error: deleteResult.error });
+          return deleteResult;
         }
-        deletionsByRootPath.get(script.rootPath)!.push(script.name);
-      }
-
-      // Process each rootPath group
-      for (const [rootPath, scriptNames] of deletionsByRootPath) {
-        const existingScripts = await this.getScriptsByRootPath(rootPath);
-        if (isFailure(existingScripts)) {
-          return { ok: false, error: existingScripts.error };
-        }
-
-        const remainingScripts = existingScripts.value.filter(
-          (script) => !scriptNames.includes(script.name)
-        );
-
-        // Check if all requested scripts were found
-        const foundNames = existingScripts.value
-          .filter((script) => scriptNames.includes(script.name))
-          .map((s) => s.name);
-        const missingNames = scriptNames.filter(
-          (name) => !foundNames.includes(name)
-        );
-
-        if (missingNames.length > 0) {
-          this.logger.error("Some scripts not found for deletion", {
-            missingNames,
-            rootPath,
-          });
-          return {
-            ok: false,
-            error: new ScriptError(
-              "Some scripts not found",
-              ErrorCode.SCRIPT_NOT_FOUND,
-              { missingNames, rootPath }
-            ),
-          };
-        }
-
-        // Save updated collection
-        const collection: ScriptCollection = { scripts: remainingScripts };
-        const saveResult = await this.saveScriptCollection(
-          rootPath,
-          collection
-        );
-        if (isFailure(saveResult)) {
-          return { ok: false, error: saveResult.error };
-        }
-
-        // Update index to reflect the changes
-        await this.updateIndexForRootPath(rootPath);
       }
 
       this.logger.log("Multiple scripts deleted successfully", {
-        count: scripts.length,
+        count: scriptIds.length,
       });
       return { ok: true, value: undefined };
     } catch (err: any) {
       this.logger.error("Failed to delete multiple scripts", {
         error: err.message,
-        count: scripts.length,
+        count: scriptIds.length,
       });
       return {
         ok: false,
@@ -794,84 +730,6 @@ export class ScriptRepository implements IScriptRepository {
     }
   }
 
-  private async getOrCreateScriptCollection(
-    rootPath: string
-  ): Promise<Result<ScriptCollection>> {
-    const collection = await this.loadScriptCollection(rootPath);
-    if (collection.ok) {
-      return collection;
-    }
-    return { ok: true, value: { scripts: [] } };
-  }
-
-  private async loadScriptCollection(
-    rootPath: string
-  ): Promise<Result<ScriptCollection>> {
-    try {
-      const referenceFile = await this.getReferenceFilePath(rootPath);
-      if (!referenceFile) {
-        return {
-          ok: false,
-          error: new ScriptError(
-            "Reference file not found",
-            ErrorCode.SCRIPT_NOT_FOUND,
-            { rootPath }
-          ),
-        };
-      }
-
-      const raw = await fs.readFile(referenceFile, { encoding: "utf8" });
-      let data = raw;
-
-      // Check if encrypted
-      if (raw.startsWith("ENCRYPTED_v1")) {
-        const config = await this.configService.getConfig();
-        if (
-          config.ok &&
-          config.value.encryption?.enabled &&
-          config.value.encryption.encryptionKey
-        ) {
-          const decrypted = await this.encryption.decrypt(
-            raw,
-            config.value.encryption.encryptionKey
-          );
-          if (isFailure(decrypted)) {
-            this.logger.error("Failed to decrypt script collection", {
-              error: decrypted.error,
-            });
-            return { ok: false, error: decrypted.error };
-          }
-          data = decrypted.value;
-        }
-      }
-
-      const parsed = JSON.parse(data);
-      const collection = validateScriptCollection(parsed);
-      return { ok: true, value: collection };
-    } catch (err: any) {
-      if (err.code === "ENOENT") {
-        return {
-          ok: false,
-          error: new ScriptError(
-            "Script collection not found",
-            ErrorCode.SCRIPT_NOT_FOUND,
-            { rootPath }
-          ),
-        };
-      }
-      this.logger.error("Failed to load script collection", {
-        error: err.message,
-        rootPath,
-      });
-      return {
-        ok: false,
-        error: new ScriptError(err.message, ErrorCode.SCRIPT_INVALID, {
-          originalError: err.message,
-        }),
-      };
-    }
-  }
-
   private async saveScriptCollection(
     rootPath: string,
     collection: ScriptCollection
@@ -902,7 +760,18 @@ export class ScriptRepository implements IScriptRepository {
         encrypted = true;
       }
 
-      const referenceFile = await this.getOrCreateReferenceFilePath(rootPath);
+      const referenceFile = await this.getReferenceFilePath(rootPath);
+      if (!referenceFile) {
+        return {
+          ok: false,
+          error: new ScriptError(
+            "Reference file not found",
+            ErrorCode.SCRIPT_NOT_FOUND,
+            { rootPath }
+          ),
+        };
+      }
+
       const tempPath = referenceFile + TEMP_SUFFIX;
       await fs.writeFile(tempPath, data, { encoding: "utf8", mode: 0o600 });
       await fs
@@ -947,10 +816,9 @@ export class ScriptRepository implements IScriptRepository {
       return existingPath;
     }
 
-    // Create new reference file path
-    const fileName = `${Buffer.from(rootPath)
-      .toString("base64")
-      .replace(/[^a-zA-Z0-9]/g, "")}.json`;
+    // Create new reference file path using a unique UUID for the collection file
+    // Each script collection gets its own UUID, independent of rootPath
+    const fileName = `${randomUUID()}.json`;
     return path.join(this.scriptsDir, fileName);
   }
 
@@ -972,31 +840,46 @@ export class ScriptRepository implements IScriptRepository {
       // Update existing entry
       index.value.entries[existingIndex].referenceFile = relativePath;
     } else {
-      // Add new entry - we'll update the ID later when we can access the collection
+      // Add new entry with UUID that matches the filename
+      const fileName = path.basename(referenceFile, '.json');
       index.value.entries.push({
-        id: randomUUID(), // Generate a temporary ID
+        id: fileName, // Use the UUID from filename as the ID
         rootPath,
         referenceFile: relativePath
       });
     }
 
     await this.saveScriptIndex(index.value);
+  }
 
-    // Now try to update the ID with the actual script ID if possible
-    try {
-      const collection = await this.loadScriptCollection(rootPath);
-      if (collection.ok && collection.value.scripts.length > 0) {
-        const actualScriptId = collection.value.scripts[0].id;
-        const entryIndex = index.value.entries.findIndex(e => e.rootPath === rootPath);
-        if (entryIndex >= 0) {
-          index.value.entries[entryIndex].id = actualScriptId;
-          await this.saveScriptIndex(index.value);
-        }
-      }
-    } catch (error) {
-      // If we can't load the collection, that's okay - the index entry exists
-      this.logger.debug("Could not update script ID in index", { rootPath, error });
+  private async updateIndexForScript(script: Script): Promise<void> {
+    const index = await this.loadScriptIndex();
+    if (isFailure(index)) {
+      return;
     }
+
+    const scriptFileName = `${script.id}.json`;
+    const scriptFilePath = path.join(this.scriptsDir, scriptFileName);
+    const relativePath = path.relative(this.scriptsDir, scriptFilePath);
+
+    // Check if entry already exists
+    const existingIndex = index.value.entries.findIndex(
+      (e) => e.referenceFile === relativePath
+    );
+    
+    if (existingIndex >= 0) {
+      // Update existing entry
+      index.value.entries[existingIndex].rootPath = script.rootPath;
+    } else {
+      // Add new entry
+      index.value.entries.push({
+        id: script.id,
+        rootPath: script.rootPath,
+        referenceFile: relativePath
+      });
+    }
+
+    await this.saveScriptIndex(index.value);
   }
 
   private async removeFromIndex(rootPath: string): Promise<void> {
@@ -1007,6 +890,18 @@ export class ScriptRepository implements IScriptRepository {
 
     index.value.entries = index.value.entries.filter(
       (e) => e.rootPath !== rootPath
+    );
+    await this.saveScriptIndex(index.value);
+  }
+
+  private async removeScriptFromIndex(scriptId: string): Promise<void> {
+    const index = await this.loadScriptIndex();
+    if (isFailure(index)) {
+      return;
+    }
+
+    index.value.entries = index.value.entries.filter(
+      (e) => e.id !== scriptId
     );
     await this.saveScriptIndex(index.value);
   }

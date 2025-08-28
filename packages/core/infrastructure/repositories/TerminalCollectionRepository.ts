@@ -8,7 +8,7 @@ import { validateTerminalCollection, validateTerminalCollectionIndex } from '@co
 import { StorageError } from '@codestate/core/domain/types/ErrorTypes';
 
 const TERMINAL_INDEX_PATH = 'terminals/index.json';
-const TERMINAL_FILE_PREFIX = 'terminals/terminal-';
+const TERMINAL_FILE_PREFIX = 'terminals/';
 const TERMINAL_FILE_SUFFIX = '.json';
 
 export class TerminalCollectionRepository implements ITerminalCollectionRepository {
@@ -21,10 +21,8 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
     this.storage = storage;
   }
 
-  private getTerminalFileName(name: string, rootPath: string): string {
-    const safeName = name.replace(/[^a-zA-Z0-9]/g, '_');
-    const safePath = rootPath.replace(/[^a-zA-Z0-9]/g, '_');
-    return `${TERMINAL_FILE_PREFIX}${safeName}-${safePath}${TERMINAL_FILE_SUFFIX}`;
+  private getTerminalFileName(id: string): string {
+    return `${TERMINAL_FILE_PREFIX}${id}${TERMINAL_FILE_SUFFIX}`;
   }
 
   private async getIndex(): Promise<Result<TerminalCollectionIndex>> {
@@ -65,7 +63,7 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
     }
 
     // Write terminal collection file
-    const fileName = this.getTerminalFileName(terminalCollection.name, terminalCollection.rootPath);
+    const fileName = this.getTerminalFileName(terminalCollection.id);
     const writeResult = await this.storage.write(fileName, JSON.stringify(terminalCollection));
     if (isFailure(writeResult)) return writeResult;
 
@@ -80,7 +78,7 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
     }
 
     // Remove any existing entry for this name and rootPath
-    index.entries = index.entries.filter(e => !(e.name === terminalCollection.name && e.rootPath === terminalCollection.rootPath));
+    index.entries = index.entries.filter(e => e.id !== terminalCollection.id);
 
     // Add new entry
     index.entries.push({
@@ -192,7 +190,7 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
     const terminalCollections: TerminalCollection[] = [];
 
     for (const entry of indexResult.value.entries) {
-      const terminalCollectionResult = await this.getTerminalCollection(entry.name, entry.rootPath);
+      const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
       if (isSuccess(terminalCollectionResult)) {
         terminalCollections.push(terminalCollectionResult.value);
       }
@@ -214,7 +212,7 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
 
     for (const entry of indexResult.value.entries) {
       if (entry.rootPath === rootPath) {
-        const terminalCollectionResult = await this.getTerminalCollection(entry.name, entry.rootPath);
+        const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
         if (isSuccess(terminalCollectionResult)) {
           terminalCollections.push(terminalCollectionResult.value);
         }
@@ -262,7 +260,7 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
     }
 
     // Save updated terminal collection
-    const fileName = this.getTerminalFileName(name, rootPath);
+    const fileName = this.getTerminalFileName(updatedTerminalCollection.id);
     const writeResult = await this.storage.write(fileName, JSON.stringify(updatedTerminalCollection));
     if (isFailure(writeResult)) {
       this.logger.error('Failed to save updated terminal collection', { error: writeResult.error });
@@ -291,39 +289,70 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
       return { ok: false, error: new StorageError(`Terminal collection '${name}' not found for path '${rootPath}'`, undefined, { name, rootPath }) };
     }
 
-    // Delete file
+    // Delete by ID using the found entry
+    return this.deleteTerminalCollectionById(entry.id);
+  }
+
+  async deleteTerminalCollectionById(id: string): Promise<Result<void>> {
+    this.logger.debug('TerminalCollectionRepository.deleteTerminalCollectionById called', { id });
+
+    // Get index to find file
+    const indexResult = await this.getIndex();
+    if (isFailure(indexResult)) {
+      return indexResult;
+    }
+
+    const entry = indexResult.value.entries.find(e => e.id === id);
+
+    if (!entry) {
+      this.logger.error('Terminal collection not found for deletion by ID', { id });
+      return { ok: false, error: new StorageError(`Terminal collection with ID '${id}' not found`, undefined, { id }) };
+    }
+
+    // Delete main file
     const deleteResult = await this.storage.delete(entry.referenceFile);
     if (isFailure(deleteResult)) {
       this.logger.error('Failed to delete terminal collection file', { error: deleteResult.error });
       return deleteResult;
     }
 
+    // Delete backup file if it exists
+    const backupFile = `${entry.referenceFile}.bak`;
+    try {
+      await this.storage.delete(backupFile);
+      this.logger.debug('Backup file deleted', { backupFile });
+    } catch (error) {
+      // Backup file might not exist, which is fine
+      this.logger.debug('Backup file not found or already deleted', { backupFile, error });
+    }
+
     // Update index
-    const updatedEntries = indexResult.value.entries.filter(
-      e => !(e.name === name && e.rootPath === rootPath)
-    );
+    const updatedEntries = indexResult.value.entries.filter(e => e.id !== id);
     const updateIndexResult = await this.storage.write(TERMINAL_INDEX_PATH, JSON.stringify({ entries: updatedEntries }));
     if (isFailure(updateIndexResult)) {
       this.logger.error('Failed to update index after deletion', { error: updateIndexResult.error });
       return updateIndexResult;
     }
 
-    this.logger.log('Terminal collection deleted successfully', { name, rootPath });
+    this.logger.log('Terminal collection deleted successfully by ID', { id });
     return { ok: true, value: undefined };
   }
 
   async deleteTerminalCollectionsByRootPath(rootPath: string): Promise<Result<void>> {
     this.logger.debug('TerminalCollectionRepository.deleteTerminalCollectionsByRootPath called', { rootPath });
 
-    const terminalCollectionsResult = await this.getTerminalCollectionsByRootPath(rootPath);
-    if (isFailure(terminalCollectionsResult)) {
-      return terminalCollectionsResult;
+    const indexResult = await this.getIndex();
+    if (isFailure(indexResult)) {
+      return indexResult;
     }
 
-    for (const terminalCollection of terminalCollectionsResult.value) {
-      const deleteResult = await this.deleteTerminalCollection(terminalCollection.name, terminalCollection.rootPath);
+    // Find all entries for the given rootPath
+    const entriesToDelete = indexResult.value.entries.filter(e => e.rootPath === rootPath);
+
+    for (const entry of entriesToDelete) {
+      const deleteResult = await this.deleteTerminalCollectionById(entry.id);
       if (isFailure(deleteResult)) {
-        this.logger.error('Failed to delete terminal collection', { error: deleteResult.error, name: terminalCollection.name });
+        this.logger.error('Failed to delete terminal collection', { error: deleteResult.error, id: entry.id });
         return deleteResult;
       }
     }

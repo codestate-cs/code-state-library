@@ -9,7 +9,7 @@ export class DeleteScript {
     this.scriptService = scriptService || new ScriptFacade();
   }
   
-  async execute(name: string, rootPath: string): Promise<Result<void>> {
-    return this.scriptService.deleteScript(name, rootPath);
+  async execute(scriptId: string): Promise<Result<void>> {
+    return this.scriptService.deleteScript(scriptId);
   }
 } 

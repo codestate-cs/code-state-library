@@ -10,8 +10,8 @@ export interface IScriptService {
   getScriptById(id: string): Promise<Result<Script>>;
   updateScript(name: string, rootPath: string, script: Partial<Script>): Promise<Result<void>>;
   updateScripts(updates: Array<{ name: string; rootPath: string; script: Partial<Script> }>): Promise<Result<void>>;
-  deleteScript(name: string, rootPath: string): Promise<Result<void>>;
-  deleteScripts(scripts: Array<{ name: string; rootPath: string }>): Promise<Result<void>>;
+  deleteScript(scriptId: string): Promise<Result<void>>;
+  deleteScripts(scriptIds: string[]): Promise<Result<void>>;
   deleteScriptsByRootPath(rootPath: string): Promise<Result<void>>;
   
   // Index operations
@@ -28,8 +28,8 @@ export interface IScriptRepository {
   getScriptById(id: string): Promise<Result<Script>>;
   updateScript(name: string, rootPath: string, script: Partial<Script>): Promise<Result<void>>;
   updateScripts(updates: Array<{ name: string; rootPath: string; script: Partial<Script> }>): Promise<Result<void>>;
-  deleteScript(name: string, rootPath: string): Promise<Result<void>>;
-  deleteScripts(scripts: Array<{ name: string; rootPath: string }>): Promise<Result<void>>;
+  deleteScript(scriptId: string): Promise<Result<void>>;
+  deleteScripts(scriptIds: string[]): Promise<Result<void>>;
   deleteScriptsByRootPath(rootPath: string): Promise<Result<void>>;
   
   // Index operations

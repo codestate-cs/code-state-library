@@ -84,6 +84,10 @@ export class TerminalCollectionFacade implements ITerminalCollectionService {
     return this.service.deleteTerminalCollection(name, rootPath);
   }
 
+  async deleteTerminalCollectionById(id: string): Promise<any> {
+    return this.service.deleteTerminalCollectionById(id);
+  }
+
   async deleteTerminalCollectionsByRootPath(rootPath: string): Promise<any> {
     return this.service.deleteTerminalCollectionsByRootPath(rootPath);
   }

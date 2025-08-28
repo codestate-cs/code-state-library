@@ -23,8 +23,8 @@ export class ResumeScript {
       const targetScript = scriptResult.value;
       const targetRootPath = targetScript.rootPath;
 
-      // Execute the script based on execution mode
-      const executionMode = (targetScript as any).executionMode || 'same-terminal';
+      // Always use new-terminals execution for now
+      const executionMode = 'new-terminals';
       
       if (targetScript.script) {
         // Legacy single command format
@@ -49,18 +49,6 @@ export class ResumeScript {
             return { ok: true, value: undefined };
           } else {
             return { ok: false, error: spawnResult.error };
-          }
-        } else {
-          // Same terminal execution
-          const scriptResult = await this.terminalService.execute(targetScript.script, {
-            cwd: targetRootPath,
-            timeout: 30000,
-          });
-          
-          if (scriptResult.ok && scriptResult.value.success) {
-            return { ok: true, value: undefined };
-          } else {
-            return { ok: false, error: new Error(`Script execution failed: ${scriptResult.ok ? scriptResult.value.stderr : scriptResult.error}`) };
           }
         }
       } else if ((targetScript as any).commands && (targetScript as any).commands.length > 0) {
@@ -91,29 +79,13 @@ export class ResumeScript {
           } else {
             return { ok: false, error: spawnResult.error };
           }
-        } else {
-          // Execute commands in sequence in the same terminal
-          for (const command of commands) {
-            const executeResult = await this.terminalService.execute(command.command, {
-              cwd: targetRootPath,
-              timeout: 30000,
-            });
-            
-            if (!executeResult.ok || !executeResult.value.success) {
-              return { ok: false, error: new Error(`Command '${command.command}' failed`) };
-            }
-            
-            // Small delay between commands
-            if (command.priority < commands.length) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-          }
-          
-          return { ok: true, value: undefined };
         }
       } else {
         return { ok: false, error: new Error('Script has no executable content') };
       }
+      
+      // This should never be reached since we always use new-terminals
+      return { ok: false, error: new Error('Invalid execution mode') };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error : new Error('Unknown error during script execution') };
     }

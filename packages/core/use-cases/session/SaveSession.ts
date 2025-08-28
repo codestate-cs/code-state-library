@@ -2,6 +2,7 @@ import { ISessionService } from '@codestate/core/domain/ports/ISessionService';
 import { Session } from '@codestate/core/domain/models/Session';
 import { Result, isFailure } from '@codestate/core/domain/models/Result';
 import { SessionFacade } from '@codestate/core/services/session/SessionFacade';
+import { randomUUID } from 'crypto';
 
 export class SaveSession {
   private sessionService: ISessionService;
@@ -22,7 +23,7 @@ export class SaveSession {
     terminalCollections?: Session['terminalCollections'];
     scripts?: Session['scripts'];
   }): Promise<Result<Session>> {
-    const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const sessionId = randomUUID();
     const now = new Date();
     
     return this.sessionService.saveSession({

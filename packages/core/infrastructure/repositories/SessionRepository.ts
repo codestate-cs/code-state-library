@@ -7,7 +7,7 @@ import { StorageError } from '@codestate/core/domain/types/ErrorTypes';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 
 const SESSION_INDEX_PATH = 'sessions/index.json';
-const SESSION_FILE_PREFIX = 'sessions/session-';
+const SESSION_FILE_PREFIX = 'sessions/';
 const SESSION_FILE_SUFFIX = '.json';
 const SESSION_INDEX_VERSION = '1.0.0';
 

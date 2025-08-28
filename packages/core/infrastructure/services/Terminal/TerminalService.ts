@@ -27,6 +27,9 @@ export class TerminalService implements ITerminalService {
     
     const startTime = Date.now();
     
+    // Store the original working directory
+    let originalCwd: string = process.cwd();
+    
     try {
       // Validate command
       if (!command.command || command.command.trim().length === 0) {
@@ -38,6 +41,26 @@ export class TerminalService implements ITerminalService {
       // if (!isAvailable.ok || !isAvailable.value) {
       //   this.logger.warn('Command may not be available', { command: command.command });
       // }
+
+      // Store the original working directory
+      originalCwd = process.cwd();
+      
+      // Change to the target directory if specified
+      if (command.cwd && typeof command.cwd === 'string') {
+        try {
+          process.chdir(command.cwd);
+          this.logger.debug('Changed working directory', { from: originalCwd, to: command.cwd });
+        } catch (error) {
+          this.logger.error('Failed to change working directory', { cwd: command.cwd, error });
+          return { 
+            ok: false, 
+            error: new TerminalError(
+              `Failed to change working directory to ${command.cwd}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              ErrorCode.TERMINAL_COMMAND_FAILED
+            ) 
+          };
+        }
+      }
 
       // Prepare spawn options
       const spawnOptions: SpawnOptions = {
@@ -53,6 +76,16 @@ export class TerminalService implements ITerminalService {
       // Execute command
       const result = await this.spawnCommand(cmd, args, spawnOptions);
       const duration = Date.now() - startTime;
+
+      // Restore original working directory
+      if (command.cwd && typeof command.cwd === 'string') {
+        try {
+          process.chdir(originalCwd);
+          this.logger.debug('Restored working directory', { to: originalCwd });
+        } catch (error) {
+          this.logger.warn('Failed to restore working directory', { cwd: originalCwd, error });
+        }
+      }
 
       const terminalResult: TerminalResult = {
         success: result.exitCode === 0,
@@ -71,6 +104,16 @@ export class TerminalService implements ITerminalService {
 
       return { ok: true, value: terminalResult };
     } catch (error) {
+      // Restore original working directory on error
+      if (originalCwd && command.cwd && typeof command.cwd === 'string') {
+        try {
+          process.chdir(originalCwd);
+          this.logger.debug('Restored working directory on error', { to: originalCwd });
+        } catch (restoreError) {
+          this.logger.warn('Failed to restore working directory on error', { cwd: originalCwd, error: restoreError });
+        }
+      }
+
       const duration = Date.now() - startTime;
       this.logger.error('Command execution failed', { command: command.command, error, duration });
       
@@ -411,13 +454,49 @@ export class TerminalService implements ITerminalService {
   private async getTerminalCommand(): Promise<string> {
     const osPlatform = platform();
     if (osPlatform === 'win32') {
-      return 'cmd.exe';
+      return this.detectWindowsTerminal();
     } else if (osPlatform === 'darwin') {
       return 'open';
     } else {
       // Linux - detect available terminal emulators
       return this.detectLinuxTerminal();
     }
+  }
+
+  private async detectWindowsTerminal(): Promise<string> {
+    // Common Windows terminal emulators to try, in order of preference
+    const terminals = [
+      'wt.exe',           // Windows Terminal (modern)
+      'powershell.exe',   // PowerShell
+      'wsl.exe',          // Windows Subsystem for Linux
+      'bash.exe',         // Git Bash
+      'mintty.exe',       // MinTTY
+      'cmd.exe'           // Fallback to Command Prompt
+    ];
+
+    this.logger.debug('Detecting available Windows terminals', { terminals });
+
+    for (const terminal of terminals) {
+      try {
+        // On Windows, use 'where' instead of 'which'
+        const result = await this.executeCommand({ 
+          command: `where ${terminal}`, 
+          timeout: 2000 
+        });
+        if (result.ok && result.value.success) {
+          this.logger.debug(`Windows terminal detected: ${terminal}`);
+          return terminal;
+        }
+      } catch (error) {
+        this.logger.debug(`Windows terminal ${terminal} not available`, { error });
+        // Continue to next terminal
+        continue;
+      }
+    }
+
+    // Fallback to cmd.exe if none detected (will fail gracefully)
+    this.logger.warn('No common Windows terminal emulator detected, falling back to cmd.exe');
+    return 'cmd.exe';
   }
 
   private async detectLinuxTerminal(): Promise<string> {
@@ -461,9 +540,24 @@ export class TerminalService implements ITerminalService {
   private getTerminalArgs(terminalCmd: string, shell: string, command: string, cwd?: string): string[] {
     const args: string[] = [];
     
-    if (terminalCmd === 'cmd.exe') {
-      // Windows
+    if (terminalCmd === 'wt.exe') {
+      // Windows Terminal (modern)
+      args.push('new-tab', '--title', 'CodeState Script', '--', 'cmd', '/k', command);
+    } else if (terminalCmd === 'cmd.exe') {
+      // Windows Command Prompt
       args.push('/c', 'start', 'cmd', '/k', command);
+    } else if (terminalCmd === 'powershell.exe') {
+      // Windows PowerShell
+      args.push('-Command', 'Start-Process', 'powershell', '-ArgumentList', '-NoExit', '-Command', command);
+    } else if (terminalCmd === 'wsl.exe') {
+      // Windows Subsystem for Linux
+      args.push('-e', 'bash', '-c', command);
+    } else if (terminalCmd === 'bash.exe') {
+      // Git Bash
+      args.push('-c', command);
+    } else if (terminalCmd === 'mintty.exe') {
+      // MinTTY (Git Bash)
+      args.push('-e', 'bash', '-c', command);
     } else if (terminalCmd === 'open') {
       // macOS
       args.push('-a', 'Terminal', command);
