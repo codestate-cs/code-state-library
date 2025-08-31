@@ -10,6 +10,6 @@ export class DeleteTerminalCollection {
   }
   
   async execute(id: string): Promise<Result<void>> {
-    return this.terminalCollectionService.deleteTerminalCollectionById(id);
+    return this.terminalCollectionService.deleteTerminalCollections([id]);
   }
 }

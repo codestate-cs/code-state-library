@@ -1,38 +1,26 @@
-import { Script, ScriptIndex, ScriptCollection } from '../models/Script';
+import { Script, ScriptIndex, ScriptCollection, LifecycleEvent } from '../models/Script';
 import { Result } from '../models/Result';
+import { ExportOptions, ExportResult } from '../../use-cases/scripts/ExportScripts';
+import { ImportOptions, ImportResult } from '../../use-cases/scripts/ImportScripts';
 
 export interface IScriptService {
   // Script operations
   createScript(script: Script): Promise<Result<void>>;
-  createScripts(scripts: Script[]): Promise<Result<void>>;
-  getScriptsByRootPath(rootPath: string): Promise<Result<Script[]>>;
-  getAllScripts(): Promise<Result<Script[]>>;
   getScriptById(id: string): Promise<Result<Script>>;
-  updateScript(name: string, rootPath: string, script: Partial<Script>): Promise<Result<void>>;
-  updateScripts(updates: Array<{ name: string; rootPath: string; script: Partial<Script> }>): Promise<Result<void>>;
-  deleteScript(scriptId: string): Promise<Result<void>>;
-  deleteScripts(scriptIds: string[]): Promise<Result<void>>;
-  deleteScriptsByRootPath(rootPath: string): Promise<Result<void>>;
+  getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent }): Promise<Result<Script[]>>;
+  updateScript(id: string, script: Partial<Script>): Promise<Result<void>>;
+  deleteScripts(ids: string[]): Promise<Result<void>>;
   
-  // Index operations
-  getScriptIndex(): Promise<Result<ScriptIndex>>;
-  updateScriptIndex(index: ScriptIndex): Promise<Result<void>>;
+  // Import/Export operations
+  exportScripts(options?: ExportOptions): Promise<Result<ExportResult>>;
+  importScripts(filePath: string, options?: ImportOptions): Promise<Result<ImportResult>>;
 }
 
 export interface IScriptRepository {
   // Script operations
   createScript(script: Script): Promise<Result<void>>;
-  createScripts(scripts: Script[]): Promise<Result<void>>;
-  getScriptsByRootPath(rootPath: string): Promise<Result<Script[]>>;
-  getAllScripts(): Promise<Result<Script[]>>;
   getScriptById(id: string): Promise<Result<Script>>;
-  updateScript(name: string, rootPath: string, script: Partial<Script>): Promise<Result<void>>;
-  updateScripts(updates: Array<{ name: string; rootPath: string; script: Partial<Script> }>): Promise<Result<void>>;
-  deleteScript(scriptId: string): Promise<Result<void>>;
-  deleteScripts(scriptIds: string[]): Promise<Result<void>>;
-  deleteScriptsByRootPath(rootPath: string): Promise<Result<void>>;
-  
-  // Index operations
-  loadScriptIndex(): Promise<Result<ScriptIndex>>;
-  saveScriptIndex(index: ScriptIndex): Promise<Result<void>>;
+  getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent }): Promise<Result<Script[]>>;
+  updateScript(id: string, script: Partial<Script>): Promise<Result<void>>;
+  deleteScripts(ids: string[]): Promise<Result<void>>;
 } 

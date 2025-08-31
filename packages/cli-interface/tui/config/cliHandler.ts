@@ -5,11 +5,43 @@ import { resetConfigTui } from "./resetConfigTui";
 import { showConfigTui } from "./showConfigTui";
 import { updateConfigTui } from "./updateConfigTui";
 
+function showConfigHelp() {
+  const logger = new ConfigurableLogger();
+  logger.plainLog(`
+Configuration Management Commands
+
+Usage: codestate config <subcommand> [options]
+
+Subcommands:
+  show              Show current configuration
+  edit              Edit configuration interactively
+  reset             Reset configuration to defaults
+  export            Export configuration to file
+  import            Import configuration from file
+
+Examples:
+  codestate config show
+  codestate config edit
+  codestate config reset
+  codestate config export
+  codestate config import --file <path>
+
+Options:
+  --file <path>    File path for import/export operations
+`);
+}
+
 export async function handleConfigCommand(
   subcommand: string,
   options: string[]
 ) {
   const logger = new ConfigurableLogger();
+
+  // Show help if no subcommand is provided
+  if (!subcommand) {
+    showConfigHelp();
+    return;
+  }
 
   switch (subcommand) {
     case "show":

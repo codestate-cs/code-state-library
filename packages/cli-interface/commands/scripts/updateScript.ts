@@ -1,17 +1,19 @@
-import { ConfigurableLogger, Script, UpdateScript } from "@codestate/core";
+import { ConfigurableLogger, Script, UpdateScript, Result } from "@codestate/core";
 
 export async function updateScriptCommand(
-  name: string,
-  rootPath: string,
+  id: string,
   scriptUpdate: Partial<Script>
-) {
+): Promise<Result<void>> {
   const logger = new ConfigurableLogger();
   const updateScript = new UpdateScript();
-  const result = await updateScript.execute(name, rootPath, scriptUpdate);
+  const result = await updateScript.execute(id, scriptUpdate);
+  
   if (result.ok) {
     const updatedFields = Object.keys(scriptUpdate).join(", ");
-    logger.log(`Script '${name}' updated successfully (${updatedFields})`);
+    logger.log(`Script updated successfully (${updatedFields})`);
   } else {
-    logger.error(`Failed to update script '${name}'`);
+    logger.error("Failed to update script");
   }
+  
+  return result;
 }

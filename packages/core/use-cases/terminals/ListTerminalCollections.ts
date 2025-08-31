@@ -11,6 +11,14 @@ export class ListTerminalCollections {
   }
   
   async execute(): Promise<Result<TerminalCollectionWithScripts[]>> {
-    return this.terminalCollectionService.getAllTerminalCollectionsWithScripts();
+    const result = await this.terminalCollectionService.getTerminalCollections({
+      loadScripts: true
+    });
+    
+    if (!result.ok) {
+      return result;
+    }
+    
+    return { ok: true, value: result.value as TerminalCollectionWithScripts[] };
   }
 }

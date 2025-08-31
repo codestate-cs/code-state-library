@@ -1,176 +1,118 @@
-import { ConfigurableLogger, GetScriptsByRootPath, Terminal } from "@codestate/core";
+import { ConfigurableLogger, ResumeScript, GetScripts, Script } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
 import { CLISpinner } from "../../utils/CLISpinner";
 
-export async function resumeScriptCommand(scriptName?: string, rootPath?: string) {
+const getName = (s: Script) => {
+  return `${s.name} (${s.rootPath}) \n  Commands:\n   ${s.commands?.map((c) => `Priority: ${c.priority}, Name: ${c.name}, Command: ${c.command}`).join("\n   ")}`
+}
+
+export async function resumeScriptCommand(scriptName?: string, rootPath?: string, lifecycleFilter?: string[]) {
   const logger = new ConfigurableLogger();
   const spinner = new CLISpinner();
-  const getScriptsByRootPath = new GetScriptsByRootPath();
-  const terminal = new Terminal();
+  const resumeScript = new ResumeScript();
+  const getScripts = new GetScripts();
 
   try {
-    // If no script name specified, ask user to select one
-    let targetScriptName = scriptName;
+    let targetScript: Script | undefined;
     let targetRootPath = rootPath || process.cwd();
 
-    if (!targetScriptName) {
-      // Get all scripts for the current directory
-      const scriptsResult = await getScriptsByRootPath.execute(targetRootPath);
+    // If no script name specified, ask user to select one
+    if (!scriptName) {
+      // Get scripts for the specified root path or all scripts
+      const scriptsResult = await getScripts.execute({
+        ...(rootPath && { rootPath: targetRootPath }),
+        ...(lifecycleFilter && lifecycleFilter.length > 0 && { lifecycle: lifecycleFilter[0] as any }) // For now, use first filter
+      });
       if (!scriptsResult.ok || scriptsResult.value.length === 0) {
-        logger.warn("No scripts found for the current directory.");
+        logger.warn("No scripts found");
         return;
       }
 
       const scripts = scriptsResult.value;
-      const { selectedScript } = await inquirer.customPrompt([
+      const { selectedScriptId } = await inquirer.customPrompt([
         {
           type: "list",
-          name: "selectedScript",
+          name: "selectedScriptId",
           message: "Select a script to resume:",
           choices: scripts.map((s) => ({
-            name: `${s.name} - ${s.script || 'Multi-command script'}`,
-            value: s.name,
+            name: getName(s),
+            value: s.id,
           })),
         },
       ]);
-      targetScriptName = selectedScript || "";
-    }
-
-    // Ensure targetScriptName is not empty
-    if (!targetScriptName || !targetScriptName.trim()) {
-      logger.plainLog("No script specified. Resume cancelled.");
-      return;
-    }
-
-    // Get scripts for the target path
-    const scriptsResult = await getScriptsByRootPath.execute(targetRootPath);
-    if (!scriptsResult.ok) {
-      logger.error("Failed to get scripts");
-      return;
-    }
-
-    // Find the target script
-    const targetScript = scriptsResult.value.find(s => s.name === targetScriptName);
-    if (!targetScript) {
-      logger.error(`Script '${targetScriptName}' not found in ${targetRootPath}`);
-      return;
-    }
-
-    logger.plainLog(`📜 Resuming script: "${targetScript.name}"`);
-
-    // Execute the script based on execution mode
-    const executionMode = (targetScript as any).executionMode || 'same-terminal';
-    
-    if (targetScript.script) {
-      // Legacy single command format
-      if (executionMode === 'new-terminals') {
-        spinner.start("🚀 Spawning new terminal...");
-        
-        // Check if terminal should close after execution
-        const closeAfterExecution = (targetScript as any).closeTerminalAfterExecution || false;
-        
-        // Modify command based on close behavior
-        let finalCommand = targetScript.script;
-        if (closeAfterExecution) {
-          finalCommand = `${targetScript.script} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
-        } else {
-          finalCommand = `${targetScript.script} && echo 'Script execution completed. Terminal will remain open.'`;
-        }
-        
-        const spawnResult = await terminal.spawnTerminal(finalCommand, {
-          cwd: targetRootPath,
-          timeout: 5000,
-        });
-        
-        if (spawnResult.ok) {
-          spinner.succeed("Script executed in new terminal");
-          logger.log("Script executed in new terminal");
-        } else {
-          spinner.fail("Failed to spawn terminal");
-          logger.error("Failed to spawn terminal");
-        }
-      } else {
-        // Same terminal execution
-        spinner.start("⚡ Executing script...");
-        
-        const scriptResult = await terminal.execute(targetScript.script, {
-          cwd: targetRootPath,
-          timeout: 30000,
-        });
-        
-        if (scriptResult.ok && scriptResult.value.success) {
-          spinner.succeed("Script completed successfully");
-          logger.log("Script completed successfully");
-        } else {
-          spinner.fail("Script failed");
-          logger.error("Script failed");
-        }
-      }
-    } else if ((targetScript as any).commands && (targetScript as any).commands.length > 0) {
-      // New multi-command format
-      const commands = (targetScript as any).commands.sort((a: any, b: any) => a.priority - b.priority);
       
-      if (executionMode === 'new-terminals') {
-        spinner.start("🚀 Spawning new terminal...");
-        
-        // Create a combined command that runs all commands in sequence
-        const combinedCommand = commands
-          .sort((a: any, b: any) => a.priority - b.priority)
-          .map((cmd: any) => cmd.command)
-          .join(' && ');
-        
-        // Check if terminal should close after execution
-        const closeAfterExecution = (targetScript as any).closeTerminalAfterExecution || false;
-        
-        // Modify command based on close behavior
-        let finalCommand = combinedCommand;
-        if (closeAfterExecution) {
-          finalCommand = `${combinedCommand} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
-        } else {
-          finalCommand = `${combinedCommand} && echo 'Script execution completed. Terminal will remain open.'`;
-        }
-        
-        const spawnResult = await terminal.spawnTerminal(finalCommand, {
-          cwd: targetRootPath,
-          timeout: 5000,
-        });
-        
-        if (spawnResult.ok) {
-          spinner.succeed("Script executed in new terminal");
-          logger.log("Script executed in new terminal");
-        } else {
-          spinner.fail("Failed to spawn terminal");
-          logger.error("Failed to spawn terminal");
-        }
-      } else {
-        // Execute commands in sequence in the same terminal
-        spinner.start("⚡ Executing script commands...");
-        
-        for (const cmd of commands) {
-          spinner.update(`⚡ Executing command: ${cmd.name}`);
-          
-          const cmdResult = await terminal.execute(cmd.command, {
-            cwd: targetRootPath,
-            timeout: 30000,
-          });
-          
-          if (!cmdResult.ok || !cmdResult.value.success) {
-            spinner.fail(`Command '${cmd.name}' failed`);
-            logger.error(`Command '${cmd.name}' failed`);
-            return;
-          }
-          
-          // Small delay between commands
-          if (cmd.priority < commands.length) {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-          }
-        }
-        
-        spinner.succeed("Script completed successfully");
-        logger.log("Script completed successfully");
+      // Find the selected script directly
+      targetScript = scripts.find(s => s.id === selectedScriptId);
+      if (!targetScript) {
+        logger.error("Selected script not found");
+        return;
       }
     } else {
-      logger.warn("Script has no commands to execute");
+      // Script name provided, search for matching scripts
+      const scriptsResult = await getScripts.execute({
+        ...(rootPath && { rootPath: targetRootPath }),
+        ...(lifecycleFilter && lifecycleFilter.length > 0 && { lifecycle: lifecycleFilter[0] as any }) // For now, use first filter
+      });
+      if (!scriptsResult.ok) {
+        logger.error("Failed to get scripts");
+        return;
+      }
+
+      // Find all scripts that match the target name (case-insensitive)
+      const matchingScripts = scriptsResult.value.filter(s => 
+        s.name.toLowerCase().includes(scriptName.toLowerCase())
+      );
+
+      if (matchingScripts.length === 0) {
+        logger.error(`No scripts found matching '${scriptName}'`);
+        return;
+      }
+
+      // If multiple scripts match, let user choose
+      if (matchingScripts.length > 1) {
+        logger.plainLog(`Found ${matchingScripts.length} scripts matching '${scriptName}':`);
+        
+        const { selectedScriptId } = await inquirer.customPrompt([
+          {
+            type: "list",
+            name: "selectedScriptId",
+            message: "Select a script to resume:",
+            choices: matchingScripts.map((s) => ({
+              name: getName(s),
+              value: s.id,
+            })),
+          },
+        ]);
+
+        targetScript = matchingScripts.find(s => s.id === selectedScriptId);
+        if (!targetScript) {
+          logger.plainLog("No script selected. Resume cancelled.");
+          return;
+        }
+      } else {
+        // Only one script matches
+        targetScript = matchingScripts[0];
+      }
+    }
+
+    // Ensure we have a target script
+    if (!targetScript) {
+      logger.error("No script selected for execution");
+      return;
+    }
+
+    logger.plainLog(`📜 Resuming script: "${targetScript.name}" from ${targetScript.rootPath}`);
+    spinner.start("⚡ Executing script...");
+
+    // Use the ResumeScript use case
+    const result = await resumeScript.execute(targetScript.id);
+    
+    if (result.ok) {
+      spinner.succeed("Script executed successfully");
+      logger.log("Script executed successfully");
+    } else {
+      spinner.fail("Script execution failed");
+      logger.error("Script execution failed");
     }
 
   } catch (error) {

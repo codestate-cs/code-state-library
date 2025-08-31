@@ -1,12 +1,12 @@
 import inquirer from '../../utils/inquirer';
-import { exportScriptsCommand } from '../../commands/scripts/exportScripts';
-import { GetScripts, ExportOptions } from '@codestate/core';
+import { exportTerminalCollectionsCommand } from '../../commands/terminals/exportTerminalCollections';
+import { GetTerminalCollections, ExportTerminalCollectionOptions } from '@codestate/core';
 import { ConfigurableLogger } from '@codestate/core';
 
-export async function exportScriptsTui(): Promise<void> {
+export async function exportTerminalCollectionsTui(): Promise<void> {
   const logger = new ConfigurableLogger();
   
-  console.log('📤 Script Export Wizard\n');
+  console.log('📤 Terminal Collection Export Wizard\n');
   
   try {
     // Step 1: Choose export scope
@@ -16,16 +16,16 @@ export async function exportScriptsTui(): Promise<void> {
         name: 'exportScope',
         message: 'What would you like to export?',
         choices: [
-          { name: '🌟 All scripts', value: 'all' },
-          { name: '📂 Scripts from specific project', value: 'project' },
-          { name: '🆔 Select specific scripts', value: 'select' },
-          { name: '🔄 Scripts by lifecycle', value: 'lifecycle' },
+          { name: '🌟 All terminal collections', value: 'all' },
+          { name: '📂 Terminal collections from specific project', value: 'project' },
+          { name: '🆔 Select specific terminal collections', value: 'select' },
+          { name: '🔄 Terminal collections by lifecycle', value: 'lifecycle' },
           { name: '🔍 Advanced filtering', value: 'advanced' }
         ]
       }
     ]);
 
-    let exportOptions: ExportOptions = {};
+    let exportOptions: ExportTerminalCollectionOptions = {};
 
     switch (scopeAnswer.exportScope) {
       case 'all':
@@ -49,15 +49,15 @@ export async function exportScriptsTui(): Promise<void> {
         break;
 
       case 'select':
-        // Show interactive script selection
-        const selectedScripts = await showScriptSelection();
-        if (selectedScripts.length === 0) {
-          logger.log('No scripts selected. Export cancelled.');
+        // Show interactive terminal collection selection
+        const selectedTerminalCollections = await showTerminalCollectionSelection();
+        if (selectedTerminalCollections.length === 0) {
+          logger.log('No terminal collections selected. Export cancelled.');
           return;
         }
         exportOptions = { 
           selectionMode: 'ids',
-          scriptIds: selectedScripts
+          terminalCollectionIds: selectedTerminalCollections
         };
         break;
 
@@ -68,8 +68,8 @@ export async function exportScriptsTui(): Promise<void> {
             name: 'lifecycle',
             message: 'Select lifecycle filter:',
             choices: [
-              { name: '🚪 Open scripts', value: 'open' },
-              { name: '🔄 Resume scripts', value: 'resume' },
+              { name: '🚪 Open terminal collections', value: 'open' },
+              { name: '🔄 Resume terminal collections', value: 'resume' },
               { name: '❌ None lifecycle', value: 'none' }
             ]
           }
@@ -93,8 +93,8 @@ export async function exportScriptsTui(): Promise<void> {
             name: 'lifecycle',
             message: 'Select lifecycle (optional, press Enter to skip):',
             choices: [
-              { name: '🚪 Open scripts', value: 'open' },
-              { name: '🔄 Resume scripts', value: 'resume' },
+              { name: '🚪 Open terminal collections', value: 'open' },
+              { name: '🔄 Resume terminal collections', value: 'resume' },
               { name: '❌ None lifecycle', value: 'none' },
               { name: '⏭️  Skip lifecycle filter', value: '' }
             ]
@@ -135,8 +135,8 @@ export async function exportScriptsTui(): Promise<void> {
     if (exportOptions.lifecycle) {
       console.log(`   Lifecycle: ${exportOptions.lifecycle}`);
     }
-    if (exportOptions.scriptIds) {
-      console.log(`   Scripts selected: ${exportOptions.scriptIds.length}`);
+    if (exportOptions.terminalCollectionIds) {
+      console.log(`   Terminal collections selected: ${exportOptions.terminalCollectionIds.length}`);
     }
     if (exportOptions.filename) {
       console.log(`   Filename: ${exportOptions.filename}`);
@@ -147,7 +147,7 @@ export async function exportScriptsTui(): Promise<void> {
       {
         type: 'confirm',
         name: 'confirm',
-        message: 'Proceed with export?',
+        message: 'Proceed with export? (This will bundle all scripts within the terminal collections)',
         default: true
       }
     ]);
@@ -159,7 +159,7 @@ export async function exportScriptsTui(): Promise<void> {
 
     // Step 5: Execute export
     console.log('\n🚀 Executing export...\n');
-    const result = await exportScriptsCommand(exportOptions);
+    const result = await exportTerminalCollectionsCommand(exportOptions);
 
     if (result.ok) {
       logger.log('Export completed successfully! 🎉');
@@ -172,78 +172,78 @@ export async function exportScriptsTui(): Promise<void> {
   }
 }
 
-async function showScriptSelection(): Promise<string[]> {
+async function showTerminalCollectionSelection(): Promise<string[]> {
   const logger = new ConfigurableLogger();
   
   try {
-    // Get all available scripts
-    const getScripts = new GetScripts();
-    const scriptsResult = await getScripts.execute();
+    // Get all available terminal collections
+    const getTerminalCollections = new GetTerminalCollections();
+    const terminalCollectionsResult = await getTerminalCollections.execute();
     
-    if (!scriptsResult.ok) {
-      logger.error('Failed to fetch scripts for selection');
+    if (!terminalCollectionsResult.ok) {
+      logger.error('Failed to fetch terminal collections for selection');
       return [];
     }
 
-    const scripts = scriptsResult.value;
+    const terminalCollections = terminalCollectionsResult.value;
     
-    if (scripts.length === 0) {
-      logger.log('No scripts found to select from.');
+    if (terminalCollections.length === 0) {
+      logger.log('No terminal collections found to select from.');
       return [];
     }
 
-    // Group scripts by root path for better organization
-    const scriptsByPath = scripts.reduce((acc, script) => {
-      const path = script.rootPath;
+    // Group terminal collections by root path for better organization
+    const collectionsByPath = terminalCollections.reduce((acc, tc) => {
+      const path = tc.rootPath;
       if (!acc[path]) {
         acc[path] = [];
       }
-      acc[path].push(script);
+      acc[path].push(tc);
       return acc;
-    }, {} as Record<string, typeof scripts>);
+    }, {} as Record<string, typeof terminalCollections>);
 
     // Create choices for inquirer
     const choices: any[] = [];
     
-    Object.entries(scriptsByPath).forEach(([rootPath, pathScripts]) => {
+    Object.entries(collectionsByPath).forEach(([rootPath, pathCollections]) => {
       // Add a separator for each root path
       choices.push(new inquirer.Separator(`📁 ${rootPath}`));
       
-      // Add scripts for this path
-      pathScripts.forEach(script => {
-        const lifecycleInfo = script.lifecycle && script.lifecycle.length > 0 
-          ? ` [${script.lifecycle.join(', ')}]` 
+      // Add terminal collections for this path
+      pathCollections.forEach(tc => {
+        const lifecycleInfo = tc.lifecycle && tc.lifecycle.length > 0 
+          ? ` [${tc.lifecycle.join(', ')}]` 
           : '';
         
         choices.push({
-          name: `  📜 ${script.name}${lifecycleInfo}`,
-          value: script.id,
-          short: script.name
+          name: `  📜 ${tc.name}${lifecycleInfo}`,
+          value: tc.id,
+          short: tc.name
         });
       });
     });
 
-    // Show multi-select interfaces
+    // Show multi-select interface
     const selectionAnswer = await (inquirer.customPrompt as any)([
       {
         type: 'checkbox',
-        name: 'selectedScriptIds',
-        message: 'Select scripts to export (use spacebar to select/deselect, arrow keys to navigate):',
+        name: 'selectedTerminalCollectionIds',
+        message: 'Select terminal collections to export (use spacebar to select/deselect, arrow keys to navigate):',
         choices: choices,
         pageSize: 15,
         validate: (input: string[]) => {
           if (input.length === 0) {
-            return 'Please select at least one script';
+            return 'Please select at least one terminal collection';
           }
           return true;
         }
       }
     ]);
 
-    return selectionAnswer.selectedScriptIds || [];
+    return selectionAnswer.selectedTerminalCollectionIds || [];
 
   } catch (error) {
-          logger.error('Failed to show script selection');
+          logger.error('Failed to show terminal collection selection');
     return [];
   }
 } 

@@ -10,7 +10,7 @@ export class UpdateScript {
     this.scriptService = scriptService || new ScriptFacade();
   }
   
-  async execute(name: string, rootPath: string, scriptUpdate: Partial<Script>): Promise<Result<void>> {
-    return this.scriptService.updateScript(name, rootPath, scriptUpdate);
+  async execute(id: string, scriptUpdate: Partial<Script>): Promise<Result<void>> {
+    return this.scriptService.updateScript(id, scriptUpdate);
   }
 } 

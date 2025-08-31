@@ -1,32 +1,19 @@
-import { ConfigurableLogger, CreateScripts, Script } from "@codestate/core";
+import { CreateScript, Script, Result } from "@codestate/core";
 import { CLISpinner } from "../../utils/CLISpinner";
 
-export async function createScriptCommand(scripts: Script | Script[]) {
-  const logger = new ConfigurableLogger();
+export async function createScriptCommand(script: Script): Promise<Result<void>> {
   const spinner = new CLISpinner();
-  const createScripts = new CreateScripts();
-
-  const scriptsArray = Array.isArray(scripts) ? scripts : [scripts];
+  const createScript = new CreateScript();
   
-  if (scriptsArray.length === 1) {
-    spinner.start("📜 Creating script...");
-  } else {
-    spinner.start(`📜 Creating ${scriptsArray.length} scripts...`);
-  }
+  spinner.start("📜 Creating script...");
   
-  const result = await createScripts.execute(scriptsArray);
+  const result = await createScript.execute(script);
 
   if (result.ok) {
-    const scriptNames = scriptsArray.map((s) => s.name).join(", ");
-    if (scriptsArray.length === 1) {
-      spinner.succeed(`Script '${scriptNames}' created successfully`);
-      logger.log(`Script '${scriptNames}' created successfully`);
-    } else {
-      spinner.succeed(`Scripts created successfully: ${scriptNames}`);
-      logger.log(`Scripts created successfully: ${scriptNames}`);
-    }
+    spinner.succeed(`Script '${script.name}' created successfully`);
   } else {
-    spinner.fail("Failed to create scripts");
-    logger.error("Failed to create scripts");
+    spinner.fail("Failed to create script");
   }
+  
+  return result;
 }

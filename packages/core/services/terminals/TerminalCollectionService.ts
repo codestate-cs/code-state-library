@@ -26,17 +26,6 @@ export class TerminalCollectionService implements ITerminalCollectionService {
     return result;
   }
 
-  async getTerminalCollection(name: string, rootPath?: string): Promise<Result<TerminalCollection>> {
-    this.logger.debug('TerminalCollectionService.getTerminalCollection called', { name, rootPath });
-    const result = await this.repository.getTerminalCollection(name, rootPath);
-    if (isFailure(result)) {
-      this.logger.error('Failed to get terminal collection', { error: result.error, name, rootPath });
-    } else {
-      this.logger.log('Terminal collection retrieved successfully', { name, rootPath });
-    }
-    return result;
-  }
-
   async getTerminalCollectionById(id: string): Promise<Result<TerminalCollection>> {
     this.logger.debug('TerminalCollectionService.getTerminalCollectionById called', { id });
     
@@ -49,362 +38,70 @@ export class TerminalCollectionService implements ITerminalCollectionService {
     return result;
   }
 
-  async getTerminalCollectionWithScripts(name: string, rootPath?: string): Promise<Result<TerminalCollectionWithScripts>> {
-    this.logger.debug('TerminalCollectionService.getTerminalCollectionWithScripts called', { name, rootPath });
+  async getTerminalCollections(options?: { rootPath?: string; lifecycle?: LifecycleEvent; loadScripts?: boolean }): Promise<Result<TerminalCollection[] | TerminalCollectionWithScripts[]>> {
+    this.logger.debug('TerminalCollectionService.getTerminalCollections called', { options });
     
-    // Get the terminal collection with references
-    const terminalCollectionResult = await this.getTerminalCollection(name, rootPath);
-    if (isFailure(terminalCollectionResult)) {
-      return terminalCollectionResult;
+    const result = await this.repository.getTerminalCollections(options);
+    if (isFailure(result)) {
+      this.logger.error('Failed to get terminal collections', { error: result.error, options });
+    } else {
+      this.logger.log('Terminal collections retrieved successfully', { options, count: result.value.length });
     }
+    return result;
+  }
 
-    const terminalCollection = terminalCollectionResult.value;
+  async updateTerminalCollection(id: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>> {
+    this.logger.debug('TerminalCollectionService.updateTerminalCollection called', { id, terminalCollectionUpdate });
     
-    // Load the actual scripts for each reference
-    const scripts = [];
-    for (const scriptRef of terminalCollection.scriptReferences) {
-      // TODO: We need to implement getScriptById in the script service
-      // For now, we'll need to get all scripts and find by ID
-      const allScriptsResult = await this.scriptService.getAllScripts();
-      if (isFailure(allScriptsResult)) {
-        this.logger.error('Failed to get scripts for terminal collection', { error: allScriptsResult.error, name });
-        return allScriptsResult;
-      }
-      
-      const script = allScriptsResult.value.find(s => s.id === scriptRef.id && s.rootPath === scriptRef.rootPath);
-      if (script) {
-        scripts.push(script);
+    const result = await this.repository.updateTerminalCollection(id, terminalCollectionUpdate);
+    if (isFailure(result)) {
+      this.logger.error('Failed to update terminal collection', { error: result.error, id });
+    } else {
+      this.logger.log('Terminal collection updated successfully', { id });
+    }
+    return result;
+  }
+
+  async deleteTerminalCollections(ids: string[]): Promise<Result<void>> {
+    this.logger.debug('TerminalCollectionService.deleteTerminalCollections called', { ids });
+    
+    const result = await this.repository.deleteTerminalCollections(ids);
+    if (isFailure(result)) {
+      this.logger.error('Failed to delete terminal collections', { error: result.error, ids });
       } else {
-        this.logger.warn('Script not found for reference', { scriptId: scriptRef.id, rootPath: scriptRef.rootPath });
-      }
-    }
-
-    const terminalCollectionWithScripts: TerminalCollectionWithScripts = {
-      id: terminalCollection.id,
-      name: terminalCollection.name,
-      rootPath: terminalCollection.rootPath,
-      lifecycle: terminalCollection.lifecycle,
-      scripts: scripts,
-      closeTerminalAfterExecution: terminalCollection.closeTerminalAfterExecution
-    };
-
-    this.logger.log('Terminal collection with scripts retrieved successfully', { name, rootPath, scriptCount: scripts.length });
-    return { ok: true, value: terminalCollectionWithScripts };
-  }
-
-  async getTerminalCollectionWithScriptsById(id: string): Promise<Result<TerminalCollectionWithScripts>> {
-    this.logger.debug('TerminalCollectionService.getTerminalCollectionWithScriptsById called', { id });
-    
-    // Get the terminal collection with references
-    const terminalCollectionResult = await this.getTerminalCollectionById(id);
-    if (isFailure(terminalCollectionResult)) {
-      return terminalCollectionResult;
-    }
-
-    const terminalCollection = terminalCollectionResult.value;
-    
-    // Load the actual scripts for each reference
-    const scripts = [];
-    for (const scriptRef of terminalCollection.scriptReferences) {
-      // TODO: We need to implement getScriptById in the script service
-      // For now, we'll need to get all scripts and find by ID
-      const allScriptsResult = await this.scriptService.getAllScripts();
-      if (isFailure(allScriptsResult)) {
-        this.logger.error('Failed to get scripts for terminal collection', { error: allScriptsResult.error, id });
-        return allScriptsResult;
-      }
-      
-      const script = allScriptsResult.value.find(s => s.id === scriptRef.id && s.rootPath === scriptRef.rootPath);
-      if (script) {
-        scripts.push(script);
-      } else {
-        this.logger.warn('Script not found for reference', { scriptId: scriptRef.id, rootPath: scriptRef.rootPath });
-      }
-    }
-
-    const terminalCollectionWithScripts: TerminalCollectionWithScripts = {
-      id: terminalCollection.id,
-      name: terminalCollection.name,
-      rootPath: terminalCollection.rootPath,
-      lifecycle: terminalCollection.lifecycle,
-      scripts: scripts,
-      closeTerminalAfterExecution: terminalCollection.closeTerminalAfterExecution
-    };
-
-    this.logger.log('Terminal collection with scripts retrieved successfully by ID', { id, scriptCount: scripts.length });
-    return { ok: true, value: terminalCollectionWithScripts };
-  }
-
-  async getAllTerminalCollections(): Promise<Result<TerminalCollection[]>> {
-    this.logger.debug('TerminalCollectionService.getAllTerminalCollections called');
-    const result = await this.repository.getAllTerminalCollections();
-    if (isFailure(result)) {
-      this.logger.error('Failed to get all terminal collections', { error: result.error });
-    } else {
-      this.logger.log('All terminal collections retrieved', { count: result.value.length });
+      this.logger.log('Terminal collections deleted successfully', { ids });
     }
     return result;
-  }
-
-  async getAllTerminalCollectionsWithScripts(): Promise<Result<TerminalCollectionWithScripts[]>> {
-    this.logger.debug('TerminalCollectionService.getAllTerminalCollectionsWithScripts called');
-    
-    // Get all terminal collections with references
-    const terminalCollectionsResult = await this.getAllTerminalCollections();
-    if (isFailure(terminalCollectionsResult)) {
-      return terminalCollectionsResult;
-    }
-
-    const terminalCollections = terminalCollectionsResult.value;
-    const terminalCollectionsWithScripts: TerminalCollectionWithScripts[] = [];
-
-    // Load scripts for each terminal collection
-    for (const terminalCollection of terminalCollections) {
-      const withScriptsResult = await this.getTerminalCollectionWithScripts(terminalCollection.name, terminalCollection.rootPath);
-      if (isSuccess(withScriptsResult)) {
-        terminalCollectionsWithScripts.push(withScriptsResult.value);
-      }
-    }
-
-    this.logger.log('All terminal collections with scripts retrieved', { count: terminalCollectionsWithScripts.length });
-    return { ok: true, value: terminalCollectionsWithScripts };
-  }
-
-  async getTerminalCollectionsByRootPath(rootPath: string): Promise<Result<TerminalCollection[]>> {
-    this.logger.debug('TerminalCollectionService.getTerminalCollectionsByRootPath called', { rootPath });
-    const result = await this.repository.getTerminalCollectionsByRootPath(rootPath);
-    if (isFailure(result)) {
-      this.logger.error('Failed to get terminal collections by root path', { error: result.error, rootPath });
-    } else {
-      this.logger.log('Terminal collections retrieved by root path', { rootPath, count: result.value.length });
-    }
-    return result;
-  }
-
-  async getTerminalCollectionsByRootPathWithScripts(rootPath: string): Promise<Result<TerminalCollectionWithScripts[]>> {
-    this.logger.debug('TerminalCollectionService.getTerminalCollectionsByRootPathWithScripts called', { rootPath });
-    
-    // Get terminal collections by root path with references
-    const terminalCollectionsResult = await this.getTerminalCollectionsByRootPath(rootPath);
-    if (isFailure(terminalCollectionsResult)) {
-      return terminalCollectionsResult;
-    }
-
-    const terminalCollections = terminalCollectionsResult.value;
-    const terminalCollectionsWithScripts: TerminalCollectionWithScripts[] = [];
-
-    // Load scripts for each terminal collection
-    for (const terminalCollection of terminalCollections) {
-      const withScriptsResult = await this.getTerminalCollectionWithScripts(terminalCollection.name, terminalCollection.rootPath);
-      if (isSuccess(withScriptsResult)) {
-        terminalCollectionsWithScripts.push(withScriptsResult.value);
-      }
-    }
-
-    this.logger.log('Terminal collections with scripts retrieved by root path', { rootPath, count: terminalCollectionsWithScripts.length });
-    return { ok: true, value: terminalCollectionsWithScripts };
-  }
-
-  async getTerminalCollectionsByLifecycle(lifecycle: LifecycleEvent, rootPath: string): Promise<Result<TerminalCollection[]>> {
-    this.logger.debug('TerminalCollectionService.getTerminalCollectionsByLifecycle called', { lifecycle, rootPath });
-    const result = await this.repository.getTerminalCollectionsByLifecycle(lifecycle, rootPath);
-    if (isFailure(result)) {
-      this.logger.error('Failed to get terminal collections by lifecycle', { error: result.error, lifecycle, rootPath });
-    } else {
-      this.logger.log('Terminal collections retrieved by lifecycle', { lifecycle, rootPath, count: result.value.length });
-    }
-    return result;
-  }
-
-  async updateTerminalCollection(name: string, rootPath: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionService.updateTerminalCollection called', { name, rootPath, terminalCollectionUpdate });
-    const result = await this.repository.updateTerminalCollection(name, rootPath, terminalCollectionUpdate);
-    if (isFailure(result)) {
-      this.logger.error('Failed to update terminal collection', { error: result.error, name, rootPath });
-    } else {
-      this.logger.log('Terminal collection updated successfully', { name, rootPath });
-    }
-    return result;
-  }
-
-  async deleteTerminalCollection(name: string, rootPath: string): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionService.deleteTerminalCollection called', { name, rootPath });
-    const result = await this.repository.deleteTerminalCollection(name, rootPath);
-    if (isFailure(result)) {
-      this.logger.error('Failed to delete terminal collection', { error: result.error, name, rootPath });
-    } else {
-      this.logger.log('Terminal collection deleted successfully', { name, rootPath });
-    }
-    return result;
-  }
-
-  async deleteTerminalCollectionById(id: string): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionService.deleteTerminalCollectionById called', { id });
-    const result = await this.repository.deleteTerminalCollectionById(id);
-    if (isFailure(result)) {
-      this.logger.error('Failed to delete terminal collection by ID', { error: result.error, id });
-    } else {
-      this.logger.log('Terminal collection deleted successfully by ID', { id });
-    }
-    return result;
-  }
-
-  async deleteTerminalCollectionsByRootPath(rootPath: string): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionService.deleteTerminalCollectionsByRootPath called', { rootPath });
-    const result = await this.repository.deleteTerminalCollectionsByRootPath(rootPath);
-    if (isFailure(result)) {
-      this.logger.error('Failed to delete terminal collections by root path', { error: result.error, rootPath });
-    } else {
-      this.logger.log('Terminal collections deleted by root path', { rootPath });
-    }
-    return result;
-  }
-
-  async executeTerminalCollection(name: string, rootPath?: string): Promise<Result<void>> {
-    // Use current directory as default if no rootPath provided
-    const targetRootPath = rootPath || process.cwd();
-    this.logger.debug('TerminalCollectionService.executeTerminalCollection called', { name, rootPath: targetRootPath });
-    
-    // Get the terminal collection with loaded scripts
-    const terminalCollectionResult = await this.getTerminalCollectionWithScripts(name, targetRootPath);
-    if (isFailure(terminalCollectionResult)) {
-      return terminalCollectionResult;
-    }
-
-    const terminalCollection = terminalCollectionResult.value;
-
-    // Execute each script in the terminal collection
-    for (const script of terminalCollection.scripts) {
-      // Get execution mode from script, default to new-terminals for terminal collections
-      const executionMode = (script as any).executionMode || 'new-terminals';
-      
-      // Terminal collection setting takes precedence over individual script settings
-      const terminalCollectionCloseAfterExecution = (terminalCollection as any).closeTerminalAfterExecution || false;
-      
-      if (script.commands && script.commands.length > 0) {
-        // Execute commands in order of priority
-        const sortedCommands = script.commands.sort((a, b) => a.priority - b.priority);
-        
-        if (executionMode === 'new-terminals') {
-          // Create a combined command that runs all commands in sequence
-          const combinedCommand = sortedCommands
-            .map(cmd => cmd.command)
-            .join(' && ');
-          
-          // Terminal collection setting takes precedence over individual script settings
-          const closeAfterExecution = terminalCollectionCloseAfterExecution;
-          
-          // Modify command based on close behavior
-          let finalCommand = combinedCommand;
-          if (closeAfterExecution) {
-            finalCommand = `${combinedCommand} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
-          } else {
-            finalCommand = `${combinedCommand} && echo 'Script execution completed. Terminal will remain open.'`;
-          }
-          
-          const spawnResult = await this.terminalService.spawnTerminalCommand({
-            command: finalCommand,
-            cwd: targetRootPath
-          });
-          
-          if (isFailure(spawnResult)) {
-            this.logger.error('Failed to spawn terminal for script', { error: spawnResult.error, scriptName: script.name });
-            return spawnResult;
-          }
-        } else {
-          // Execute commands in sequence in the same terminal
-          for (const command of sortedCommands) {
-            const executeResult = await this.terminalService.executeCommand({
-              command: command.command,
-              cwd: targetRootPath
-            });
-            
-            if (isFailure(executeResult)) {
-              this.logger.error('Failed to execute command', { error: executeResult.error, command: command.command });
-              return executeResult;
-            }
-            
-            if (!executeResult.value.success) {
-              this.logger.error('Command execution failed', { 
-                command: command.command, 
-                exitCode: executeResult.value.exitCode,
-                stderr: executeResult.value.stderr 
-              });
-              return { ok: false, error: new Error(`Command '${command.command}' failed with exit code ${executeResult.value.exitCode}`) };
-            }
-            
-            // Small delay between commands
-            if (command.priority < sortedCommands.length) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-          }
-        }
-      } else if (script.script) {
-        // Execute legacy single script
-        if (executionMode === 'new-terminals') {
-          // Terminal collection setting takes precedence over individual script settings
-          const closeAfterExecution = terminalCollectionCloseAfterExecution;
-          
-          // Modify command based on close behavior
-          let finalCommand = script.script;
-          if (closeAfterExecution) {
-            finalCommand = `${script.script} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
-          } else {
-            finalCommand = `${script.script} && echo 'Script execution completed. Terminal will remain open.'`;
-          }
-          
-          const spawnResult = await this.terminalService.spawnTerminalCommand({
-            command: finalCommand,
-            cwd: targetRootPath
-          });
-          
-          if (isFailure(spawnResult)) {
-            this.logger.error('Failed to spawn terminal for legacy script', { error: spawnResult.error, script: script.script });
-            return spawnResult;
-          }
-        } else {
-          const executeResult = await this.terminalService.executeCommand({
-            command: script.script,
-            cwd: targetRootPath
-          });
-          
-          if (isFailure(executeResult)) {
-            this.logger.error('Failed to execute legacy script', { error: executeResult.error, script: script.script });
-            return executeResult;
-          }
-          
-          if (!executeResult.value.success) {
-            this.logger.error('Legacy script execution failed', { 
-              script: script.script, 
-              exitCode: executeResult.value.exitCode,
-              stderr: executeResult.value.stderr 
-            });
-            return { ok: false, error: new Error(`Script '${script.script}' failed with exit code ${executeResult.value.exitCode}`) };
-          }
-        }
-        
-        // Small delay between scripts
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-    }
-
-    return { ok: true, value: undefined };
   }
 
   async executeTerminalCollectionById(id: string): Promise<Result<void>> {
     this.logger.debug('TerminalCollectionService.executeTerminalCollectionById called', { id });
     
     // Get the terminal collection with loaded scripts by ID
-    const terminalCollectionResult = await this.getTerminalCollectionWithScriptsById(id);
+    const terminalCollectionResult = await this.getTerminalCollectionById(id);
     if (isFailure(terminalCollectionResult)) {
       return terminalCollectionResult;
     }
 
     const terminalCollection = terminalCollectionResult.value;
     const targetRootPath = terminalCollection.rootPath;
-
+    
     // Execute each script in the terminal collection
-    for (const script of terminalCollection.scripts) {
+    for (const scriptRef of terminalCollection.scriptReferences) {
+      // TODO: We need to implement getScriptById in the script service
+      // For now, we'll need to get all scripts and find by ID
+      const allScriptsResult = await this.scriptService.getScripts();
+      if (isFailure(allScriptsResult)) {
+        this.logger.error('Failed to get scripts for terminal collection', { error: allScriptsResult.error, id });
+        return allScriptsResult;
+      }
+      
+      const script = allScriptsResult.value.find((s: any) => s.id === scriptRef.id && s.rootPath === scriptRef.rootPath);
+      if (!script) {
+        this.logger.warn('Script not found for reference', { scriptId: scriptRef.id, rootPath: scriptRef.rootPath });
+        continue;
+      }
+
       // Get execution mode from script, default to new-terminals for terminal collections
       const executionMode = (script as any).executionMode || 'new-terminals';
       
@@ -413,12 +110,12 @@ export class TerminalCollectionService implements ITerminalCollectionService {
       
       if (script.commands && script.commands.length > 0) {
         // Execute commands in order of priority
-        const sortedCommands = script.commands.sort((a, b) => a.priority - b.priority);
+        const sortedCommands = script.commands.sort((a: any, b: any) => a.priority - b.priority);
         
         if (executionMode === 'new-terminals') {
           // Create a combined command that runs all commands in sequence
           const combinedCommand = sortedCommands
-            .map(cmd => cmd.command)
+            .map((cmd: any) => cmd.command)
             .join(' && ');
           
           // Terminal collection setting takes precedence over individual script settings

@@ -29,9 +29,9 @@ export class TerminalCollectionFacade implements ITerminalCollectionService {
       dataDir: terminalsDir || path.join(process.env.HOME || process.env.USERPROFILE || '.', '.codestate'),
     };
     const storage = new FileStorage(_logger, _encryption, fileStorageConfig);
-    const repository = new TerminalCollectionRepository(_logger, storage);
-    const terminalService = new TerminalFacade(_logger);
     const scriptService = new ScriptFacade();
+    const repository = new TerminalCollectionRepository(_logger, storage, scriptService);
+    const terminalService = new TerminalFacade(_logger);
     
     this.service = new TerminalCollectionService(repository, terminalService, scriptService, _logger);
   }
@@ -40,60 +40,20 @@ export class TerminalCollectionFacade implements ITerminalCollectionService {
     return this.service.createTerminalCollection(terminalCollection);
   }
 
-  async getTerminalCollection(name: string, rootPath?: string): Promise<any> {
-    return this.service.getTerminalCollection(name, rootPath);
-  }
-
   async getTerminalCollectionById(id: string): Promise<any> {
     return this.service.getTerminalCollectionById(id);
   }
 
-  async getTerminalCollectionWithScripts(name: string, rootPath?: string): Promise<any> {
-    return this.service.getTerminalCollectionWithScripts(name, rootPath);
+  async getTerminalCollections(options?: { rootPath?: string; lifecycle?: any; loadScripts?: boolean }): Promise<any> {
+    return this.service.getTerminalCollections(options);
   }
 
-  async getTerminalCollectionWithScriptsById(id: string): Promise<any> {
-    return this.service.getTerminalCollectionWithScriptsById(id);
+  async updateTerminalCollection(id: string, terminalCollectionUpdate: any): Promise<any> {
+    return this.service.updateTerminalCollection(id, terminalCollectionUpdate);
   }
 
-  async getAllTerminalCollections(): Promise<any> {
-    return this.service.getAllTerminalCollections();
-  }
-
-  async getAllTerminalCollectionsWithScripts(): Promise<any> {
-    return this.service.getAllTerminalCollectionsWithScripts();
-  }
-
-  async getTerminalCollectionsByRootPath(rootPath: string): Promise<any> {
-    return this.service.getTerminalCollectionsByRootPath(rootPath);
-  }
-
-  async getTerminalCollectionsByRootPathWithScripts(rootPath: string): Promise<any> {
-    return this.service.getTerminalCollectionsByRootPathWithScripts(rootPath);
-  }
-
-  async getTerminalCollectionsByLifecycle(lifecycle: any, rootPath: string): Promise<any> {
-    return this.service.getTerminalCollectionsByLifecycle(lifecycle, rootPath);
-  }
-
-  async updateTerminalCollection(name: string, rootPath: string, terminalCollectionUpdate: any): Promise<any> {
-    return this.service.updateTerminalCollection(name, rootPath, terminalCollectionUpdate);
-  }
-
-  async deleteTerminalCollection(name: string, rootPath: string): Promise<any> {
-    return this.service.deleteTerminalCollection(name, rootPath);
-  }
-
-  async deleteTerminalCollectionById(id: string): Promise<any> {
-    return this.service.deleteTerminalCollectionById(id);
-  }
-
-  async deleteTerminalCollectionsByRootPath(rootPath: string): Promise<any> {
-    return this.service.deleteTerminalCollectionsByRootPath(rootPath);
-  }
-
-  async executeTerminalCollection(name: string, rootPath?: string): Promise<any> {
-    return this.service.executeTerminalCollection(name, rootPath);
+  async deleteTerminalCollections(ids: string[]): Promise<any> {
+    return this.service.deleteTerminalCollections(ids);
   }
 
   async executeTerminalCollectionById(id: string): Promise<any> {

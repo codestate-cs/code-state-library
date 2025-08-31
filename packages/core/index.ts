@@ -23,4 +23,6 @@ export { CLILoggerFacade as ConfigurableLogger } from '@codestate/infrastructure
 export { GitFacade as GitService } from '@codestate/core/services/git/GitFacade';
 export { TerminalFacade as Terminal } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
 export { IDEFacade as IDEService } from '@codestate/core/services/ide/IDEFacade';
-export { FileStorageFacade as FileStorage } from '@codestate/core/services/storage'; 
+export { FileStorageFacade as FileStorage } from '@codestate/core/services/storage';
+export { ScriptFacade } from '@codestate/core/services/scripts/ScriptFacade';
+export { TerminalCollectionFacade } from '@codestate/core/services/terminals/TerminalCollectionFacade'; 

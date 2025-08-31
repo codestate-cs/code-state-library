@@ -176,73 +176,24 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         // Sort commands within terminal by priority
         const sortedCommands = [...terminalState.commands].sort((a: any, b: any) => a.priority - b.priority);
         
-        // Get execution mode from terminal state, default to new-terminals for sessions
-        const executionMode = terminalState.executionMode || 'new-terminals';
+        // Always use new-terminals for sessions (same-terminal deprecated)
+        logger.plainLog(`  Opening new terminal for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
         
-        if (executionMode === 'new-terminals') {
-          // Open new terminal window and run all commands sequentially in it
-          logger.plainLog(`  Opening new terminal for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
-          
-          // Create a combined command that runs all commands in sequence
-          const combinedCommand = sortedCommands
-            .map((cmd: any) => cmd.command)
-            .join(' && ');
-          
-          const spawnResult = await terminal.spawnTerminal(combinedCommand, {
-            cwd: session.projectRoot,
-            timeout: 5000, // Short timeout for spawning
-          });
+        // Create a combined command that runs all commands in sequence
+        const combinedCommand = sortedCommands
+          .map((cmd: any) => cmd.command)
+          .join(' && ');
+        
+        const spawnResult = await terminal.spawnTerminal(combinedCommand, {
+          cwd: session.projectRoot,
+          timeout: 5000, // Short timeout for spawning
+        });
 
-          if (!spawnResult.ok) {
-            logger.error(
-              `Failed to spawn new terminal for terminal ${terminalState.terminalId}`,
-              {
-                error: spawnResult.error,
-                terminalId: terminalState.terminalId,
-                terminalName: terminalState.terminalName,
-              }
-            );
-          } else {
-            logger.plainLog(`  New terminal spawned for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
-            logger.plainLog(`  📱 All commands will run sequentially in the new terminal window`);
-          }
+        if (!spawnResult.ok) {
+          logger.error(`Failed to spawn new terminal for terminal ${terminalState.terminalId}`);
         } else {
-          // Execute commands in sequence in the same terminal
-          for (const terminalCmd of sortedCommands) {
-            logger.plainLog(`  Executing in same terminal: ${terminalCmd.name} - ${terminalCmd.command}`);
-            const executeResult = await terminal.execute(terminalCmd.command, {
-              cwd: session.projectRoot,
-              timeout: 30000, // 30 seconds timeout per command
-            });
-
-            if (!executeResult.ok) {
-              logger.error(
-                `Failed to execute command: ${terminalCmd.command}`,
-                {
-                  error: executeResult.error,
-                  terminalId: terminalState.terminalId,
-                  commandName: terminalCmd.name,
-                }
-              );
-            } else if (!executeResult.value.success) {
-              logger.error(
-                `Command failed: ${terminalCmd.command}`,
-                {
-                  exitCode: executeResult.value.exitCode,
-                  stderr: executeResult.value.stderr,
-                  terminalId: terminalState.terminalId,
-                  commandName: terminalCmd.name,
-                }
-              );
-            } else {
-              logger.plainLog(`  Command executed successfully: ${terminalCmd.name} - ${terminalCmd.command}`);
-            }
-
-            // Small delay between commands
-            if (terminalCmd.priority < sortedCommands.length) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-          }
+          logger.plainLog(`  New terminal spawned for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
+          logger.plainLog(`  📱 All commands will run sequentially in the new terminal window`);
         }
       }
     } else {
@@ -258,7 +209,7 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       for (const collectionId of session.terminalCollections) {
         try {
           const executeTerminalCollection = new ExecuteTerminalCollection();
-          const executeResult = await executeTerminalCollection.executeById(collectionId);
+          const executeResult = await executeTerminalCollection.execute(collectionId);
           
           if (executeResult.ok) {
             logger.plainLog(`Terminal collection executed successfully`);

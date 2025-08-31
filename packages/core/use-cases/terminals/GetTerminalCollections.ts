@@ -3,14 +3,14 @@ import { TerminalCollectionFacade } from '@codestate/core/services/terminals/Ter
 import { TerminalCollectionWithScripts } from '@codestate/core/domain/models/TerminalCollection';
 import { Result } from '@codestate/core/domain/models/Result';
 
-export class GetTerminalCollection {
+export class GetTerminalCollections {
   private terminalCollectionService: ITerminalCollectionService;
   
   constructor(terminalCollectionService?: ITerminalCollectionService) {
     this.terminalCollectionService = terminalCollectionService || new TerminalCollectionFacade();
   }
   
-  async execute(name: string, rootPath?: string): Promise<Result<TerminalCollectionWithScripts>> {
-    return this.terminalCollectionService.getTerminalCollectionWithScripts(name, rootPath);
+  async execute(): Promise<Result<TerminalCollectionWithScripts[]>> {
+    return this.terminalCollectionService.getTerminalCollections({ loadScripts: true }) as Promise<Result<TerminalCollectionWithScripts[]>>;
   }
-}
+} 

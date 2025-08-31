@@ -1,11 +1,12 @@
 import { ITerminalCollectionRepository } from '@codestate/core/domain/ports/ITerminalCollectionRepository';
-import { TerminalCollection, TerminalCollectionIndex } from '@codestate/core/domain/models/TerminalCollection';
+import { TerminalCollection, TerminalCollectionIndex, TerminalCollectionWithScripts } from '@codestate/core/domain/models/TerminalCollection';
 import { LifecycleEvent } from '@codestate/core/domain/models/Script';
 import { Result, isSuccess, isFailure } from '@codestate/core/domain/models/Result';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 import { FileStorage } from '@codestate/infrastructure/services/FileStorage';
 import { validateTerminalCollection, validateTerminalCollectionIndex } from '@codestate/core/domain/schemas/SchemaRegistry';
 import { StorageError } from '@codestate/core/domain/types/ErrorTypes';
+import { IScriptService } from '@codestate/core/domain/ports/IScriptService';
 
 const TERMINAL_INDEX_PATH = 'terminals/index.json';
 const TERMINAL_FILE_PREFIX = 'terminals/';
@@ -16,13 +17,42 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
 
   constructor(
     private logger: ILoggerService,
-    storage: FileStorage
+    storage: FileStorage,
+    private scriptService?: IScriptService
   ) {
     this.storage = storage;
   }
 
   private getTerminalFileName(id: string): string {
     return `${TERMINAL_FILE_PREFIX}${id}${TERMINAL_FILE_SUFFIX}`;
+  }
+
+  private async loadScriptsForTerminalCollection(terminalCollection: TerminalCollection): Promise<TerminalCollectionWithScripts> {
+    const scripts: any[] = [];
+    
+    if (this.scriptService && terminalCollection.scriptReferences.length > 0) {
+      try {
+        // Get all scripts and filter by the references
+        const allScriptsResult = await this.scriptService.getScripts();
+        if (isSuccess(allScriptsResult)) {
+          for (const scriptRef of terminalCollection.scriptReferences) {
+            const script = allScriptsResult.value.find((s: any) => 
+              s.id === scriptRef.id && s.rootPath === scriptRef.rootPath
+            );
+            if (script) {
+              scripts.push(script);
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to load scripts for terminal collection', { error, terminalCollectionId: terminalCollection.id });
+      }
+    }
+    
+    return {
+      ...terminalCollection,
+      scripts
+    };
   }
 
   private async getIndex(): Promise<Result<TerminalCollectionIndex>> {
@@ -96,55 +126,7 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
     return { ok: true, value: undefined };
   }
 
-  async getTerminalCollection(name: string, rootPath?: string): Promise<Result<TerminalCollection>> {
-    this.logger.debug('TerminalCollectionRepository.getTerminalCollection called', { name, rootPath });
 
-    // Get index to find file
-    const indexResult = await this.getIndex();
-    if (isFailure(indexResult)) {
-      return indexResult;
-    }
-
-    let entry;
-    if (rootPath) {
-      // If rootPath is provided, search for exact match
-      entry = indexResult.value.entries.find(
-        e => e.name === name && e.rootPath === rootPath
-      );
-    } else {
-      // If no rootPath provided, search by name only
-      entry = indexResult.value.entries.find(e => e.name === name);
-      
-      // If multiple matches found, prefer the one in current directory
-      if (!entry && indexResult.value.entries.length > 1) {
-        const currentPath = process.cwd();
-        entry = indexResult.value.entries.find(
-          e => e.name === name && e.rootPath === currentPath
-        );
-      }
-    }
-
-    if (!entry) {
-      this.logger.error('Terminal collection not found', { name, rootPath });
-      return { ok: false, error: new StorageError(`Terminal collection '${name}' not found${rootPath ? ` for path '${rootPath}'` : ''}`, undefined, { name, rootPath }) };
-    }
-
-    // Read file
-    const readResult = await this.storage.read(entry.referenceFile);
-    if (isFailure(readResult)) {
-      this.logger.error('Failed to read terminal collection file', { error: readResult.error });
-      return readResult;
-    }
-
-    try {
-      const validatedTerminalCollection = validateTerminalCollection(JSON.parse(readResult.value));
-      this.logger.log('Terminal collection retrieved successfully', { name, rootPath });
-      return { ok: true, value: validatedTerminalCollection };
-    } catch (error) {
-      this.logger.error('Failed to parse or validate terminal collection JSON', { error });
-      return { ok: false, error: new StorageError('Invalid terminal collection data format', undefined, { error }) };
-    }
-  }
 
   async getTerminalCollectionById(id: string): Promise<Result<TerminalCollection>> {
     this.logger.debug('TerminalCollectionRepository.getTerminalCollectionById called', { id });
@@ -179,71 +161,119 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
     }
   }
 
-  async getAllTerminalCollections(): Promise<Result<TerminalCollection[]>> {
-    this.logger.debug('TerminalCollectionRepository.getAllTerminalCollections called');
+  async getTerminalCollections(options?: { rootPath?: string; lifecycle?: LifecycleEvent; loadScripts?: boolean }): Promise<Result<TerminalCollection[] | TerminalCollectionWithScripts[]>> {
+    this.logger.debug('TerminalCollectionRepository.getTerminalCollections called', { options });
 
     const indexResult = await this.getIndex();
     if (isFailure(indexResult)) {
       return indexResult;
     }
 
-    const terminalCollections: TerminalCollection[] = [];
+    let filteredEntries = indexResult.value.entries;
 
-    for (const entry of indexResult.value.entries) {
-      const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
-      if (isSuccess(terminalCollectionResult)) {
-        terminalCollections.push(terminalCollectionResult.value);
+    // Apply rootPath filter if provided
+    if (options?.rootPath) {
+      filteredEntries = filteredEntries.filter(e => e.rootPath === options.rootPath);
+    }
+
+    // Apply lifecycle filter if provided
+    if (options?.lifecycle) {
+      // We need to read the actual terminal collection files to check lifecycle
+      if (options.loadScripts) {
+        const terminalCollections: TerminalCollectionWithScripts[] = [];
+        
+        for (const entry of filteredEntries) {
+          const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
+          if (isSuccess(terminalCollectionResult) && terminalCollectionResult.value.lifecycle.includes(options.lifecycle!)) {
+            // Load scripts for this terminal collection
+            const terminalCollectionWithScripts = await this.loadScriptsForTerminalCollection(terminalCollectionResult.value);
+            terminalCollections.push(terminalCollectionWithScripts);
+          }
+        }
+        
+        this.logger.log('Terminal collections with scripts retrieved with lifecycle filter', { options, count: terminalCollections.length });
+        return { ok: true, value: terminalCollections };
+      } else {
+        const terminalCollections: TerminalCollection[] = [];
+        
+        for (const entry of filteredEntries) {
+          const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
+          if (isSuccess(terminalCollectionResult) && terminalCollectionResult.value.lifecycle.includes(options.lifecycle!)) {
+            terminalCollections.push(terminalCollectionResult.value);
+          }
+        }
+        
+        this.logger.log('Terminal collections retrieved with lifecycle filter', { options, count: terminalCollections.length });
+        return { ok: true, value: terminalCollections };
       }
     }
 
-    this.logger.log('All terminal collections retrieved', { count: terminalCollections.length });
-    return { ok: true, value: terminalCollections };
-  }
-
-  async getTerminalCollectionsByRootPath(rootPath: string): Promise<Result<TerminalCollection[]>> {
-    this.logger.debug('TerminalCollectionRepository.getTerminalCollectionsByRootPath called', { rootPath });
-
-    const indexResult = await this.getIndex();
-    if (isFailure(indexResult)) {
-      return indexResult;
+    // If no lifecycle filter, just apply rootPath filter and return data
+    if (options?.rootPath) {
+      if (options.loadScripts) {
+        const terminalCollections: TerminalCollectionWithScripts[] = [];
+        
+        for (const entry of filteredEntries) {
+          const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
+          if (isSuccess(terminalCollectionResult)) {
+            // Load scripts for this terminal collection
+            const terminalCollectionWithScripts = await this.loadScriptsForTerminalCollection(terminalCollectionResult.value);
+            terminalCollections.push(terminalCollectionWithScripts);
+          }
+        }
+        
+        this.logger.log('Terminal collections with scripts retrieved by root path', { rootPath: options.rootPath, count: terminalCollections.length });
+        return { ok: true, value: terminalCollections };
+      } else {
+        const terminalCollections: TerminalCollection[] = [];
+        
+        for (const entry of filteredEntries) {
+          const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
+          if (isSuccess(terminalCollectionResult)) {
+            terminalCollections.push(terminalCollectionResult.value);
+          }
+        }
+        
+        this.logger.log('Terminal collections retrieved by root path', { rootPath: options.rootPath, count: terminalCollections.length });
+        return { ok: true, value: terminalCollections };
+      }
     }
 
-    const terminalCollections: TerminalCollection[] = [];
-
-    for (const entry of indexResult.value.entries) {
-      if (entry.rootPath === rootPath) {
+    // No filters - return all terminal collections
+    if (options?.loadScripts) {
+      const terminalCollections: TerminalCollectionWithScripts[] = [];
+      
+      for (const entry of filteredEntries) {
+        const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
+        if (isSuccess(terminalCollectionResult)) {
+          // Load scripts for this terminal collection
+          const terminalCollectionWithScripts = await this.loadScriptsForTerminalCollection(terminalCollectionResult.value);
+          terminalCollections.push(terminalCollectionWithScripts);
+        }
+      }
+      
+      this.logger.log('All terminal collections with scripts retrieved', { count: terminalCollections.length });
+      return { ok: true, value: terminalCollections };
+    } else {
+      const terminalCollections: TerminalCollection[] = [];
+      
+      for (const entry of filteredEntries) {
         const terminalCollectionResult = await this.getTerminalCollectionById(entry.id);
         if (isSuccess(terminalCollectionResult)) {
           terminalCollections.push(terminalCollectionResult.value);
         }
       }
+      
+      this.logger.log('All terminal collections retrieved', { count: terminalCollections.length });
+      return { ok: true, value: terminalCollections };
     }
-
-    this.logger.log('Terminal collections retrieved by root path', { rootPath, count: terminalCollections.length });
-    return { ok: true, value: terminalCollections };
   }
 
-  async getTerminalCollectionsByLifecycle(lifecycle: LifecycleEvent, rootPath: string): Promise<Result<TerminalCollection[]>> {
-    this.logger.debug('TerminalCollectionRepository.getTerminalCollectionsByLifecycle called', { lifecycle, rootPath });
-
-    const terminalCollectionsResult = await this.getTerminalCollectionsByRootPath(rootPath);
-    if (isFailure(terminalCollectionsResult)) {
-      return terminalCollectionsResult;
-    }
-
-    const filteredCollections = terminalCollectionsResult.value.filter(
-      collection => collection.lifecycle.includes(lifecycle)
-    );
-
-    this.logger.log('Terminal collections filtered by lifecycle', { lifecycle, rootPath, count: filteredCollections.length });
-    return { ok: true, value: filteredCollections };
-  }
-
-  async updateTerminalCollection(name: string, rootPath: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionRepository.updateTerminalCollection called', { name, rootPath, terminalCollectionUpdate });
+  async updateTerminalCollection(id: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>> {
+    this.logger.debug('TerminalCollectionRepository.updateTerminalCollection called', { id, terminalCollectionUpdate });
 
     // Get existing terminal collection
-    const existingResult = await this.getTerminalCollection(name, rootPath);
+    const existingResult = await this.getTerminalCollectionById(id);
     if (isFailure(existingResult)) {
       return existingResult;
     }
@@ -267,121 +297,57 @@ export class TerminalCollectionRepository implements ITerminalCollectionReposito
       return writeResult;
     }
 
-    this.logger.log('Terminal collection updated successfully', { name, rootPath });
+    this.logger.log('Terminal collection updated successfully', { id });
     return { ok: true, value: undefined };
   }
 
-  async deleteTerminalCollection(name: string, rootPath: string): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionRepository.deleteTerminalCollection called', { name, rootPath });
 
-    // Get index to find file
+
+  async deleteTerminalCollections(ids: string[]): Promise<Result<void>> {
+    this.logger.debug('TerminalCollectionRepository.deleteTerminalCollections called', { ids });
+
+    // Get index to find files
     const indexResult = await this.getIndex();
     if (isFailure(indexResult)) {
       return indexResult;
     }
 
-    const entry = indexResult.value.entries.find(
-      e => e.name === name && e.rootPath === rootPath
-    );
+    const entriesToDelete = indexResult.value.entries.filter(e => ids.includes(e.id));
 
-    if (!entry) {
-      this.logger.error('Terminal collection not found for deletion', { name, rootPath });
-      return { ok: false, error: new StorageError(`Terminal collection '${name}' not found for path '${rootPath}'`, undefined, { name, rootPath }) };
+    if (entriesToDelete.length === 0) {
+      this.logger.error('No terminal collections found for deletion', { ids });
+      return { ok: false, error: new StorageError(`No terminal collections found with the provided IDs`, undefined, { ids }) };
     }
 
-    // Delete by ID using the found entry
-    return this.deleteTerminalCollectionById(entry.id);
-  }
+    // Delete each terminal collection
+    for (const entry of entriesToDelete) {
+      // Delete main file
+      const deleteResult = await this.storage.delete(entry.referenceFile);
+      if (isFailure(deleteResult)) {
+        this.logger.error('Failed to delete terminal collection file', { error: deleteResult.error, id: entry.id });
+        return deleteResult;
+      }
 
-  async deleteTerminalCollectionById(id: string): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionRepository.deleteTerminalCollectionById called', { id });
-
-    // Get index to find file
-    const indexResult = await this.getIndex();
-    if (isFailure(indexResult)) {
-      return indexResult;
+      // Delete backup file if it exists
+      const backupFile = `${entry.referenceFile}.bak`;
+      try {
+        await this.storage.delete(backupFile);
+        this.logger.debug('Backup file deleted', { backupFile });
+      } catch (error) {
+        // Backup file might not exist, which is fine
+        this.logger.debug('Backup file not found or already deleted', { backupFile, error });
+      }
     }
 
-    const entry = indexResult.value.entries.find(e => e.id === id);
-
-    if (!entry) {
-      this.logger.error('Terminal collection not found for deletion by ID', { id });
-      return { ok: false, error: new StorageError(`Terminal collection with ID '${id}' not found`, undefined, { id }) };
-    }
-
-    // Delete main file
-    const deleteResult = await this.storage.delete(entry.referenceFile);
-    if (isFailure(deleteResult)) {
-      this.logger.error('Failed to delete terminal collection file', { error: deleteResult.error });
-      return deleteResult;
-    }
-
-    // Delete backup file if it exists
-    const backupFile = `${entry.referenceFile}.bak`;
-    try {
-      await this.storage.delete(backupFile);
-      this.logger.debug('Backup file deleted', { backupFile });
-    } catch (error) {
-      // Backup file might not exist, which is fine
-      this.logger.debug('Backup file not found or already deleted', { backupFile, error });
-    }
-
-    // Update index
-    const updatedEntries = indexResult.value.entries.filter(e => e.id !== id);
+    // Update index by removing all deleted entries
+    const updatedEntries = indexResult.value.entries.filter(e => !ids.includes(e.id));
     const updateIndexResult = await this.storage.write(TERMINAL_INDEX_PATH, JSON.stringify({ entries: updatedEntries }));
     if (isFailure(updateIndexResult)) {
       this.logger.error('Failed to update index after deletion', { error: updateIndexResult.error });
       return updateIndexResult;
     }
 
-    this.logger.log('Terminal collection deleted successfully by ID', { id });
-    return { ok: true, value: undefined };
-  }
-
-  async deleteTerminalCollectionsByRootPath(rootPath: string): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionRepository.deleteTerminalCollectionsByRootPath called', { rootPath });
-
-    const indexResult = await this.getIndex();
-    if (isFailure(indexResult)) {
-      return indexResult;
-    }
-
-    // Find all entries for the given rootPath
-    const entriesToDelete = indexResult.value.entries.filter(e => e.rootPath === rootPath);
-
-    for (const entry of entriesToDelete) {
-      const deleteResult = await this.deleteTerminalCollectionById(entry.id);
-      if (isFailure(deleteResult)) {
-        this.logger.error('Failed to delete terminal collection', { error: deleteResult.error, id: entry.id });
-        return deleteResult;
-      }
-    }
-
-    this.logger.log('All terminal collections deleted for root path', { rootPath });
-    return { ok: true, value: undefined };
-  }
-
-  async getTerminalCollectionIndex(): Promise<Result<TerminalCollectionIndex>> {
-    this.logger.debug('TerminalCollectionRepository.getTerminalCollectionIndex called');
-    return this.getIndex();
-  }
-
-  async updateTerminalCollectionIndex(index: TerminalCollectionIndex): Promise<Result<void>> {
-    this.logger.debug('TerminalCollectionRepository.updateTerminalCollectionIndex called');
-
-    try {
-      validateTerminalCollectionIndex(index);
-    } catch (error) {
-      this.logger.error('Index validation failed', { error });
-      return { ok: false, error: new StorageError('Index validation failed', undefined, { error }) };
-    }
-
-    const writeResult = await this.storage.write(TERMINAL_INDEX_PATH, JSON.stringify(index));
-    if (isFailure(writeResult)) {
-      this.logger.error('Failed to write index file', { error: writeResult.error });
-      return writeResult;
-    }
-
+    this.logger.log('Terminal collections deleted successfully', { ids, count: entriesToDelete.length });
     return { ok: true, value: undefined };
   }
 }

@@ -1,14 +1,14 @@
 import inquirer from "inquirer";
-import { ConfigurableLogger, ListTerminalCollections } from "@codestate/core";
+import { ConfigurableLogger, TerminalCollectionFacade } from "@codestate/core";
 import { deleteTerminalCollectionCommand } from "../../commands/terminals/deleteTerminalCollection";
 
 export async function deleteTerminalCollectionTui() {
   const logger = new ConfigurableLogger();
-  const listTerminalCollections = new ListTerminalCollections();
+  const terminalCollectionService = new TerminalCollectionFacade();
 
   try {
     // Get all terminal collections
-    const result = await listTerminalCollections.execute();
+    const result = await terminalCollectionService.getTerminalCollections({ loadScripts: true });
     if (!result.ok) {
       logger.error("Failed to get terminal collections");
       return;
@@ -23,35 +23,55 @@ export async function deleteTerminalCollectionTui() {
     // Create choices for inquirer
     const choices = terminalCollections.map((tc: any) => ({
       name: `${tc.name} (${tc.rootPath}) - ID: ${tc.id}`,
-      value: { id: tc.id, name: tc.name, rootPath: tc.rootPath }
+      value: tc.id
     }));
 
     // Add a cancel option
     choices.push({
       name: "Cancel",
-      value: { id: null, name: null, rootPath: null }
+      value: null
     });
 
     const answers = await inquirer.prompt([
       {
-        type: "list",
-        name: "terminalCollection",
-        message: "Select a terminal collection to delete:",
+        type: "checkbox",
+        name: "selectedTerminalCollections",
+        message: "Select terminal collections to delete (use spacebar to select/deselect):",
         choices,
-        pageSize: 10
-      },
-      {
-        type: "confirm",
-        name: "confirm",
-        message: "Are you sure you want to delete this terminal collection? This action cannot be undone.",
-        default: false,
-        when: (answers) => answers.terminalCollection.id !== null
+        pageSize: 10,
+        validate: (input: string[]) => {
+          if (input.length === 0) {
+            return 'Please select at least one terminal collection';
+          }
+          return true;
+        }
       }
     ]);
 
-    if (answers.terminalCollection && answers.terminalCollection.id && answers.confirm) {
-      const { id } = answers.terminalCollection;
-      await deleteTerminalCollectionCommand(id);
+    if (answers.selectedTerminalCollections && answers.selectedTerminalCollections.length > 0) {
+      // Filter out null values (cancel option)
+      const selectedIds = answers.selectedTerminalCollections.filter((id: string) => id !== null);
+      
+      if (selectedIds.length === 0) {
+        logger.log("Operation cancelled.");
+        return;
+      }
+
+      // Show confirmation
+      const confirmAnswer = await inquirer.prompt([
+        {
+          type: "confirm",
+          name: "confirm",
+          message: `Are you sure you want to delete ${selectedIds.length} terminal collection(s)? This action cannot be undone.`,
+          default: false
+        }
+      ]);
+
+      if (confirmAnswer.confirm) {
+        await deleteTerminalCollectionCommand(selectedIds);
+      } else {
+        logger.log("Operation cancelled.");
+      }
     } else {
       logger.log("Operation cancelled.");
     }

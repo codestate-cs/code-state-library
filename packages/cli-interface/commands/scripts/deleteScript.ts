@@ -8,7 +8,7 @@ export async function deleteScriptCommand(scriptId: string) {
   
   spinner.start("🗑️  Deleting script...");
   
-  const result = await deleteScript.execute(scriptId);
+  const result = await deleteScript.execute([scriptId]);
   
   if (result.ok) {
     spinner.succeed(`Script deleted successfully`);

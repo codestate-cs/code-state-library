@@ -4,19 +4,9 @@ import { LifecycleEvent } from '../models/Script';
 
 export interface ITerminalCollectionService {
   createTerminalCollection(terminalCollection: TerminalCollection): Promise<Result<void>>;
-  getTerminalCollection(name: string, rootPath?: string): Promise<Result<TerminalCollection>>;
   getTerminalCollectionById(id: string): Promise<Result<TerminalCollection>>;
-  getTerminalCollectionWithScripts(name: string, rootPath?: string): Promise<Result<TerminalCollectionWithScripts>>;
-  getTerminalCollectionWithScriptsById(id: string): Promise<Result<TerminalCollectionWithScripts>>;
-  getAllTerminalCollections(): Promise<Result<TerminalCollection[]>>;
-  getAllTerminalCollectionsWithScripts(): Promise<Result<TerminalCollectionWithScripts[]>>;
-  getTerminalCollectionsByRootPath(rootPath: string): Promise<Result<TerminalCollection[]>>;
-  getTerminalCollectionsByRootPathWithScripts(rootPath: string): Promise<Result<TerminalCollectionWithScripts[]>>;
-  getTerminalCollectionsByLifecycle(lifecycle: LifecycleEvent, rootPath: string): Promise<Result<TerminalCollection[]>>;
-  updateTerminalCollection(name: string, rootPath: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>>;
-  deleteTerminalCollection(name: string, rootPath: string): Promise<Result<void>>;
-  deleteTerminalCollectionById(id: string): Promise<Result<void>>;
-  deleteTerminalCollectionsByRootPath(rootPath: string): Promise<Result<void>>;
-  executeTerminalCollection(name: string, rootPath?: string): Promise<Result<void>>;
+  getTerminalCollections(options?: { rootPath?: string; lifecycle?: LifecycleEvent; loadScripts?: boolean }): Promise<Result<TerminalCollection[] | TerminalCollectionWithScripts[]>>;
+  updateTerminalCollection(id: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>>;
+  deleteTerminalCollections(ids: string[]): Promise<Result<void>>;
   executeTerminalCollectionById(id: string): Promise<Result<void>>;
 }

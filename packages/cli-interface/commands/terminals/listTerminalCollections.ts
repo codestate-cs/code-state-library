@@ -1,14 +1,32 @@
-import { ListTerminalCollections, ConfigurableLogger, isSuccess, isFailure } from '@codestate/core';
+import { TerminalCollectionFacade, ConfigurableLogger, isSuccess, isFailure } from '@codestate/core';
 import { CLISpinner } from '../../utils/CLISpinner';
 
-export async function listTerminalCollectionsCommand() {
+export async function listTerminalCollectionsCommand(
+  rootPath?: string, 
+  lifecycleFilter?: string[]
+) {
   const logger = new ConfigurableLogger();
   const spinner = new CLISpinner();
-  const listTerminalCollections = new ListTerminalCollections();
+  const terminalCollectionService = new TerminalCollectionFacade();
   
   spinner.start("📋 Loading terminal collections...");
   
-  const result = await listTerminalCollections.execute();
+  // Build filtering options
+  const options: { rootPath?: string; lifecycle?: string; loadScripts?: boolean } = {
+    loadScripts: true
+  };
+  
+  if (rootPath) {
+    options.rootPath = rootPath;
+  }
+  
+  if (lifecycleFilter && lifecycleFilter.length > 0) {
+    options.lifecycle = lifecycleFilter[0]; // Use first filter for now
+  }
+
+  options.loadScripts = true;
+  
+  const result = await terminalCollectionService.getTerminalCollections(options);
   
   if (isFailure(result)) {
     spinner.fail("Failed to load terminal collections");
@@ -22,7 +40,15 @@ export async function listTerminalCollectionsCommand() {
   
   if (terminalCollections.length === 0) {
     logger.plainLog('📝 No terminal collections found.');
-    logger.plainLog('');
+    
+    // Show applied filters if any
+    if (rootPath || lifecycleFilter) {
+      logger.plainLog('Applied filters:');
+      if (rootPath) logger.plainLog(`   Root path: ${rootPath}`);
+      if (lifecycleFilter) logger.plainLog(`   Lifecycle: ${lifecycleFilter.join(', ')}`);
+      logger.plainLog('');
+    }
+    
     logger.plainLog('💡 To get started:');
     logger.plainLog('   • Create your first terminal collection with `codestate terminals create`');
     logger.plainLog('   • Terminal collections help you manage multiple scripts that run together');
@@ -32,7 +58,14 @@ export async function listTerminalCollectionsCommand() {
   }
   
   logger.plainLog('Terminal Collections:');
-  logger.plainLog('');
+  
+  // Show applied filters if any
+  if (rootPath || lifecycleFilter) {
+    logger.plainLog('Applied filters:');
+    if (rootPath) logger.plainLog(`   Root path: ${rootPath}`);
+    if (lifecycleFilter) logger.plainLog(`   Lifecycle: ${lifecycleFilter.join(', ')}`);
+    logger.plainLog('');
+  }
   
   for (const terminalCollection of terminalCollections) {
     logger.plainLog(`📁 ${terminalCollection.name} (${terminalCollection.rootPath})`);

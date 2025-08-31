@@ -1,7 +1,11 @@
 export { ListTerminalCollections } from './ListTerminalCollections';
-export { GetTerminalCollection } from './GetTerminalCollection';
+export { GetTerminalCollections } from './GetTerminalCollections';
 export { CreateTerminalCollection } from './CreateTerminalCollection';
 export { UpdateTerminalCollection } from './UpdateTerminalCollection'; 
 export { DeleteTerminalCollection } from './DeleteTerminalCollection';
 export { ExecuteTerminalCollection } from './ExecuteTerminalCollection';
+export { ExportTerminalCollections } from './ExportTerminalCollections';
+export { ImportTerminalCollections } from './ImportTerminalCollections';
 export type { TerminalCollection } from '../../domain/models/TerminalCollection';
+export type { ExportTerminalCollectionOptions, ExportTerminalCollectionResult } from './ExportTerminalCollections';
+export type { ImportTerminalCollectionOptions, ImportTerminalCollectionResult } from './ImportTerminalCollections';

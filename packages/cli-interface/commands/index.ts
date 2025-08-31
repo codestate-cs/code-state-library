@@ -19,7 +19,7 @@ export async function handleCommand(
     case "scripts":
       await handleScriptCommand(subcommand, options);
       break;
-    case "session":
+    case "sessions":
       await handleSessionCommand(subcommand, options);
       break;
     case "terminals":
@@ -30,7 +30,7 @@ export async function handleCommand(
       break;
     default:
       logger.error(`Error: Unknown command '${command}'`);
-      logger.plainLog("Available commands: config, scripts, session, terminals, reset");
+      logger.plainLog("Available commands: config, scripts, sessions, terminals, reset");
       process.exit(1);
   }
 }

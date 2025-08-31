@@ -34,47 +34,27 @@ export class ScriptFacade implements IScriptService {
     return this.service.createScript(...args);
   }
 
-  async createScripts(...args: Parameters<IScriptService['createScripts']>) {
-    return this.service.createScripts(...args);
-  }
-
-  async getScriptsByRootPath(...args: Parameters<IScriptService['getScriptsByRootPath']>) {
-    return this.service.getScriptsByRootPath(...args);
-  }
-
-  async getAllScripts(...args: Parameters<IScriptService['getAllScripts']>) {
-    return this.service.getAllScripts(...args);
-  }
-
   async getScriptById(...args: Parameters<IScriptService['getScriptById']>) {
     return this.service.getScriptById(...args);
+  }
+
+  async getScripts(...args: Parameters<IScriptService['getScripts']>) {
+    return this.service.getScripts(...args);
   }
 
   async updateScript(...args: Parameters<IScriptService['updateScript']>) {
     return this.service.updateScript(...args);
   }
 
-  async updateScripts(...args: Parameters<IScriptService['updateScripts']>) {
-    return this.service.updateScripts(...args);
-  }
-
-  async deleteScript(...args: Parameters<IScriptService['deleteScript']>) {
-    return this.service.deleteScript(...args);
-  }
-
   async deleteScripts(...args: Parameters<IScriptService['deleteScripts']>) {
     return this.service.deleteScripts(...args);
   }
 
-  async deleteScriptsByRootPath(...args: Parameters<IScriptService['deleteScriptsByRootPath']>) {
-    return this.service.deleteScriptsByRootPath(...args);
+  async exportScripts(...args: Parameters<IScriptService['exportScripts']>) {
+    return this.service.exportScripts(...args);
   }
 
-  async getScriptIndex(...args: Parameters<IScriptService['getScriptIndex']>) {
-    return this.service.getScriptIndex(...args);
-  }
-
-  async updateScriptIndex(...args: Parameters<IScriptService['updateScriptIndex']>) {
-    return this.service.updateScriptIndex(...args);
+  async importScripts(...args: Parameters<IScriptService['importScripts']>) {
+    return this.service.importScripts(...args);
   }
 } 

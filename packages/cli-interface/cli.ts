@@ -27,25 +27,28 @@ Commands:
   config import   Import configuration from file
   
   scripts show              Show all scripts (supports multi-command format)
-  scripts show-by-path      Show scripts for specific root path
   scripts create            Create scripts interactively (single or multi-command)
   scripts update            Update scripts interactively
   scripts delete            Delete scripts interactively
-  scripts delete-by-path    Delete all scripts for a root path
-  scripts export            Export scripts to JSON
-  scripts import            Import scripts from JSON
   scripts resume            Execute a script by name (supports multi-command format)
+  scripts export            Export scripts to JSON files (interactive selection)
+  scripts import            Import scripts from JSON files (interactive)
   
-  session save              Save current session (captures terminal commands)
-  session resume            Resume a saved session (restores terminal commands & file order)
-  session update            Update a saved session
-  session list              List all sessions with metadata
-  session delete            Delete a session
+  sessions save              Save current session (captures terminal commands)
+  sessions resume            Resume a saved session (restores terminal commands & file order)
+  sessions update            Update a saved session
+  sessions list              List all sessions with metadata
+  sessions delete            Delete a session
+  sessions export            Export sessions to JSON files (interactive selection)
+  sessions import            Import sessions from JSON files (interactive)
   
-  terminals list            List all terminal collections
+  terminals list            List all terminal collections (supports filtering)
   terminals create          Create a new terminal collection interactively
-  terminals show <name>     Show specific terminal collection details
-  terminals resume <name>   Execute a terminal collection
+  terminals show            Show all terminal collections (supports filtering)
+  terminals resume [name]   Execute a terminal collection (supports filtering)
+  terminals delete          Delete terminal collections interactively
+  terminals export          Export terminal collections to JSON files (interactive selection)
+  terminals import          Import terminal collections from JSON files (interactive)
   
   reset [options]           Reset CodeState data (sessions, scripts, terminals, config, all)
 
@@ -56,20 +59,25 @@ Features:
   • Git Integration: Full Git state capture and restoration
   • Cross-Platform: Works on Windows, macOS, and Linux
 
+Getting Help:
+  codestate --help                    # Show this help message
+  codestate config                    # Show config command help
+  codestate scripts                   # Show scripts command help
+  codestate sessions                  # Show sessions command help
+  codestate terminals                 # Show terminals command help
+  codestate reset --help              # Show reset command help
+
 Examples:
   codestate config show
   codestate config edit
   codestate scripts show
   codestate scripts create
-  codestate scripts show-by-path /home/user/project
-  codestate scripts resume
   codestate scripts resume "build-and-test"
-  codestate session save "Feature Work"
-  codestate session resume "Feature Work"
+  codestate sessions save "Feature Work"
+  codestate sessions resume "Feature Work"
   codestate terminals list
   codestate terminals create
-  codestate terminals show "my-project"
-  codestate terminals resume "my-project"
+  codestate reset --all
 
 Options:
   --help, -h      Show this help message
@@ -82,19 +90,23 @@ function showVersion() {
 }
 
 async function main() {
+  // Handle help and version flags first
+
   // Parse command first
   const [command, subcommand, ...options] = args;
 
-  // Handle help and version flags only if no command is specified
+
+  if (command === "--help" || command === "-h") {
+    showHelp();
+    return;
+  }
+  if (command === "--version" || command === "-v") {
+    showVersion();
+    return;
+  }
+
+  // Handle case when no command is specified
   if (!command) {
-    if (args.includes("--help") || args.includes("-h")) {
-      showHelp();
-      return;
-    }
-    if (args.includes("--version") || args.includes("-v")) {
-      showVersion();
-      return;
-    }
     logger.error("Error: No command specified");
     showHelp();
     process.exit(1);
@@ -103,6 +115,7 @@ async function main() {
   try {
     await handleCommand(command, subcommand, options);
   } catch (error) {
+    console.log(error);
     logger.error("Error: An unexpected error occurred");
     process.exit(1);
   }
