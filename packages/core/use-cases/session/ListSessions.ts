@@ -1,5 +1,5 @@
 import { ISessionService } from '@codestate/core/domain/ports/ISessionService';
-import { Session } from '@codestate/core/domain/models/Session';
+import { Session, SessionWithFullData } from '@codestate/core/domain/models/Session';
 import { Result } from '@codestate/core/domain/models/Result';
 import { SessionFacade } from '@codestate/core/services/session/SessionFacade';
 
@@ -10,7 +10,7 @@ export class ListSessions {
     this.sessionService = sessionService || new SessionFacade();
   }
   
-  async execute(filter?: { tags?: string[]; search?: string }): Promise<Result<Session[]>> {
+  async execute(filter?: { tags?: string[]; search?: string, loadAll?: boolean }): Promise<Result<Session[] | SessionWithFullData[]>> {
     return this.sessionService.listSessions(filter);
   }
 } 

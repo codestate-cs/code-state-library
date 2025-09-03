@@ -1,3 +1,6 @@
+import { Script } from "./Script";
+import { TerminalCollectionWithScripts } from "./TerminalCollection";
+
 export interface Session {
   id: string;
   name: string;
@@ -12,6 +15,11 @@ export interface Session {
   terminalCommands?: TerminalCommandState[]; // NEW: Terminal commands with metadata (backward compatible)
   terminalCollections?: string[]; // NEW: Terminal collection IDs
   scripts?: string[]; // NEW: Individual script IDs
+}
+
+export interface SessionWithFullData extends Session {
+  terminalCollectionsData?: TerminalCollectionWithScripts[];
+  scriptsData?: Script[];
 }
 
 export interface FileState {

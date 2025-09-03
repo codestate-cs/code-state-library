@@ -1,7 +1,12 @@
-import { ConfigurableLogger, ListSessions } from "@codestate/core";
+import { ConfigurableLogger, ListSessions, Session, SessionWithFullData } from "@codestate/core";
 import { CLISpinner } from "../../utils/CLISpinner";
 
-export async function listSessionsCommand() {
+// Type guard to check if session has full data
+function hasFullData(session: Session | SessionWithFullData): session is SessionWithFullData {
+  return 'terminalCollectionsData' in session || 'scriptsData' in session;
+}
+
+export async function listSessionsCommand(showAll: boolean = false, filter?: { tags?: string[]; search?: string; loadAll?: boolean }) {
   const logger = new ConfigurableLogger();
   const spinner = new CLISpinner();
   const listSessions = new ListSessions();
@@ -9,7 +14,13 @@ export async function listSessionsCommand() {
   try {
     spinner.start("📋 Loading sessions...");
     
-    const result = await listSessions.execute();
+    // Merge showAll into filter if provided
+    const finalFilter = filter || {};
+    if (showAll) {
+      finalFilter.loadAll = true;
+    }
+    
+    const result = await listSessions.execute(finalFilter);
 
     if (!result.ok) {
       spinner.fail("Failed to load sessions");
@@ -55,11 +66,11 @@ export async function listSessionsCommand() {
           const notes = session.notes ? ` - ${session.notes}` : "";
           logger.plainLog(`  • ${session.name}${tags}${notes}`);
           logger.plainLog(
-            `    ID: ${session.id} | Created: ${new Date(
+            `    Created: ${new Date(
               session.createdAt
             ).toLocaleString()}`
           );
-          if (session.git) {
+          if (showAll && session.git) {
             logger.plainLog(
               `    Git: ${session.git.branch} (${session.git.commit.substring(
                 0,
@@ -69,8 +80,8 @@ export async function listSessionsCommand() {
           }
           
           // Show terminal commands info if available
-          if ((session as any).terminalCommands && (session as any).terminalCommands.length > 0) {
-            const terminalCount = (session as any).terminalCommands.length;
+          if (session.terminalCommands && session.terminalCommands.length > 0) {
+            const terminalCount = session.terminalCommands.length;
             logger.plainLog(`    🖥️  Terminals: ${terminalCount} terminal${terminalCount > 1 ? 's' : ''}`);
           }
           
@@ -81,6 +92,26 @@ export async function listSessionsCommand() {
               logger.plainLog(`    📁 Files: ${session.files.length} (${filesWithPosition.length} with position)`);
             } else {
               logger.plainLog(`    📁 Files: ${session.files.length}`);
+            }
+          }
+
+          // Show terminal collections and scripts if showAll is true and session has full data
+          if (showAll && hasFullData(session)) {
+            // Show terminal collections data
+            if (session.terminalCollectionsData && session.terminalCollectionsData.length > 0) {
+              logger.plainLog(`    🔗 Terminal Collections:`);
+              session.terminalCollectionsData.forEach((collection) => {
+                logger.plainLog(`      - ${collection.name} (${collection.scripts?.length || 0} scripts)`);
+              });
+            }
+
+            // Show scripts data
+            if (session.scriptsData && session.scriptsData.length > 0) {
+              logger.plainLog(`    📜 Scripts:`);
+              session.scriptsData.forEach((script) => {
+                const commandCount = script.commands?.length || 0;
+                logger.plainLog(`      - ${script.name} (${commandCount} commands)`);
+              });
             }
           }
         });

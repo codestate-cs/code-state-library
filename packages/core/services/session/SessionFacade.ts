@@ -8,6 +8,8 @@ import { FileLogger } from '@codestate/infrastructure/services/FileLogger';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
 import { IEncryptionService } from '@codestate/core/domain/ports/IEncryptionService';
 import { TerminalFacade } from '@codestate/infrastructure/services/Terminal/TerminalFacade';
+import { TerminalCollectionFacade } from '@codestate/core/services/terminals/TerminalCollectionFacade';
+import { ScriptFacade } from '@codestate/core/services/scripts/ScriptFacade';
 import * as path from 'path';
 
 export class SessionFacade implements ISessionService {
@@ -31,7 +33,9 @@ export class SessionFacade implements ISessionService {
     const storage = new FileStorage(_logger, _encryption, fileStorageConfig);
     const repository = new SessionRepository(_logger, storage);
     const terminalService = new TerminalFacade(_logger); // NEW: Terminal service for command capture
-    this.service = new SessionService(repository, terminalService); // NEW: Pass terminal service
+    const terminalCollectionService = new TerminalCollectionFacade(); // NEW: Terminal collection service
+    const scriptService = new ScriptFacade(); // NEW: Script service
+    this.service = new SessionService(repository, terminalService, terminalCollectionService, scriptService); // NEW: Pass all services
   }
 
   async saveSession(...args: Parameters<ISessionService['saveSession']>) {
