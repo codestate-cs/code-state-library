@@ -1,6 +1,43 @@
 # @codestate/cli
 
-**Version 1.0.5** - CLI interface for CodeState - A powerful development environment management tool
+**Version 1.0.6** - CLI interface for CodeState - A powerful development environment management tool
+
+## 🚀 What's New in v1.0.6
+
+### ✨ **Major New Features**
+- **Comprehensive CLI Filtering**: Advanced filtering options for sessions list command
+  - `--root-path <path>` - Filter sessions by project root path
+  - `--tags <tags>` - Filter by comma-separated tags (e.g., `--tags "feature,development"`)
+  - `--search <term>` - Search in session names and notes
+  - `--showAll` - Display full session data including terminal collections and scripts
+  - Support for combining multiple filters (e.g., `--showAll --tags "feature"`)
+- **SessionWithFullData Support**: Display complete session data with terminal collections and scripts
+  - Shows terminal collections with their associated scripts
+  - Displays individual scripts with command counts
+  - Enhanced session information with full data loading
+- **Enhanced Session Management**: Full data loading capabilities for detailed session views
+  - Automatic loading of terminal collections and scripts when `--showAll` is used
+  - Backward compatibility with existing session commands
+
+### 🔧 **Technical Enhancements**
+- **Advanced CLI Arguments**: Robust argument parsing similar to scripts CLI
+  - Proper validation for required argument values
+  - Support for multiple argument combinations
+  - Enhanced error messages for invalid usage
+- **Type Safety**: Comprehensive TypeScript support
+  - Proper handling of SessionWithFullData interface
+  - Type-safe CLI argument handling
+  - Enhanced error handling and validation
+
+### 📚 **Documentation & Developer Experience**
+- **CLI Help System**: Enhanced help with detailed examples
+  - Comprehensive help for all session subcommands
+  - Detailed examples for filtering and data loading
+  - Clear usage patterns and best practices
+- **Session Terminal Restoration**: Improved terminal command restoration
+  - Uses terminal service methods instead of manual spawning
+  - Better error handling and timeout management
+  - Consistent with TerminalCollectionService patterns
 
 ## 🚀 What's New in v1.0.5
 
@@ -19,12 +56,13 @@
 ## 🌟 CLI Features
 
 - **Script Management**: Create, update, delete, and manage development scripts
-- **Session Management**: Save and resume development sessions
+- **Session Management**: Save and resume development sessions with advanced filtering
 - **Configuration Management**: Export, import, and manage settings
 - **Terminal Collections**: Group and execute related terminal commands
 - **Git Integration**: Status checking, stash management, commit operations
 - **IDE Integration**: Multi-IDE support for project and file management
 - **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
+- **Advanced Filtering**: Filter sessions by path, tags, search terms, and load full data
 
 ## Overview
 
@@ -151,6 +189,13 @@ codestate session save
 
 # List all sessions
 codestate session list
+
+# List sessions with advanced filtering
+codestate session list --showAll
+codestate session list --root-path .
+codestate session list --tags "feature,development"
+codestate session list --search "auth"
+codestate session list --showAll --tags "feature"
 
 # Resume a session
 codestate session resume <session-id>

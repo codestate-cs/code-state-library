@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2025-01-29
+
+### ✨ **Major New Features**
+- **SessionWithFullData Interface**: New interface extending Session with loaded terminal collections and scripts data
+  - `terminalCollectionsData?: TerminalCollectionWithScripts[]` - Complete terminal collections with scripts
+  - `scriptsData?: Script[]` - Complete script objects with commands and metadata
+  - Proper TypeScript types and type guards for safe data access
+- **Comprehensive CLI Filtering**: Advanced filtering options for sessions list command
+  - `--root-path <path>` - Filter sessions by project root path
+  - `--tags <tags>` - Filter by comma-separated tags (e.g., `--tags "feature,development"`)
+  - `--search <term>` - Search in session names and notes
+  - `--showAll` - Display full session data including terminal collections and scripts
+  - Support for combining multiple filters (e.g., `--showAll --tags "feature"`)
+- **Enhanced Session Management**: Full data loading capabilities for detailed session views
+  - SessionService now integrates with TerminalCollectionService and ScriptService
+  - Automatic loading of terminal collections and scripts when `loadAll: true`
+  - Backward compatibility with existing Session interface
+
+### 🔧 **Technical Enhancements**
+- **Service Integration**: SessionService constructor now accepts TerminalCollectionService and ScriptService
+  - Proper dependency injection for data loading
+  - Enhanced error handling for failed data loads
+  - Graceful fallback when services are unavailable
+- **Advanced CLI Arguments**: Robust argument parsing similar to scripts CLI
+  - Proper validation for required argument values
+  - Support for multiple argument combinations
+  - Enhanced error messages for invalid usage
+- **Type Safety**: Comprehensive TypeScript support
+  - `SessionWithFullData` interface with proper type guards
+  - Updated `ISessionService` interface to support both return types
+  - Type-safe CLI argument handling
+
+### 📚 **Documentation & Developer Experience**
+- **UI Package Schemas**: Complete documentation for building custom UI components
+  - `docs/UI_PACKAGE_SCHEMAS.md` with all Session, Script, and TerminalCollection schemas
+  - TypeScript interfaces ready for import and use
+  - Usage examples and component structure recommendations
+  - Validation functions and error handling patterns
+- **CLI Help System**: Enhanced help with detailed examples
+  - Comprehensive help for all session subcommands
+  - Detailed examples for filtering and data loading
+  - Clear usage patterns and best practices
+- **Session Terminal Restoration**: Improved terminal command restoration
+  - Uses terminal service methods instead of manual spawning
+  - Better error handling and timeout management
+  - Consistent with TerminalCollectionService patterns
+
+### 🐛 **Bug Fixes**
+- **Session Data Loading**: Fixed issues with incomplete session data loading
+- **CLI Argument Parsing**: Improved argument validation and error handling
+- **Type Safety**: Resolved TypeScript errors in SessionWithFullData usage
+
 ## [1.0.5] - 2025-01-29
 
 ### ✨ **Major Improvements**
