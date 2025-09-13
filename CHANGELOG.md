@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2025-01-29
+
+### 🐛 **Bug Fixes**
+- **Fixed Double Execution Issue**: Resolved session resume executing terminals and scripts twice
+  - Created new `GetSession` use case for fetching session data without execution
+  - Added `getSessionById` method to `ISessionService` interface
+  - Separated session loading from session execution logic
+  - CLI now uses `GetSession` for validation and `ResumeSession` for execution
+- **Fixed Commit Changes Flow**: Improved commit handling during session resume
+  - Added proper user prompt for commit message instead of auto-generated messages
+  - Integrated with existing `CommitChanges` use case instead of manual git commands
+  - Better error handling with detailed git error messages
+  - Added validation to check if there are changes to commit before proceeding
+
+### 🔧 **Architecture Improvements**
+- **Use Case Separation**: Better separation of concerns in session management
+  - `GetSession`: Pure data fetching without side effects
+  - `ResumeSession`: Full session execution with IDE, files, terminals, and scripts
+  - Cleaner CLI command structure with proper use case usage
+- **Git Service Integration**: Proper use of existing git service methods
+  - Replaced manual terminal commands with `CommitChanges` use case
+  - Consistent error handling across git operations
+  - Better validation and user feedback
+
+### 📦 **Package Updates**
+- Updated all package versions from 1.0.6 to 1.0.7
+- Fixed core package build issues and deprecation warnings
+- Improved package.json configuration and exports
+
 ## [1.0.6] - 2025-01-29
 
 ### ✨ **Major New Features**

@@ -1,6 +1,18 @@
 # CodeState - Development Environment Management Tool
 
-**Version 1.0.6** - A powerful tool for managing development environments, scripts, and sessions with enhanced data loading and comprehensive CLI filtering.
+**Version 1.0.7** - A powerful tool for managing development environments, scripts, and sessions with enhanced data loading and comprehensive CLI filtering.
+
+## 🚀 What's New in v1.0.7
+
+### 🐛 **Bug Fixes**
+- **Fixed Double Execution Issue**: Resolved session resume executing terminals and scripts twice
+- **Fixed Commit Changes Flow**: Improved commit handling during session resume with proper user prompts
+- **Fixed Package Build Issues**: Resolved deprecation warnings and build configuration
+
+### 🔧 **Architecture Improvements**
+- **Use Case Separation**: Better separation of concerns with `GetSession` and `ResumeSession` use cases
+- **Git Service Integration**: Proper use of existing git service methods instead of manual commands
+- **Cleaner CLI Structure**: Improved command structure with proper use case usage
 
 ## 🚀 What's New in v1.0.6
 
