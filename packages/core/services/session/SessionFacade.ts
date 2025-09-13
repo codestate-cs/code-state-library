@@ -46,6 +46,10 @@ export class SessionFacade implements ISessionService {
     return this.service.updateSession(...args);
   }
 
+  async getSessionById(...args: Parameters<ISessionService['getSessionById']>) {
+    return this.service.getSessionById(...args);
+  }
+
   async resumeSession(...args: Parameters<ISessionService['resumeSession']>) {
     return this.service.resumeSession(...args);
   }

@@ -2,6 +2,7 @@ export { SaveSession } from './SaveSession';
 export { UpdateSession } from './UpdateSession';
 export { DeleteSession } from './DeleteSession';
 export { ListSessions } from './ListSessions';
+export { GetSession } from './GetSession';
 export { ResumeSession } from './ResumeSession';
 export { ExportSessions } from './ExportSessions';
 export { ImportSessions } from './ImportSessions';

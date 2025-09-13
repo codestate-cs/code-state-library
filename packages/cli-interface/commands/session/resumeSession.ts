@@ -1,15 +1,14 @@
 import {
   ConfigurableLogger,
-  GetConfig,
   GitService,
   ListSessions,
-  OpenFiles,
-  OpenIDE,
+  GetSession,
   ResumeSession,
   SaveSession,
   UpdateSession,
   Terminal,
   ApplyStash,
+  CommitChanges,
 } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
 import {
@@ -59,7 +58,8 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     }
 
     // 1. Load session file and validate
-    const sessionResult = await resumeSession.execute(targetSession);
+    const getSession = new GetSession();
+    const sessionResult = await getSession.execute(targetSession);
     if (!sessionResult.ok) {
       logger.error("Failed to load session");
       return;
@@ -139,6 +139,35 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
           logger,
         });
         logger.plainLog("Current work saved. Proceeding with resume...");
+      } else if (dirtyAction === "commit") {
+        logger.plainLog("Committing current changes...");
+        
+        // Ask user for commit message
+        const { commitMessage } = await inquirer.customPrompt([
+          {
+            type: "input",
+            name: "commitMessage",
+            message: "Enter commit message:",
+            validate: (input: string) => {
+              if (!input.trim()) {
+                return "Commit message is required";
+              }
+              return true;
+            },
+          },
+        ]);
+        
+        // Use the CommitChanges use case
+        const commitChanges = new CommitChanges();
+        const commitResult = await commitChanges.execute(commitMessage);
+        
+        if (!commitResult.ok) {
+          logger.error("Failed to commit changes");
+          logger.plainLog(`Commit error: ${commitResult.error?.message || 'Unknown error'}`);
+          return;
+        }
+        
+        logger.log("Changes committed successfully. Proceeding with resume...");
       } else if (dirtyAction === "discard") {
         await terminal.execute("git reset --hard");
         await terminal.execute("git clean -fd");
@@ -165,156 +194,15 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       }
     }
 
-    // 5. Restore terminal commands (NEW)
-    if ((session as any).terminalCommands && (session as any).terminalCommands.length > 0) {
-      logger.plainLog("Restoring terminal commands...");
-      
-      // Sort terminals by terminalId to ensure correct order
-      const sortedTerminals = [...(session as any).terminalCommands].sort((a: any, b: any) => a.terminalId - b.terminalId);
-      
-      for (const terminalState of sortedTerminals) {
-        // Sort commands within terminal by priority
-        const sortedCommands = [...terminalState.commands].sort((a: any, b: any) => a.priority - b.priority);
-        
-        // Always use new-terminals for sessions (same-terminal deprecated)
-        logger.plainLog(`  Opening new terminal for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
-        
-        // Create a combined command that runs all commands in sequence
-        const combinedCommand = sortedCommands
-          .map((cmd: any) => cmd.command)
-          .join(' && ');
-        
-        const spawnResult = await terminal.spawnTerminal(combinedCommand, {
-          cwd: session.projectRoot,
-          timeout: 5000, // Short timeout for spawning
-        });
-
-        if (!spawnResult.ok) {
-          logger.error(`Failed to spawn new terminal for terminal ${terminalState.terminalId}`);
-        } else {
-          logger.plainLog(`  New terminal spawned for terminal ${terminalState.terminalId} (${terminalState.terminalName || 'unnamed'})`);
-          logger.plainLog(`  📱 All commands will run sequentially in the new terminal window`);
-        }
-      }
-    } else {
-      logger.plainLog("No terminal commands to restore.");
+    // 5. Execute the ResumeSession use case (handles IDE, files, terminals, scripts)
+    const resumeSessionResult = await resumeSession.execute(targetSession);
+    if (!resumeSessionResult.ok) {
+      logger.error("Failed to resume session");
+      return;
     }
 
-    // 7. Execute terminal collections if any
-    if (session.terminalCollections && session.terminalCollections.length > 0) {
-      logger.plainLog(`\n🚀 Executing ${session.terminalCollections.length} terminal collection(s):`);
-      
-      const { ExecuteTerminalCollection } = await import("@codestate/core");
-      
-      for (const collectionId of session.terminalCollections) {
-        try {
-          const executeTerminalCollection = new ExecuteTerminalCollection();
-          const executeResult = await executeTerminalCollection.execute(collectionId);
-          
-          if (executeResult.ok) {
-            logger.plainLog(`Terminal collection executed successfully`);
-          } else {
-            logger.error(`Failed to execute terminal collection`);
-          }
-        } catch (error) {
-          logger.error(`Error executing terminal collection`);
-        }
-      }
-    } else {
-      logger.plainLog("No terminal collections to execute.");
-    }
-
-    // 8. Execute individual scripts if any
-    if (session.scripts && session.scripts.length > 0) {
-      logger.plainLog(`\n📜 Executing ${session.scripts.length} individual script(s):`);
-      
-      const { ResumeScript } = await import("@codestate/core");
-      
-      for (const scriptName of session.scripts) {
-        try {
-          const resumeScript = new ResumeScript();
-          const executeResult = await resumeScript.execute(scriptName);
-          
-          if (executeResult.ok) {
-            logger.plainLog(`Script executed successfully`);
-          } else {
-            logger.error(`Failed to execute script`);
-          }
-        } catch (error) {
-          logger.error(`Error executing script`);
-        }
-      }
-    } else {
-      logger.plainLog("No individual scripts to execute.");
-    }
-
-    // 6. Open IDE and files (UPDATED to use position order)
-
-    // Get configured IDE from config
-    const getConfig = new GetConfig();
-    const configResult = await getConfig.execute();
-    if (configResult.ok && configResult.value.ide) {
-      const configuredIDE = configResult.value.ide;
-
-      // Open IDE with project
-      const openIDE = new OpenIDE();
-      const ideResult = await openIDE.execute(
-        configuredIDE,
-        session.projectRoot
-      );
-
-      if (ideResult.ok) {
-        logger.log(`IDE '${configuredIDE}' opened successfully`);
-
-        // Open files if session has files (UPDATED: Sort by position)
-        if (session.files && session.files.length > 0) {
-          const openFiles = new OpenFiles();
-          
-          // Sort files by position if available, otherwise keep original order
-          const sortedFiles = [...session.files].sort((a, b) => {
-            const posA = (a as any).position ?? Number.MAX_SAFE_INTEGER;
-            const posB = (b as any).position ?? Number.MAX_SAFE_INTEGER;
-            return posA - posB;
-          });
-
-          const filesResult = await openFiles.execute({
-            ide: configuredIDE,
-            projectRoot: session.projectRoot,
-            files: sortedFiles.map((file) => ({
-              path: file.path,
-              line: file.cursor?.line,
-              column: file.cursor?.column,
-              isActive: file.isActive,
-            })),
-          });
-
-          if (filesResult.ok) {
-            logger.plainLog(`Opened ${sortedFiles.length} files in correct order`);
-          } else {
-            logger.error("Failed to open files in IDE");
-          }
-        } else {
-          logger.warn("No files to open from session");
-        }
-      } else {
-        logger.error(`Failed to open IDE '${configuredIDE}'`);
-        logger.warn("Continuing without IDE...");
-      }
-    } else {
-      logger.warn("No IDE configured. Files will not be opened automatically.");
-    }
-
-    // 7. Update session metadata (last accessed)
-
+    // 6. Update session metadata (last accessed)
     // TODO: Implement session metadata update
-
-    logger.log(`Session "${session.name}" resumed successfully!`);
-    if (session.notes) {
-      logger.plainLog(`\n📝 Notes: ${session.notes}`);
-    }
-    if (session.tags.length > 0) {
-      logger.plainLog(`🏷️  Tags: ${session.tags.join(", ")}`);
-    }
   } catch (error) {
     logger.error("Unexpected error during session resume");
   }

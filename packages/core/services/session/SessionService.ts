@@ -77,6 +77,10 @@ export class SessionService implements ISessionService {
     return { ok: true, value: updated };
   }
 
+  async getSessionById(idOrName: string): Promise<Result<Session>> {
+    return this.repository.load(idOrName);
+  }
+
   async resumeSession(idOrName: string): Promise<Result<Session>> {
     return this.repository.load(idOrName);
   }
