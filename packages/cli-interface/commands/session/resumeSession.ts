@@ -68,47 +68,50 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
     const session = sessionResult.value;
     logger.plainLog(`\n📋 Resuming session: "${session.name}"`);
 
-    // Check if we're in the correct directory
+    // 2. Determine git check location and handle directory switching
     const currentDir = process.cwd();
-    if (currentDir !== session.projectRoot) {
-      logger.warn(`You are in ${currentDir}`);
-      logger.plainLog(`Session was saved from ${session.projectRoot}`);
-      const { changeDirectory } = await inquirer.customPrompt([
-        {
-          type: "confirm",
-          name: "changeDirectory",
-          message: "Do you want to change to the session directory?",
-          default: true,
-        },
-      ]);
-      if (changeDirectory) {
-        logger.plainLog(`Changing to ${session.projectRoot}...`);
-        process.chdir(session.projectRoot);
-      } else {
-        logger.plainLog("Continuing in current directory...");
-      }
+    const isSameProject = currentDir === session.projectRoot;
+    let originalDir = currentDir;
+    let gitCheckDir = currentDir;
+
+    if (!isSameProject) {
+      logger.plainLog(`Session is from different project: ${session.projectRoot}`);
+      logger.plainLog(`Checking git status in session directory...`);
+      gitCheckDir = session.projectRoot;
+      // Change to session directory for git operations
+      process.chdir(session.projectRoot);
+    } else {
+      logger.plainLog(`Session is from current project: ${currentDir}`);
     }
 
-    // 2. Check current Git status
+    // Check if the git check directory is a Git repository
     const isRepoResult = await gitService.isGitRepository();
     if (!isRepoResult.ok || !isRepoResult.value) {
-      logger.warn("Current directory is not a Git repository.");
+      logger.warn(`Directory ${gitCheckDir} is not a Git repository.`);
       logger.plainLog(
         "Cannot restore Git state. Session resumed without Git integration."
       );
+      // Change back to original directory if we switched
+      if (!isSameProject) {
+        process.chdir(originalDir);
+      }
       return;
     }
 
     const gitStatusResult = await gitService.getStatus();
     if (!gitStatusResult.ok) {
       logger.error("Failed to get Git status");
+      // Change back to original directory if we switched
+      if (!isSameProject) {
+        process.chdir(originalDir);
+      }
       return;
     }
     const gitStatus = gitStatusResult.value;
 
     // 3. Handle current repository dirty state
     if (gitStatus.isDirty) {
-      logger.warn("Current repository has uncommitted changes:");
+      logger.warn(`Repository in ${gitCheckDir} has uncommitted changes:`);
       gitStatus.dirtyFiles.forEach((file) => {
         logger.plainLog(`  ${file.status}: ${file.path}`);
       });
@@ -120,16 +123,26 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       const { dirtyAction } = await promptDirtyState(gitStatus, canStash);
       if (dirtyAction === "cancel") {
         logger.warn("Session resume cancelled.");
+        // Change back to original directory if we switched
+        if (!isSameProject) {
+          process.chdir(originalDir);
+        }
         return;
       }
       if (dirtyAction === "save") {
         logger.plainLog("Saving current work as new session...");
         const sessionDetails = await promptSessionDetails();
         const gitState = await getCurrentGitState(gitService, logger);
-        if (!gitState) return;
+        if (!gitState) {
+          // Change back to original directory if we switched
+          if (!isSameProject) {
+            process.chdir(originalDir);
+          }
+          return;
+        }
         await handleSessionSave({
           sessionDetails,
-          projectRoot: process.cwd(),
+          projectRoot: gitCheckDir, // Use the git check directory
           git: {
             ...gitState,
             isDirty: false,
@@ -164,6 +177,10 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
         if (!commitResult.ok) {
           logger.error("Failed to commit changes");
           logger.plainLog(`Commit error: ${commitResult.error?.message || 'Unknown error'}`);
+          // Change back to original directory if we switched
+          if (!isSameProject) {
+            process.chdir(originalDir);
+          }
           return;
         }
         
@@ -175,12 +192,19 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       }
     }
 
-    // 4. Restore Git state
+    // 4. Restore Git state (always in session.projectRoot)
+    // Ensure we're in the session directory for branch switching
+    if (!isSameProject) {
+      logger.plainLog(`Switching to session directory for branch operations: ${session.projectRoot}`);
+      process.chdir(session.projectRoot);
+    }
+
     const currentBranchResult = await gitService.getCurrentBranch();
     if (
       currentBranchResult.ok &&
       currentBranchResult.value !== session.git.branch
     ) {
+      logger.plainLog(`Switching from branch '${currentBranchResult.value}' to '${session.git.branch}'`);
       await terminal.execute(`git checkout ${session.git.branch}`);
     }
 
@@ -189,9 +213,16 @@ export async function resumeSessionCommand(sessionIdOrName?: string) {
       const applyStash = new ApplyStash();
       const stashResult = await applyStash.execute(session.git.stashId);
       if (stashResult.ok && stashResult.value.success) {
+        logger.log("Stash applied successfully");
       } else {
         logger.error("Failed to apply stash");
       }
+    }
+
+    // Change back to original directory if we switched for git operations
+    if (!isSameProject) {
+      logger.plainLog(`Returning to original directory: ${originalDir}`);
+      process.chdir(originalDir);
     }
 
     // 5. Execute the ResumeSession use case (handles IDE, files, terminals, scripts)

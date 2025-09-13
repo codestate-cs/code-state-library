@@ -53,9 +53,9 @@ function showScriptsHelp() {
       # Supports: Downloads folder, custom path, paste content
 
     Lifecycle Values:
-      none     - Scripts with no lifecycle events
-      resume   - Scripts with resume lifecycle events
-      open     - Scripts with open lifecycle events
+      none     - Scripts with no lifecycle events (manual execution only)
+      resume   - Scripts with resume lifecycle events (run when resuming sessions)
+      open     - Scripts with open lifecycle events (run when opening projects)
 
     Examples:
       codestate scripts show

@@ -56,6 +56,33 @@ async function createScriptsInteractively() {
         },
       ]);
 
+      // Ask about lifecycle events
+      const lifecycleAnswer = await inquirer.customPrompt([
+        {
+          name: "lifecycle",
+          message: "When should this script be executed?",
+          type: "checkbox",
+          choices: [
+            { 
+              name: "Open - Run when opening a project (e.g., start dev servers)", 
+              value: "open",
+              checked: false 
+            },
+            { 
+              name: "Resume - Run when resuming a session (e.g., restore environment)", 
+              value: "resume",
+              checked: true 
+            },
+            { 
+              name: "None - Only run when manually executed", 
+              value: "none",
+              checked: false 
+            },
+          ],
+          validate: (input: string[]) => input.length > 0 ? true : "At least one lifecycle event must be selected",
+        },
+      ]);
+
       // Ask about terminal close behavior
       const closeAnswer = await inquirer.customPrompt([
         {
@@ -75,6 +102,7 @@ async function createScriptsInteractively() {
         name: answers.name.trim(),
         rootPath: answers.rootPath.trim(),
         script: scriptAnswer.script.trim(),
+        lifecycle: lifecycleAnswer.lifecycle,
         executionMode: 'new-terminals', // Default to new-terminals
         closeTerminalAfterExecution: closeAnswer.closeTerminalAfterExecution,
       };
@@ -118,6 +146,33 @@ async function createScriptsInteractively() {
         continueAddingCommands = commandAnswers.addAnotherCommand;
       }
 
+      // Ask about lifecycle events
+      const lifecycleAnswer = await inquirer.customPrompt([
+        {
+          name: "lifecycle",
+          message: "When should this script be executed?",
+          type: "checkbox",
+          choices: [
+            { 
+              name: "Open - Run when opening a project (e.g., start dev servers)", 
+              value: "open",
+              checked: false 
+            },
+            { 
+              name: "Resume - Run when resuming a session (e.g., restore environment)", 
+              value: "resume",
+              checked: false 
+            },
+            { 
+              name: "None - Only run when manually executed", 
+              value: "none",
+              checked: true 
+            },
+          ],
+          validate: (input: string[]) => input.length > 0 ? true : "At least one lifecycle event must be selected",
+        },
+      ]);
+
       // Ask about terminal close behavior
       const closeAnswer = await inquirer.customPrompt([
         {
@@ -137,6 +192,7 @@ async function createScriptsInteractively() {
         name: answers.name.trim(),
         rootPath: answers.rootPath.trim(),
         commands: commands,
+        lifecycle: lifecycleAnswer.lifecycle,
         executionMode: 'new-terminals', // Default to new-terminals
         closeTerminalAfterExecution: closeAnswer.closeTerminalAfterExecution,
       };

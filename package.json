@@ -1,6 +1,6 @@
 {
   "name": "codestate-monorepo",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "CodeState - A powerful development environment management tool",
   "private": true,
   "type": "module",
