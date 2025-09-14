@@ -1,17 +1,15 @@
 import { ITerminalCollectionService } from '@codestate/core/domain/ports/ITerminalCollectionService';
 import { TerminalCollectionFacade } from '@codestate/core/services/terminals/TerminalCollectionFacade';
-import { TerminalCollection } from '@codestate/core/domain/models/TerminalCollection';
 import { Result } from '@codestate/core/domain/models/Result';
 
-export class UpdateTerminalCollection {
+export class DeleteTerminalCollections {
   private terminalCollectionService: ITerminalCollectionService;
   
   constructor(terminalCollectionService?: ITerminalCollectionService) {
     this.terminalCollectionService = terminalCollectionService || new TerminalCollectionFacade();
   }
   
-  async execute(id: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>> {
-    // Update using the ID directly
-    return this.terminalCollectionService.updateTerminalCollection(id, terminalCollectionUpdate);
+  async execute(ids: string[]): Promise<Result<void>> {
+    return this.terminalCollectionService.deleteTerminalCollections(ids);
   }
 }

@@ -1,4 +1,4 @@
-import { ConfigurableLogger, TerminalCollectionFacade, TerminalCollectionWithScripts } from "@codestate/core";
+import { ConfigurableLogger, GetTerminalCollections, GetTerminalCollectionsOptions, ExecuteTerminalCollection, TerminalCollectionWithScripts, LifecycleEvent } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
 import { CLISpinner } from "../../utils/CLISpinner";
 
@@ -13,7 +13,8 @@ export async function executeTerminalCollectionCommand(
 ) {
   const logger = new ConfigurableLogger();
   const spinner = new CLISpinner();
-  const terminalCollectionService = new TerminalCollectionFacade();
+  const getTerminalCollections = new GetTerminalCollections();
+  const executeTerminalCollection = new ExecuteTerminalCollection();
 
   try {
     let targetTerminalCollectionName = terminalCollectionName;
@@ -23,7 +24,7 @@ export async function executeTerminalCollectionCommand(
     // If no terminal collection name specified, ask user to select one
     if (!targetTerminalCollectionName) {
       // Get terminal collections with filtering options
-      const options: { rootPath?: string; lifecycle?: string; loadScripts?: boolean } = {
+      const options: GetTerminalCollectionsOptions = {
         loadScripts: true
       };
       
@@ -32,10 +33,10 @@ export async function executeTerminalCollectionCommand(
       }
       
       if (lifecycleFilter && lifecycleFilter.length > 0) {
-        options.lifecycle = lifecycleFilter[0]; // Use first filter for now
+        options.lifecycle = lifecycleFilter[0] as LifecycleEvent; // Use first filter for now
       }
 
-      const terminalCollectionsResult = await terminalCollectionService.getTerminalCollections(options);
+      const terminalCollectionsResult = await getTerminalCollections.execute(options);
       if (!terminalCollectionsResult.ok || terminalCollectionsResult.value.length === 0) {
         logger.warn("No terminal collections found");
         return;
@@ -58,7 +59,7 @@ export async function executeTerminalCollectionCommand(
 
     // If we have a selected ID from the list, use it directly
     if (selectedTerminalCollectionId) {
-      const result = await terminalCollectionService.executeTerminalCollectionById(selectedTerminalCollectionId);
+      const result = await executeTerminalCollection.execute(selectedTerminalCollectionId);
       
       if (result.ok) {
         spinner.succeed("Terminal collection executed successfully");
@@ -78,7 +79,7 @@ export async function executeTerminalCollectionCommand(
     }
 
     // Get all terminal collections to find matching ones
-    const allTerminalCollectionsResult = await terminalCollectionService.getTerminalCollections({ loadScripts: true });
+    const allTerminalCollectionsResult = await getTerminalCollections.execute({ loadScripts: true });
     if (!allTerminalCollectionsResult.ok) {
       logger.error("Failed to get terminal collections");
       return;
@@ -129,8 +130,8 @@ export async function executeTerminalCollectionCommand(
     
     spinner.start("⚡ Executing terminal collection...");
 
-    // Use the service to execute the terminal collection
-    const result = await terminalCollectionService.executeTerminalCollectionById(targetTerminalCollection.id);
+    // Use the use case to execute the terminal collection
+    const result = await executeTerminalCollection.execute(targetTerminalCollection.id);
     
     if (result.ok) {
       spinner.succeed("Terminal collection executed successfully");

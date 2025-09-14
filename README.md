@@ -1,6 +1,38 @@
 # CodeState - Development Environment Management Tool
 
-**Version 1.0.7** - A powerful tool for managing development environments, scripts, and sessions with enhanced data loading and comprehensive CLI filtering.
+**Version 1.0.9** - A powerful tool for managing development environments, scripts, and sessions with complete terminal collection management and enhanced architecture.
+
+## 🚀 What's New in v1.0.9
+
+### ✨ **Major New Features**
+- **Terminal Collection Update**: Complete terminal collection management capabilities
+  - Interactive CLI command: `codestate terminals update [name]`
+  - Support for updating name, root path, lifecycle events, script references, and close behavior
+  - Name-to-ID resolution with automatic handling of multiple matches
+  - Comprehensive field selection with current value display and validation
+- **Enhanced Architecture**: Complete migration to use case-based architecture
+  - All terminal collection operations now use proper use cases instead of direct service calls
+  - Better separation of concerns: CLI/TUI → Use Cases → Services → Repositories
+  - Improved type safety with proper TypeScript interfaces
+- **Script Lifecycle Integration**: Enhanced script creation with lifecycle events
+  - Interactive lifecycle event selection ('open', 'resume', 'none') during script creation
+  - Lifecycle filtering for script listing and execution commands
+
+### 🏗️ **Architecture Improvements**
+- **Terminal Collection Use Cases**: Complete migration from direct service usage
+  - New use cases: `GetTerminalCollectionById`, `DeleteTerminalCollections`
+  - Enhanced use cases: `GetTerminalCollections` with filtering options
+  - All CLI commands now use proper use case architecture
+- **Type Safety**: Proper typing with `LifecycleEvent` and `TerminalCollectionWithScripts`
+- **Error Handling**: Better error handling and user feedback across all operations
+
+## 🚀 What's New in v1.0.8
+
+### ✨ **Major New Features**
+- **Script Lifecycle Events**: Enhanced script management with lifecycle support
+  - Interactive lifecycle event selection during script creation
+  - Lifecycle filtering for script listing and execution
+  - Support for 'open', 'resume', and 'none' lifecycle events
 
 ## 🚀 What's New in v1.0.7
 

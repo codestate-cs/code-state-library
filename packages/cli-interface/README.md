@@ -1,6 +1,43 @@
 # @codestate/cli
 
-**Version 1.0.6** - CLI interface for CodeState - A powerful development environment management tool
+**Version 1.0.9** - CLI interface for CodeState - A powerful development environment management tool
+
+## 🚀 What's New in v1.0.9
+
+### ✨ **Major New Features**
+- **Terminal Collection Update**: Complete terminal collection management capabilities
+  - `codestate terminals update [name]` - Update terminal collections by name with interactive prompts
+  - `codestate terminals update` - Interactive TUI for selecting and updating terminal collections
+  - Support for updating name, root path, lifecycle events, script references, and close behavior
+  - Name-to-ID resolution with automatic handling of multiple matches
+  - Comprehensive field selection with current value display and validation
+- **Enhanced Architecture**: Complete migration to use case-based architecture
+  - All terminal collection operations now use proper use cases instead of direct service calls
+  - Better separation of concerns: CLI/TUI → Use Cases → Services → Repositories
+  - Improved type safety with proper TypeScript interfaces
+  - Enhanced error handling and user feedback
+
+### 🔧 **Technical Enhancements**
+- **Script Lifecycle Integration**: Enhanced script creation with lifecycle events
+  - Interactive lifecycle event selection ('open', 'resume', 'none') during script creation
+  - Lifecycle filtering for script listing and execution commands
+  - Updated CLI help text with comprehensive lifecycle options
+- **Enhanced Filtering**: Improved filtering capabilities across all commands
+  - Lifecycle-based filtering for scripts and terminal collections
+  - Root path filtering with current directory support
+  - Multiple filter combination support for advanced use cases
+- **Better Error Handling**: Improved user experience with better error messages
+  - Graceful handling of empty script lists during updates
+  - Clear error messages for missing resources
+  - Comprehensive validation for user inputs
+
+## 🚀 What's New in v1.0.8
+
+### ✨ **Major New Features**
+- **Script Lifecycle Events**: Enhanced script management with lifecycle support
+  - Interactive lifecycle event selection during script creation
+  - Lifecycle filtering for script listing and execution
+  - Support for 'open', 'resume', and 'none' lifecycle events
 
 ## 🚀 What's New in v1.0.6
 
@@ -241,8 +278,17 @@ codestate terminals show <collection-name>
 # Execute a terminal collection
 codestate terminals resume <collection-name>
 
+# Update a terminal collection (NEW!)
+codestate terminals update [collection-name]
+
 # Delete a terminal collection
 codestate terminals delete [collection-name]
+
+# Export terminal collections
+codestate terminals export
+
+# Import terminal collections
+codestate terminals import
 ```
 
 ### Reset Commands
@@ -327,6 +373,14 @@ codestate config update
 ```bash
 # List all terminal collections
 codestate terminals list
+
+# Create a new terminal collection
+codestate terminals create
+# Follow prompts to create a collection with scripts
+
+# Update an existing terminal collection
+codestate terminals update my-collection
+# Interactive prompts to update name, lifecycle, scripts, etc.
 
 # Execute a collection of commands
 codestate terminals resume setup-project

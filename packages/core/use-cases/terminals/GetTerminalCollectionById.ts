@@ -3,15 +3,14 @@ import { TerminalCollectionFacade } from '@codestate/core/services/terminals/Ter
 import { TerminalCollection } from '@codestate/core/domain/models/TerminalCollection';
 import { Result } from '@codestate/core/domain/models/Result';
 
-export class UpdateTerminalCollection {
+export class GetTerminalCollectionById {
   private terminalCollectionService: ITerminalCollectionService;
   
   constructor(terminalCollectionService?: ITerminalCollectionService) {
     this.terminalCollectionService = terminalCollectionService || new TerminalCollectionFacade();
   }
   
-  async execute(id: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>> {
-    // Update using the ID directly
-    return this.terminalCollectionService.updateTerminalCollection(id, terminalCollectionUpdate);
+  async execute(id: string): Promise<Result<TerminalCollection>> {
+    return this.terminalCollectionService.getTerminalCollectionById(id);
   }
 }

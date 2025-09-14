@@ -1,15 +1,15 @@
-import { ConfigurableLogger, TerminalCollectionFacade } from "@codestate/core";
+import { ConfigurableLogger, DeleteTerminalCollections } from "@codestate/core";
 import { CLISpinner } from "../../utils/CLISpinner";
 
 export async function deleteTerminalCollectionCommand(ids: string[]) {
   const logger = new ConfigurableLogger();
   const spinner = new CLISpinner();
-  const terminalCollectionService = new TerminalCollectionFacade();
+  const deleteTerminalCollections = new DeleteTerminalCollections();
   
   try {
     spinner.start("🗑️  Deleting terminal collection(s)...");
     
-    const result = await terminalCollectionService.deleteTerminalCollections(ids);
+    const result = await deleteTerminalCollections.execute(ids);
     
     if (result.ok) {
       spinner.succeed(`Terminal collection${ids.length > 1 ? 's' : ''} deleted successfully`);

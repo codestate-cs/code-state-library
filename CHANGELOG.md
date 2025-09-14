@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2025-01-29
+
+### ✨ **New Features**
+- **Terminal Collection Update Functionality**: Complete terminal collection management
+  - Added `UpdateTerminalCollection` use case for modifying existing terminal collections
+  - Interactive CLI command: `codestate terminals update [name]`
+  - Interactive TUI for updating terminal collection properties
+  - Support for updating name, root path, lifecycle events, script references, and close behavior
+  - Name-to-ID resolution with multiple match handling
+  - Comprehensive field selection and validation
+
+### 🏗️ **Architecture Improvements**
+- **Terminal Collection Use Cases**: Complete migration from direct service usage
+  - **New Use Cases**:
+    - `GetTerminalCollectionById` - Fetch individual terminal collections by ID
+    - `DeleteTerminalCollections` - Delete terminal collections by IDs
+  - **Enhanced Use Cases**:
+    - `GetTerminalCollections` - Added filtering options (rootPath, lifecycle, loadScripts)
+  - **CLI Architecture**: All terminal collection operations now use proper use cases
+    - Commands: `updateTerminalCollection`, `deleteTerminalCollection`, `executeTerminalCollection`, `listTerminalCollections`, `getTerminalCollection`
+    - TUI: `updateTerminalCollectionTui`, `deleteTerminalCollectionTui`
+  - **Type Safety**: Proper typing with `LifecycleEvent` and `TerminalCollectionWithScripts`
+  - **Separation of Concerns**: CLI/TUI layers use use cases, use cases use services
+
+### 🔧 **Technical Enhancements**
+- **Script Lifecycle Integration**: Enhanced script creation with lifecycle events
+  - Interactive lifecycle event selection during script creation
+  - Support for 'open', 'resume', and 'none' lifecycle events
+  - Default lifecycle configuration for different script types
+  - Updated CLI help text with lifecycle filtering options
+- **Enhanced Filtering**: Improved terminal collection and script filtering
+  - Lifecycle-based filtering for both scripts and terminal collections
+  - Root path filtering with current directory support
+  - Multiple filter combination support
+- **Error Handling**: Better error handling and user feedback
+  - Graceful handling of empty script lists during updates
+  - Clear error messages for missing terminal collections
+  - Validation for required fields and user inputs
+
+## [1.0.8] - 2025-01-29
+
+### ✨ **New Features**
+- **Script Lifecycle Events**: Enhanced script management with lifecycle support
+  - Added lifecycle events ('open', 'resume', 'none') to script creation
+  - Interactive lifecycle selection during script creation
+  - Lifecycle filtering for script listing and execution
+  - Updated CLI help text with lifecycle options
+
 ## [1.0.7] - 2025-01-29
 
 ### 🐛 **Bug Fixes**

@@ -1,8 +1,9 @@
 export { ListTerminalCollections } from './ListTerminalCollections';
-export { GetTerminalCollections } from './GetTerminalCollections';
+export { GetTerminalCollections, GetTerminalCollectionsOptions } from './GetTerminalCollections';
+export { GetTerminalCollectionById } from './GetTerminalCollectionById';
 export { CreateTerminalCollection } from './CreateTerminalCollection';
-export { UpdateTerminalCollection } from './UpdateTerminalCollection'; 
-export { DeleteTerminalCollection } from './DeleteTerminalCollection';
+export { UpdateTerminalCollection } from './UpdateTerminalCollection';
+export { DeleteTerminalCollections } from './DeleteTerminalCollections';
 export { ExecuteTerminalCollection } from './ExecuteTerminalCollection';
 export { ExportTerminalCollections } from './ExportTerminalCollections';
 export { ImportTerminalCollections } from './ImportTerminalCollections';

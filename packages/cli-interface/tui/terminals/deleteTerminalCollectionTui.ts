@@ -1,14 +1,15 @@
 import inquirer from "inquirer";
-import { ConfigurableLogger, TerminalCollectionFacade } from "@codestate/core";
+import { ConfigurableLogger, GetTerminalCollections, DeleteTerminalCollections } from "@codestate/core";
 import { deleteTerminalCollectionCommand } from "../../commands/terminals/deleteTerminalCollection";
 
 export async function deleteTerminalCollectionTui() {
   const logger = new ConfigurableLogger();
-  const terminalCollectionService = new TerminalCollectionFacade();
+  const getTerminalCollections = new GetTerminalCollections();
+  const deleteTerminalCollections = new DeleteTerminalCollections();
 
   try {
     // Get all terminal collections
-    const result = await terminalCollectionService.getTerminalCollections({ loadScripts: true });
+    const result = await getTerminalCollections.execute({ loadScripts: true });
     if (!result.ok) {
       logger.error("Failed to get terminal collections");
       return;

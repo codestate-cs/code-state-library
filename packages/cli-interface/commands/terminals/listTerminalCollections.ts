@@ -1,4 +1,4 @@
-import { TerminalCollectionFacade, ConfigurableLogger, isSuccess, isFailure } from '@codestate/core';
+import { GetTerminalCollections, ConfigurableLogger, isSuccess, isFailure } from '@codestate/core';
 import { CLISpinner } from '../../utils/CLISpinner';
 
 export async function listTerminalCollectionsCommand(
@@ -7,7 +7,7 @@ export async function listTerminalCollectionsCommand(
 ) {
   const logger = new ConfigurableLogger();
   const spinner = new CLISpinner();
-  const terminalCollectionService = new TerminalCollectionFacade();
+  const getTerminalCollections = new GetTerminalCollections();
   
   spinner.start("📋 Loading terminal collections...");
   
@@ -26,7 +26,7 @@ export async function listTerminalCollectionsCommand(
 
   options.loadScripts = true;
   
-  const result = await terminalCollectionService.getTerminalCollections(options);
+  const result = await getTerminalCollections.execute(options);
   
   if (isFailure(result)) {
     spinner.fail("Failed to load terminal collections");

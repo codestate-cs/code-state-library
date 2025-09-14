@@ -4,7 +4,9 @@ import { getTerminalCollectionCommand } from "../../commands/terminals/getTermin
 import { executeTerminalCollectionCommand } from "../../commands/terminals/executeTerminalCollection";
 import { createTerminalCollectionTui } from "./createTerminalCollectionTui";
 import { deleteTerminalCollectionTui } from "./deleteTerminalCollectionTui";
+import { updateTerminalCollectionTui } from "./updateTerminalCollectionTui";
 import { deleteTerminalCollectionCommand } from "../../commands/terminals/deleteTerminalCollection";
+import { updateTerminalCollectionCommand } from "../../commands/terminals/updateTerminalCollection";
 import { exportTerminalCollectionsTui } from "./exportTerminalCollectionsTui";
 import { importTerminalCollectionsTui } from "./importTerminalCollectionsTui";
 
@@ -20,6 +22,7 @@ Subcommands:
   create          Create a new terminal collection interactively
   show            Show all terminal collections (supports filtering)
   resume          Execute a terminal collection (supports filtering)
+  update          Update terminal collections interactively
   delete          Delete terminal collections interactively
   export          Export terminal collections to JSON files (interactive selection)
   import          Import terminal collections from JSON files (interactive)
@@ -41,6 +44,8 @@ Examples:
   codestate terminals resume my-collection
   codestate terminals resume --root-path /path/to/project
   codestate terminals resume my-collection --lifecycle open
+  codestate terminals update
+  codestate terminals update my-collection
   codestate terminals delete
   codestate terminals delete 123
   codestate terminals export
@@ -74,6 +79,21 @@ export async function handleTerminalCommand(subcommand: string, options: string[
       break;
     case "resume":
       await handleResumeCommand(options);
+      break;
+    case "update":
+      if (options.length === 0) {
+        // Interactive mode - show TUI
+        await updateTerminalCollectionTui();
+      } else if (options.length === 1) {
+        // Non-interactive mode - update by name
+        await updateTerminalCollectionCommand(options[0]);
+      } else {
+        logger.error("Error: Too many arguments for update command");
+        logger.plainLog("Usage: codestate terminals update [terminal-name]");
+        logger.plainLog("  codestate terminals update          # Interactive mode");
+        logger.plainLog("  codestate terminals update <name>   # Update specific terminal");
+        process.exit(1);
+      }
       break;
     case "delete":
       if (options.length === 0) {
