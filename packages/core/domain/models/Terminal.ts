@@ -4,6 +4,7 @@ export interface TerminalCommand {
   cwd?: string;
   env?: Record<string, string>;
   timeout?: number;
+  closeAfterExecution?: boolean;
 }
 
 export interface TerminalResult {

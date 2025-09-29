@@ -171,7 +171,8 @@ export class TerminalCollectionService implements ITerminalCollectionService {
           
           const spawnResult = await this.terminalService.spawnTerminalCommand({
             command: finalCommand,
-            cwd: targetRootPath
+            cwd: targetRootPath,
+            closeAfterExecution: closeAfterExecution
           });
           
           if (isFailure(spawnResult)) {
@@ -456,9 +457,9 @@ export class TerminalCollectionService implements ITerminalCollectionService {
       throw new Error('Script has no commands or script content');
     }
 
-    // Modify command based on close behavior
+    // Add completion message but don't force exit - let terminal handler decide
     if (closeAfterExecution) {
-      return `${command} && echo "Script execution completed. Closing terminal..." && sleep 2 && exit`;
+      return `${command} && echo "Script execution completed. Closing terminal..." && sleep 2`;
     } else {
       return `${command} && echo 'Script execution completed. Terminal will remain open.'`;
     }

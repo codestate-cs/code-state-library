@@ -333,9 +333,33 @@ export class TerminalService implements ITerminalService {
         });
         return { ok: true, value: true };
       } else {
-        // For other platforms, fallback to regular spawning
-        this.logger.warn('Tab functionality not available for this platform, falling back to regular spawning');
-        return this.spawnTerminal(command, options);
+        // For Linux and other platforms, implement tab support
+        this.logger.debug('Using Linux/other platform tab approach');
+        
+        // Use provided tab commands if available, otherwise extract from combined command
+        let tabCommands: string[];
+        if (options?.tabCommands && options.tabCommands.length > 0) {
+          tabCommands = options.tabCommands;
+          this.logger.debug('Using provided tab commands', { commandCount: tabCommands.length, commands: tabCommands });
+        } else {
+          tabCommands = this.extractTabCommands(command);
+          this.logger.debug('Extracted tab commands', { commandCount: tabCommands.length, commands: tabCommands });
+        }
+        
+        if (tabCommands.length <= 1) {
+          this.logger.debug('Single command, using regular spawning');
+          return this.spawnTerminal(command, options);
+        }
+        
+        // Check if terminal supports tabs
+        const linuxHandler = this.terminalHandler as any;
+        if (linuxHandler.supportsTabs && linuxHandler.supportsTabs(terminalCmd)) {
+          this.logger.debug('Terminal supports tabs, creating tabs', { terminalCmd });
+          return this.spawnLinuxTerminalWithTabs(terminalCmd, tabCommands, options);
+        } else {
+          this.logger.warn('Terminal does not support tabs, falling back to sequential execution', { terminalCmd });
+          return this.spawnTerminal(command, options);
+        }
       }
       
     } catch (error) {
@@ -344,6 +368,96 @@ export class TerminalService implements ITerminalService {
         ok: false, 
         error: new TerminalError(
           `Failed to spawn terminal with tabs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        )
+      };
+    }
+  }
+
+  private async spawnLinuxTerminalWithTabs(
+    terminalCmd: string, 
+    tabCommands: string[], 
+    options?: TerminalOptions & { title?: string; useTabs?: boolean; tabCommands?: string[] }
+  ): Promise<Result<boolean>> {
+    try {
+      this.logger.debug('Spawning Linux terminal with tabs', { terminalCmd, tabCommands });
+      
+      // Get shell
+      const shellResult = await this.getShell();
+      if (isFailure(shellResult)) {
+        return { ok: false, error: shellResult.error };
+      }
+      const shell = shellResult.value;
+      
+      // Create the first tab with the first command
+      const firstCommand = tabCommands[0];
+      const firstArgs = this.terminalHandler.getTerminalArgs(terminalCmd, shell, firstCommand, options?.cwd);
+      
+      this.logger.debug('Spawning first tab', { terminalCmd, firstArgs });
+      
+      // Spawn the first terminal window
+      const firstChild = spawn(terminalCmd, firstArgs, {
+        detached: true,
+        stdio: 'ignore'
+      });
+      
+      firstChild.unref();
+      
+      // Wait a bit for the first terminal to open
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create additional tabs for remaining commands
+      for (let i = 1; i < tabCommands.length; i++) {
+        const command = tabCommands[i];
+        
+        // Use terminal-specific tab creation commands
+        let tabArgs: string[];
+        if (terminalCmd.includes('gnome-terminal')) {
+          tabArgs = ['--tab', '--', shell, '-c', command];
+        } else if (terminalCmd.includes('konsole')) {
+          tabArgs = ['--new-tab', '-e', shell, '-c', command];
+        } else if (terminalCmd.includes('xfce4-terminal')) {
+          tabArgs = ['--tab', '--execute', shell, '-c', command];
+        } else if (terminalCmd.includes('mate-terminal')) {
+          tabArgs = ['--tab', '--execute', shell, '-c', command];
+        } else if (terminalCmd.includes('terminator')) {
+          tabArgs = ['--new-tab', '-e', shell, '-c', command];
+        } else {
+          // Fallback: spawn new terminal window
+          tabArgs = this.terminalHandler.getTerminalArgs(terminalCmd, shell, command, options?.cwd);
+        }
+        
+        // Add working directory if supported
+        if (options?.cwd && (terminalCmd.includes('gnome-terminal') || terminalCmd.includes('xfce4-terminal') || terminalCmd.includes('mate-terminal'))) {
+          tabArgs.unshift('--working-directory', options.cwd);
+        }
+        
+        this.logger.debug(`Spawning tab ${i + 1}`, { terminalCmd, tabArgs });
+        
+        const tabChild = spawn(terminalCmd, tabArgs, {
+          detached: true,
+          stdio: 'ignore'
+        });
+        
+        tabChild.unref();
+        
+        // Small delay between tab creation
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      this.logger.log('Linux terminal with tabs spawned successfully', { 
+        terminalCmd, 
+        tabCount: tabCommands.length 
+      });
+      
+      return { ok: true, value: true };
+      
+    } catch (error) {
+      this.logger.error('Failed to spawn Linux terminal with tabs', { error: error instanceof Error ? error.message : 'Unknown error' });
+      return { 
+        ok: false, 
+        error: new TerminalError(
+          `Failed to spawn Linux terminal with tabs: ${error instanceof Error ? error.message : 'Unknown error'}`,
           ErrorCode.TERMINAL_COMMAND_FAILED
         )
       };
@@ -391,11 +505,22 @@ export class TerminalService implements ITerminalService {
   async spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>> {
     this.logger.debug('TerminalService.spawnTerminalCommand called', { command });
     
-    return this.spawnTerminal(command.command, {
-      cwd: command.cwd,
-      env: command.env,
-      timeout: command.timeout
-    });
+    // Use different spawning method based on closeAfterExecution flag
+    if (command.closeAfterExecution === false) {
+      // Use regular terminal spawning (keeps terminal open)
+      return this.spawnTerminal(command.command, {
+        cwd: command.cwd,
+        env: command.env,
+        timeout: command.timeout
+      });
+    } else {
+      // Use application spawning (allows terminal to close)
+      return this.spawnApplication(command.command, {
+        cwd: command.cwd,
+        env: command.env,
+        timeout: command.timeout
+      });
+    }
   }
 
   async spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>> {
