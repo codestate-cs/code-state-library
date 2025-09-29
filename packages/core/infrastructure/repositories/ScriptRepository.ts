@@ -287,7 +287,7 @@ export class ScriptRepository implements IScriptRepository {
     }
   }
 
-  async getScripts(options?: { rootPath?: string; lifecycle?: string }): Promise<Result<Script[]>> {
+  async getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent; ids?: string[] }): Promise<Result<Script[]>> {
     try {
       this.logger.debug("ScriptRepository.getScripts called", { options });
 
@@ -297,6 +297,11 @@ export class ScriptRepository implements IScriptRepository {
       }
 
       let filteredEntries = indexResult.value.entries;
+
+      // Apply IDs filter if provided
+      if (options?.ids && options.ids.length > 0) {
+        filteredEntries = filteredEntries.filter(e => options.ids!.includes(e.id));
+      }
 
       // Apply rootPath filter if provided
       if (options?.rootPath) {

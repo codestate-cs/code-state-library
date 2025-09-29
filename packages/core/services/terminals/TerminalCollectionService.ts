@@ -54,7 +54,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
   async getTerminalCollectionById(id: string): Promise<Result<TerminalCollection>> {
     this.logger.debug('TerminalCollectionService.getTerminalCollectionById called', { id });
-
+    
     const result = await this.repository.getTerminalCollectionById(id);
     if (isFailure(result)) {
       this.logger.error('Failed to get terminal collection by ID', { error: result.error, id });
@@ -66,7 +66,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
   async getTerminalCollections(options?: { rootPath?: string; lifecycle?: LifecycleEvent; loadScripts?: boolean }): Promise<Result<TerminalCollection[] | TerminalCollectionWithScripts[]>> {
     this.logger.debug('TerminalCollectionService.getTerminalCollections called', { options });
-
+    
     const result = await this.repository.getTerminalCollections(options);
     if (isFailure(result)) {
       this.logger.error('Failed to get terminal collections', { error: result.error, options });
@@ -78,7 +78,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
   async updateTerminalCollection(id: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>> {
     this.logger.debug('TerminalCollectionService.updateTerminalCollection called', { id, terminalCollectionUpdate });
-
+    
     const result = await this.repository.updateTerminalCollection(id, terminalCollectionUpdate);
     if (isFailure(result)) {
       this.logger.error('Failed to update terminal collection', { error: result.error, id });
@@ -90,11 +90,11 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
   async deleteTerminalCollections(ids: string[]): Promise<Result<void>> {
     this.logger.debug('TerminalCollectionService.deleteTerminalCollections called', { ids });
-
+    
     const result = await this.repository.deleteTerminalCollections(ids);
     if (isFailure(result)) {
       this.logger.error('Failed to delete terminal collections', { error: result.error, ids });
-    } else {
+      } else {
       this.logger.log('Terminal collections deleted successfully', { ids });
     }
     return result;
@@ -102,7 +102,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
   async executeTerminalCollectionById(id: string): Promise<Result<void>> {
     this.logger.debug('TerminalCollectionService.executeTerminalCollectionById called', { id });
-
+    
     // Get the terminal collection with loaded scripts by ID
     const terminalCollectionResult = await this.getTerminalCollectionById(id);
     if (isFailure(terminalCollectionResult)) {
@@ -111,7 +111,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
     const terminalCollection = terminalCollectionResult.value;
     const targetRootPath = terminalCollection.rootPath;
-
+    
     // Get execution mode from terminal collection, default to same-terminal for backward compatibility
     const executionMode = terminalCollection.executionMode || 'same-terminal';
     const terminalCollectionCloseAfterExecution = terminalCollection.closeTerminalAfterExecution || false;
@@ -168,16 +168,16 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
       const script = scriptResult.value;
       const finalCommand = this.buildFinalCommand(script, closeAfterExecution);
-
-      const spawnResult = await this.terminalService.spawnTerminalCommand({
-        command: finalCommand,
-        cwd: targetRootPath
-      });
-
-      if (isFailure(spawnResult)) {
-        this.logger.error('Failed to spawn terminal for script', { error: spawnResult.error, scriptName: script.name });
-        return spawnResult;
-      }
+          
+          const spawnResult = await this.terminalService.spawnTerminalCommand({
+            command: finalCommand,
+            cwd: targetRootPath
+          });
+          
+          if (isFailure(spawnResult)) {
+            this.logger.error('Failed to spawn terminal for script', { error: spawnResult.error, scriptName: script.name });
+            return spawnResult;
+          }
 
       // Small delay between terminal spawns
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -197,7 +197,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
     if (terminalCollection.scriptReferences.length > 1) {
       this.logger.debug('Multiple scripts detected, attempting tab-based execution');
       return this.executeWithTabsInSingleTerminal(terminalCollection, targetRootPath, closeAfterExecution);
-    } else {
+        } else {
       this.logger.debug('Single script detected, using sequential execution');
       return this.executeAllScriptsInSingleTerminal(terminalCollection, targetRootPath, closeAfterExecution);
     }
@@ -363,9 +363,9 @@ export class TerminalCollectionService implements ITerminalCollectionService {
 
     // Add final close behavior if needed
     let finalCommand = combinedCommand;
-    if (closeAfterExecution) {
+          if (closeAfterExecution) {
       finalCommand = `${combinedCommand} && echo "🎉 All scripts completed successfully! Closing terminal..." && sleep 2 && exit`;
-    } else {
+          } else {
       finalCommand = `${combinedCommand} && echo "🎉 All scripts completed successfully! Terminal will remain open."`;
     }
 
@@ -390,12 +390,12 @@ export class TerminalCollectionService implements ITerminalCollectionService {
     }
 
     // Try to spawn a single terminal with the combined command
-    const spawnResult = await this.terminalService.spawnTerminalCommand({
-      command: finalCommand,
-      cwd: targetRootPath
-    });
-
-    if (isFailure(spawnResult)) {
+          const spawnResult = await this.terminalService.spawnTerminalCommand({
+            command: finalCommand,
+            cwd: targetRootPath
+          });
+          
+          if (isFailure(spawnResult)) {
       this.logger.error('Failed to spawn terminal for combined scripts', {
         error: spawnResult.error,
         commandPreview: finalCommand.substring(0, 200) + (finalCommand.length > 200 ? '...' : ''),
@@ -406,9 +406,9 @@ export class TerminalCollectionService implements ITerminalCollectionService {
       this.logger.warn('Testing basic terminal spawning...');
       const testResult = await this.terminalService.spawnTerminalCommand({
         command: 'echo "Terminal test successful"',
-        cwd: targetRootPath
-      });
-
+            cwd: targetRootPath
+          });
+          
       if (isFailure(testResult)) {
         this.logger.error('Basic terminal spawning failed', { error: testResult.error });
         return testResult;
@@ -529,7 +529,7 @@ export class TerminalCollectionService implements ITerminalCollectionService {
         scriptPath
       });
 
-      return { ok: true, value: undefined };
+    return { ok: true, value: undefined };
 
     } catch (error) {
       this.logger.error('Failed to execute with script file', { error: error instanceof Error ? error.message : 'Unknown error' });
