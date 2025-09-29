@@ -123,6 +123,7 @@ export const TerminalCollectionSchema = z.object({
   lifecycle: z.array(LifecycleEventSchema).min(1, 'At least one lifecycle event is required'),
   scriptReferences: z.array(ScriptReferenceSchema).min(1, 'At least one script reference is required'),
   closeTerminalAfterExecution: z.boolean().default(false), // NEW: Control whether to close terminal after execution
+  executionMode: z.enum(['ide', 'same-terminal', 'multi-terminal']).default('same-terminal'), // NEW: Control how scripts are executed
 });
 
 export const TerminalCollectionIndexEntrySchema = z.object({

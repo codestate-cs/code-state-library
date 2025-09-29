@@ -96,7 +96,8 @@ async function createTerminalCollectionInteractively() {
       rootPath: terminalCollectionDetails.rootPath,
       lifecycle: terminalCollectionDetails.lifecycle,
       scriptReferences: selectedScripts,
-      closeTerminalAfterExecution: terminalCollectionDetails.closeTerminalAfterExecution
+      closeTerminalAfterExecution: terminalCollectionDetails.closeTerminalAfterExecution,
+      executionMode: terminalCollectionDetails.executionMode
     };
     
     const spinner = new CLISpinner();
@@ -120,6 +121,7 @@ async function createTerminalCollectionInteractively() {
     logger.plainLog(`🔄 Lifecycle: ${terminalCollection.lifecycle.join(', ')}`);
     logger.plainLog(`📜 Scripts: ${selectedScripts.length}`);
     logger.plainLog(`🔒 Terminal close behavior: ${terminalCollection.closeTerminalAfterExecution ? 'Auto-close' : 'Keep open'}`);
+    logger.plainLog(`⚡ Execution mode: ${terminalCollection.executionMode}`);
     logger.plainLog('');
     logger.plainLog('💡 You can now:');
     logger.plainLog('   • Use `codestate terminals show <name>` to view details');
@@ -167,6 +169,26 @@ async function promptForTerminalCollectionDetails(currentRootPath: string) {
       type: "confirm",
       default: false,
     },
+    {
+      name: "executionMode",
+      message: "How should scripts be executed?",
+      type: "list",
+      choices: [
+        { 
+          name: "Same Terminal - Try tabs first, fallback to multiple terminals", 
+          value: "same-terminal" 
+        },
+        { 
+          name: "Multi Terminal - Each script in separate terminal", 
+          value: "multi-terminal" 
+        },
+        { 
+          name: "IDE - For IDE extension use only", 
+          value: "ide" 
+        },
+      ],
+      default: "same-terminal",
+    },
   ]);
 
   return {
@@ -174,6 +196,7 @@ async function promptForTerminalCollectionDetails(currentRootPath: string) {
     rootPath: answers.rootPath.trim(),
     lifecycle: answers.lifecycle,
     closeTerminalAfterExecution: answers.closeTerminalAfterExecution,
+    executionMode: answers.executionMode,
   };
 }
 

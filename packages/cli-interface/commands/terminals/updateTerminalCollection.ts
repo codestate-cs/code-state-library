@@ -110,6 +110,7 @@ export async function updateTerminalCollectionCommand(
     logger.plainLog(`🔄 Lifecycle: ${currentCollection.lifecycle.join(', ')}`);
     logger.plainLog(`📜 Script References: ${currentCollection.scriptReferences.length}`);
     logger.plainLog(`🔧 Close After Execution: ${currentCollection.closeTerminalAfterExecution ? 'Yes' : 'No'}`);
+    logger.plainLog(`⚡ Execution Mode: ${currentCollection.executionMode || 'same-terminal'}`);
 
     // Ask what to update
     const { updateFields } = await inquirer.customPrompt([
@@ -123,6 +124,7 @@ export async function updateTerminalCollectionCommand(
           { name: "Lifecycle Events", value: "lifecycle" },
           { name: "Script References", value: "scriptReferences" },
           { name: "Close After Execution", value: "closeTerminalAfterExecution" },
+          { name: "Execution Mode", value: "executionMode" },
         ],
         validate: (input: string[]) => input.length > 0 ? true : "Please select at least one field to update",
       },
@@ -202,6 +204,35 @@ export async function updateTerminalCollectionCommand(
             },
           ]);
           updates.closeTerminalAfterExecution = closeTerminalAfterExecution;
+          break;
+
+        case "executionMode":
+          const { executionMode } = await inquirer.customPrompt([
+            {
+              name: "executionMode",
+              message: "How should scripts be executed?",
+              type: "list",
+              choices: [
+                { 
+                  name: "Same Terminal - Try tabs first, fallback to multiple terminals", 
+                  value: "same-terminal",
+                  checked: (currentCollection.executionMode || 'same-terminal') === 'same-terminal'
+                },
+                { 
+                  name: "Multi Terminal - Each script in separate terminal", 
+                  value: "multi-terminal",
+                  checked: currentCollection.executionMode === 'multi-terminal'
+                },
+                { 
+                  name: "IDE - For IDE extension use only", 
+                  value: "ide",
+                  checked: currentCollection.executionMode === 'ide'
+                },
+              ],
+              default: currentCollection.executionMode || 'same-terminal',
+            },
+          ]);
+          updates.executionMode = executionMode;
           break;
 
         case "scriptReferences":

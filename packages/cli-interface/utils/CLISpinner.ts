@@ -46,11 +46,11 @@ export class CLISpinner {
 
   succeed(message: string) {
     this.stop();
-    // process.stdout.write(`✅ ${message}\n`);
+    process.stdout.write(``);
   }
 
   fail(message: string) {
     this.stop();
-    // process.stdout.write(`❌ ${message}\n`);
+    process.stdout.write(``);
   }
 } 

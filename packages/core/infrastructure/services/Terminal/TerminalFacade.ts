@@ -1,5 +1,5 @@
 // Main entry point for CLI/IDE to interact with Terminal (no DI required)
-import { TerminalService } from '@codestate/infrastructure/services/Terminal/TerminalService';
+import { TerminalService } from './TerminalService';
 import { FileLogger } from '@codestate/infrastructure/services/FileLogger';
 import { ITerminalService } from '@codestate/core/domain/ports/ITerminalService';
 import { ILoggerService } from '@codestate/core/domain/ports/ILoggerService';
@@ -42,6 +42,10 @@ export class TerminalFacade implements ITerminalService {
 
   async spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>> {
     return this.service.spawnApplication(command, options);
+  }
+
+  async spawnTerminalWithTabs(command: string, options?: TerminalOptions & { title?: string; useTabs?: boolean; tabCommands?: string[] }): Promise<Result<boolean>> {
+    return this.service.spawnTerminalWithTabs(command, options);
   }
 
   async isCommandAvailable(command: string): Promise<Result<boolean>> {
