@@ -14,6 +14,7 @@ export interface ITerminalService {
   spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
   spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
   spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
+  spawnTerminalWithTabs(command: string, options?: TerminalOptions & { title?: string; useTabs?: boolean; tabCommands?: string[] }): Promise<Result<boolean>>;
   
   // NEW: Terminal command capture for sessions
   getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>>;

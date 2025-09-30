@@ -1,5 +1,5 @@
 import inquirer from "@codestate/cli-interface/utils/inquirer";
-import { CreateTerminalCollection, GetScripts, CreateScript, ConfigurableLogger, isSuccess, isFailure, Script, ScriptCommand } from "@codestate/core";
+import { CreateTerminalCollection, GetScripts, CreateScript, ConfigurableLogger, isSuccess, isFailure, Script, ScriptCommand, GetOSInfo } from "@codestate/core";
 import { randomUUID } from "crypto";
 import { CLISpinner } from "../../utils/CLISpinner";
 
@@ -12,6 +12,7 @@ async function createTerminalCollectionInteractively() {
   const createTerminalCollection = new CreateTerminalCollection();
   const getScripts = new GetScripts();
   const createScript = new CreateScript();
+  const getOSInfo = new GetOSInfo();
 
   try {
     logger.plainLog('🚀 Creating a new terminal collection');
@@ -21,7 +22,7 @@ async function createTerminalCollectionInteractively() {
     const currentRootPath = process.cwd();
     
     // Prompt for terminal collection details
-    const terminalCollectionDetails = await promptForTerminalCollectionDetails(currentRootPath);
+    const terminalCollectionDetails = await promptForTerminalCollectionDetails(currentRootPath, getOSInfo);
     
     // Get existing scripts for selection
     const existingScriptsResult = await getScripts.execute();
@@ -96,7 +97,8 @@ async function createTerminalCollectionInteractively() {
       rootPath: terminalCollectionDetails.rootPath,
       lifecycle: terminalCollectionDetails.lifecycle,
       scriptReferences: selectedScripts,
-      closeTerminalAfterExecution: terminalCollectionDetails.closeTerminalAfterExecution
+      closeTerminalAfterExecution: terminalCollectionDetails.closeTerminalAfterExecution,
+      executionMode: terminalCollectionDetails.executionMode
     };
     
     const spinner = new CLISpinner();
@@ -120,6 +122,7 @@ async function createTerminalCollectionInteractively() {
     logger.plainLog(`🔄 Lifecycle: ${terminalCollection.lifecycle.join(', ')}`);
     logger.plainLog(`📜 Scripts: ${selectedScripts.length}`);
     logger.plainLog(`🔒 Terminal close behavior: ${terminalCollection.closeTerminalAfterExecution ? 'Auto-close' : 'Keep open'}`);
+    logger.plainLog(`⚡ Execution mode: ${terminalCollection.executionMode}`);
     logger.plainLog('');
     logger.plainLog('💡 You can now:');
     logger.plainLog('   • Use `codestate terminals show <name>` to view details');
@@ -132,7 +135,30 @@ async function createTerminalCollectionInteractively() {
   }
 }
 
-async function promptForTerminalCollectionDetails(currentRootPath: string) {
+async function promptForTerminalCollectionDetails(currentRootPath: string, getOSInfo: GetOSInfo) {
+  // Get OS info to filter execution mode choices
+  const osInfoResult = await getOSInfo.execute();
+  if (!osInfoResult.ok) {
+    throw new Error("Failed to detect OS information");
+  }
+  const osInfo = osInfoResult.value;
+  
+  // Build execution mode choices based on OS support
+  const executionModeChoices = [
+    { 
+      name: "Multi Terminal - Each script in separate terminal", 
+      value: "multi-terminal" 
+    }
+  ];
+  
+  // Only add same-terminal option if OS supports terminal tabs
+  if (osInfo.supportsTerminalTabs) {
+    executionModeChoices.unshift({
+      name: "Same Terminal - Try tabs first, fallback to multiple terminals", 
+      value: "same-terminal" 
+    });
+  }
+  
   const answers = await inquirer.customPrompt([
     {
       name: "name",
@@ -167,6 +193,13 @@ async function promptForTerminalCollectionDetails(currentRootPath: string) {
       type: "confirm",
       default: false,
     },
+    {
+      name: "executionMode",
+      message: "How should scripts be executed?",
+      type: "list",
+      choices: executionModeChoices,
+      default: osInfo.supportsTerminalTabs ? "same-terminal" : "multi-terminal",
+    },
   ]);
 
   return {
@@ -174,6 +207,7 @@ async function promptForTerminalCollectionDetails(currentRootPath: string) {
     rootPath: answers.rootPath.trim(),
     lifecycle: answers.lifecycle,
     closeTerminalAfterExecution: answers.closeTerminalAfterExecution,
+    executionMode: answers.executionMode,
   };
 }
 

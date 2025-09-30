@@ -12,6 +12,7 @@ export interface TerminalCollection {
   lifecycle: LifecycleEvent[];
   scriptReferences: ScriptReference[];
   closeTerminalAfterExecution?: boolean; // NEW: Control whether to close terminal after execution
+  executionMode?: 'ide' | 'same-terminal' | 'multi-terminal'; // NEW: Control how scripts are executed
 }
 
 // Interface for terminal collection with loaded scripts (for display/execution)
@@ -22,6 +23,7 @@ export interface TerminalCollectionWithScripts {
   lifecycle: LifecycleEvent[];
   scripts: Script[];
   closeTerminalAfterExecution?: boolean;
+  executionMode?: 'ide' | 'same-terminal' | 'multi-terminal'; // NEW: Control how scripts are executed
 }
 
 export interface TerminalCollectionIndexEntry {

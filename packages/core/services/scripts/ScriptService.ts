@@ -35,8 +35,32 @@ export class ScriptService implements IScriptService {
     return result;
   }
 
-  async getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent }): Promise<Result<Script[]>> {
+  async getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent; ids?: string[] }): Promise<Result<Script[]>> {
     this.logger.debug('ScriptService.getScripts called', { options });
+    
+    // If specific IDs are provided, fetch them individually
+    if (options?.ids && options.ids.length > 0) {
+      const scripts: Script[] = [];
+      const errors: string[] = [];
+      
+      for (const id of options.ids) {
+        const scriptResult = await this.getScriptById(id);
+        if (isSuccess(scriptResult)) {
+          scripts.push(scriptResult.value);
+        } else {
+          errors.push(`Failed to fetch script with ID ${id}: ${scriptResult.error}`);
+        }
+      }
+      
+      if (errors.length > 0) {
+        this.logger.warn('Some scripts could not be fetched by ID', { errors, requestedIds: options.ids });
+      }
+      
+      this.logger.log('Scripts retrieved by IDs', { requestedIds: options.ids, foundCount: scripts.length, errors: errors.length });
+      return { ok: true, value: scripts };
+    }
+    
+    // Otherwise, use the repository's getScripts method
     const result = await this.repository.getScripts(options);
     if (isFailure(result)) {
       this.logger.error('Failed to get scripts', { error: result.error, options });

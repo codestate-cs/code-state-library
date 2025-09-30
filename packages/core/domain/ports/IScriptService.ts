@@ -7,7 +7,7 @@ export interface IScriptService {
   // Script operations
   createScript(script: Script): Promise<Result<void>>;
   getScriptById(id: string): Promise<Result<Script>>;
-  getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent }): Promise<Result<Script[]>>;
+  getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent; ids?: string[] }): Promise<Result<Script[]>>;
   updateScript(id: string, script: Partial<Script>): Promise<Result<void>>;
   deleteScripts(ids: string[]): Promise<Result<void>>;
   
@@ -20,7 +20,7 @@ export interface IScriptRepository {
   // Script operations
   createScript(script: Script): Promise<Result<void>>;
   getScriptById(id: string): Promise<Result<Script>>;
-  getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent }): Promise<Result<Script[]>>;
+  getScripts(options?: { rootPath?: string; lifecycle?: LifecycleEvent; ids?: string[] }): Promise<Result<Script[]>>;
   updateScript(id: string, script: Partial<Script>): Promise<Result<void>>;
   deleteScripts(ids: string[]): Promise<Result<void>>;
 } 

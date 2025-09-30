@@ -10,7 +10,7 @@ export class GetScripts {
     this.scriptService = scriptService || new ScriptFacade();
   }
   
-  async execute(options?: { rootPath?: string; lifecycle?: LifecycleEvent }): Promise<Result<Script[]>> {
+  async execute(options?: { rootPath?: string; lifecycle?: LifecycleEvent; ids?: string[] }): Promise<Result<Script[]>> {
     return this.scriptService.getScripts(options);
   }
 } 

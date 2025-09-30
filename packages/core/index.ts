@@ -13,6 +13,7 @@ export * from '@codestate/core/use-cases/session';
 export * from '@codestate/core/use-cases/git';
 export * from '@codestate/core/use-cases/ide';
 export * from '@codestate/core/use-cases/terminals';
+export * from '@codestate/core/use-cases/os';
 
 // Error types and registry
 export * from '@codestate/core/domain/types/ErrorTypes';

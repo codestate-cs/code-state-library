@@ -8,8 +8,35 @@ import { spawn, SpawnOptions } from 'child_process';
 import { platform } from 'os';
 import * as path from 'path';
 
+// Import OS-specific handlers
+import { ITerminalHandler } from './handlers/ITerminalHandler';
+import { WindowsTerminalHandler } from './handlers/WindowsTerminalHandler';
+import { MacOSTerminalHandler } from './handlers/MacOSTerminalHandler';
+import { LinuxTerminalHandler } from './handlers/LinuxTerminalHandler';
+
 export class TerminalService implements ITerminalService {
-  constructor(private logger: ILoggerService) {}
+  private terminalHandler: ITerminalHandler;
+
+  constructor(private logger: ILoggerService) {
+    // Initialize OS-specific terminal handler
+    this.terminalHandler = this.createTerminalHandler();
+  }
+
+  private createTerminalHandler(): ITerminalHandler {
+    const currentPlatform = platform();
+    
+    switch (currentPlatform) {
+      case 'win32':
+        return new WindowsTerminalHandler(this.logger);
+      case 'darwin':
+        return new MacOSTerminalHandler(this.logger);
+      case 'linux':
+        return new LinuxTerminalHandler(this.logger);
+      default:
+        this.logger.warn(`Unsupported platform: ${currentPlatform}, falling back to Linux handler`);
+        return new LinuxTerminalHandler(this.logger);
+    }
+  }
 
   async execute(command: string, options?: TerminalOptions): Promise<Result<TerminalResult>> {
     this.logger.debug('TerminalService.execute called', { command, options });
@@ -35,12 +62,6 @@ export class TerminalService implements ITerminalService {
       if (!command.command || command.command.trim().length === 0) {
         return { ok: false, error: new TerminalError('Command cannot be empty', ErrorCode.TERMINAL_COMMAND_FAILED) };
       }
-
-      // Remove the isCommandAvailable check to prevent circular dependency
-      // const isAvailable = await this.isCommandAvailable(command.command.split(' ')[0]);
-      // if (!isAvailable.ok || !isAvailable.value) {
-      //   this.logger.warn('Command may not be available', { command: command.command });
-      // }
 
       // Store the original working directory
       originalCwd = process.cwd();
@@ -103,20 +124,25 @@ export class TerminalService implements ITerminalService {
       });
 
       return { ok: true, value: terminalResult };
+
     } catch (error) {
+      const duration = Date.now() - startTime;
+      
       // Restore original working directory on error
-      if (originalCwd && command.cwd && typeof command.cwd === 'string') {
+      if (command.cwd && typeof command.cwd === 'string') {
         try {
           process.chdir(originalCwd);
-          this.logger.debug('Restored working directory on error', { to: originalCwd });
         } catch (restoreError) {
           this.logger.warn('Failed to restore working directory on error', { cwd: originalCwd, error: restoreError });
         }
       }
 
-      const duration = Date.now() - startTime;
-      this.logger.error('Command execution failed', { command: command.command, error, duration });
-      
+      this.logger.error('Command execution failed', { 
+        command: command.command, 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration 
+      });
+
       return { 
         ok: false, 
         error: new TerminalError(
@@ -128,94 +154,74 @@ export class TerminalService implements ITerminalService {
   }
 
   async executeBatch(commands: TerminalCommand[]): Promise<Result<TerminalResult[]>> {
-    this.logger.debug('TerminalService.executeBatch called', { count: commands.length });
+    this.logger.debug('TerminalService.executeBatch called', { commandCount: commands.length });
     
     const results: TerminalResult[] = [];
     
     for (const command of commands) {
       const result = await this.executeCommand(command);
+      
       if (isFailure(result)) {
-        this.logger.error('Batch execution failed', { command: command.command, error: (result as any).error });
-        return { ok: false, error: (result as any).error };
+        this.logger.error('Batch execution failed', { error: result.error, command: command.command });
+        return { ok: false, error: result.error };
       }
+      
       results.push(result.value);
     }
     
-    this.logger.log('Batch execution completed', { count: results.length });
+    this.logger.log('Batch execution completed', { 
+      totalCommands: commands.length, 
+      successfulCommands: results.filter(r => r.success).length 
+    });
+    
     return { ok: true, value: results };
   }
 
   async spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>> {
     this.logger.debug('TerminalService.spawnTerminal called', { command, options });
     
-    const terminalCommand: TerminalCommand = {
-      command,
-      ...options
-    };
-    
-    return this.spawnTerminalCommand(terminalCommand);
-  }
-
-  async spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>> {
-    this.logger.debug('TerminalService.spawnTerminalCommand called', { command });
-    
     try {
-      // Validate command
-      if (!command.command || command.command.trim().length === 0) {
-        return { ok: false, error: new TerminalError('Command cannot be empty', ErrorCode.TERMINAL_COMMAND_FAILED) };
+      // Detect the best terminal for the current OS
+      const terminalCmd = await this.terminalHandler.detectTerminal();
+      this.logger.debug('Detected terminal', { terminalCmd });
+      
+      // Get shell
+      const shellResult = await this.getShell();
+      if (isFailure(shellResult)) {
+        return { ok: false, error: shellResult.error };
       }
-
-      // Get the appropriate terminal command for the current platform
-      const terminalCmd = await this.getTerminalCommand();
-      const shell = this.getDefaultShell();
+      const shell = shellResult.value;
       
-      // Prepare spawn options
-      const spawnOptions: SpawnOptions = {
-        cwd: command.cwd || process.cwd(),
-        env: { ...process.env, ...command.env },
-        detached: true, // Important: run in detached mode so it opens in a new window
-        stdio: 'ignore', // Ignore stdio to prevent hanging
-      };
-
-      // Parse the command to execute
-      const [cmd, args] = this.parseCommand(command.command);
+      // Get terminal arguments
+      const args = this.terminalHandler.getTerminalArgs(terminalCmd, shell, command, options?.cwd);
       
-      // Create the full command string for the terminal
-      let fullCommand = `${cmd} ${args.join(' ')}`;
+      this.logger.debug('Spawning terminal', { terminalCmd, args });
       
-      // For Linux, modify the command to ensure terminal stays open
-      const osPlatform = platform();
-      if (osPlatform === 'linux') {
-        if (terminalCmd.includes('gnome-terminal')) {
-          fullCommand = `${shell} -c "${fullCommand}; exec ${shell}"`;
-        } else if (terminalCmd.includes('xterm')) {
-          // xterm will use -hold flag in getTerminalArgs
-        } else if (terminalCmd.includes('konsole')) {
-          // konsole will use --hold flag in getTerminalArgs
-        } else {
-          // fallback: force bash read trick
-          fullCommand = `${shell} -c "${fullCommand}; echo 'Press Enter to close terminal...'; read"`;
-        }
-      }
-      
-      // Spawn the terminal with the command
-      const terminalArgs = this.getTerminalArgs(terminalCmd, shell, fullCommand, command.cwd);
-      
-      const child = spawn(terminalCmd, terminalArgs, spawnOptions);
-      
-      // Don't wait for the process to complete since it's a new terminal window
-      child.unref();
-      
-      this.logger.log('Terminal spawned successfully', { 
-        command: command.command, 
-        terminalCmd,
-        terminalArgs 
+      // Spawn the terminal process
+      this.logger.debug('About to spawn terminal process', { 
+        terminalCmd, 
+        args, 
+        spawnOptions: { detached: true, stdio: 'ignore' } 
       });
       
-      return { ok: true, value: true };
-    } catch (error) {
-      this.logger.error('Failed to spawn terminal', { command: command.command, error });
+      const child = spawn(terminalCmd, args, {
+        detached: true,
+        stdio: 'ignore'
+      });
       
+      this.logger.debug('Spawn process created', { 
+        pid: child.pid, 
+        terminalCmd, 
+        args 
+      });
+      
+      child.unref();
+      
+      this.logger.log('Terminal spawned successfully', { terminalCmd, command });
+      return { ok: true, value: true };
+      
+    } catch (error) {
+      this.logger.error('Failed to spawn terminal', { error: error instanceof Error ? error.message : 'Unknown error' });
       return { 
         ok: false, 
         error: new TerminalError(
@@ -226,479 +232,543 @@ export class TerminalService implements ITerminalService {
     }
   }
 
-  async spawnApplication(command: string, options?: SpawnOptions): Promise<Result<boolean>> {
-    this.logger.debug('TerminalService.spawnApplication called', { command });
-    
+  async spawnTerminalWithTabs(command: string, options?: TerminalOptions & { title?: string; useTabs?: boolean; tabCommands?: string[] }): Promise<Result<boolean>> {
     try {
-      // Validate command
-      if (!command || command.trim().length === 0) {
-        return { ok: false, error: new TerminalError('Command cannot be empty', ErrorCode.TERMINAL_COMMAND_FAILED) };
+      this.logger.debug('Spawning terminal with tabs', { command, options });
+      
+      if (!options?.useTabs) {
+        this.logger.debug('Tab mode not requested, using regular spawning');
+        return this.spawnTerminal(command, options);
       }
 
-      // Get the appropriate terminal command for the current platform
-      const terminalCmd = await this.getTerminalCommand();
-      const shell = this.getDefaultShell();
+      // Detect the best terminal for the current OS
+      const terminalCmd = await this.terminalHandler.detectTerminal();
+      this.logger.debug('Detected terminal for tab spawning', { terminalCmd });
       
-      // Prepare spawn options
-      const spawnOptions: SpawnOptions = {
-        cwd: options?.cwd || process.cwd(),
-        env: { ...process.env, ...options?.env },
-        detached: true, // Important: run in detached mode so it opens in a new window
-        stdio: 'ignore', // Ignore stdio to prevent hanging
-      };
-
-      // Parse the command to execute
-      const [cmd, args] = this.parseCommand(command);
-      
-      // Create the full command string for the terminal
-      let fullCommand = `${cmd} ${args.join(' ')}`;
-      
-      // For Linux, modify the command to ensure terminal closes after launching the app
-      const osPlatform = platform();
-      if (osPlatform === 'linux') {
-        if (terminalCmd.includes('gnome-terminal')) {
-          // For gnome-terminal, use -- bash -c "command && exit" to close after execution
-          fullCommand = `${shell} -c "${fullCommand} && exit"`;
-        } else if (terminalCmd.includes('xterm')) {
-          // xterm will use -e flag without -hold
-          fullCommand = `${shell} -c "${fullCommand} && exit"`;
-        } else if (terminalCmd.includes('konsole')) {
-          // konsole will use -e flag without --hold
-          fullCommand = `${shell} -c "${fullCommand} && exit"`;
+      // For macOS, use System Events approach for tabs
+      if (terminalCmd === 'osascript') {
+        this.logger.debug('Using System Events approach for macOS tabs');
+        
+        // Use provided tab commands if available, otherwise extract from combined command
+        let tabCommands: string[];
+        if (options?.tabCommands && options.tabCommands.length > 0) {
+          tabCommands = options.tabCommands;
+          this.logger.debug('Using provided tab commands', { commandCount: tabCommands.length, commands: tabCommands });
         } else {
-          // fallback: force exit after command
-          fullCommand = `${shell} -c "${fullCommand} && exit"`;
+          tabCommands = this.extractTabCommands(command);
+          this.logger.debug('Extracted tab commands', { commandCount: tabCommands.length, commands: tabCommands });
         }
-      }
-      
-      // Spawn the terminal with the command
-      const cwd = options?.cwd && typeof options.cwd === 'string' ? options.cwd : undefined;
-      const terminalArgs = this.getTerminalArgsForApp(terminalCmd, shell, fullCommand, cwd);
-      
-      const child = spawn(terminalCmd, terminalArgs, spawnOptions);
-      
-      // Don't wait for the process to complete since it's a new terminal window
-      child.unref();
-      
-      this.logger.log('Application launched successfully', { 
-        command: command, 
-        terminalCmd,
-        terminalArgs 
-      });
-      
-      return { ok: true, value: true };
-    } catch (error) {
-      this.logger.error('Failed to launch application', { command: command, error });
-      
-      return { 
-        ok: false, 
-        error: new TerminalError(
-          `Failed to launch application: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          ErrorCode.TERMINAL_COMMAND_FAILED
-        ) 
-      };
-    }
-  }
-
-  async isCommandAvailable(command: string): Promise<Result<boolean>> {
-    this.logger.debug('TerminalService.isCommandAvailable called', { command });
-    
-    try {
-      const osPlatform = platform();
-      
-      if (osPlatform === 'win32') {
-        // On Windows, check if the command is a full path to an executable
-        if (command.includes('\\') && command.endsWith('.exe')) {
-          // It's a full path, check if file exists
-          const fs = await import('fs');
-          const exists = fs.existsSync(command);
-          return { ok: true, value: exists };
+        
+        if (tabCommands.length <= 1) {
+          this.logger.debug('Single command, using regular spawning');
+          return this.spawnTerminal(command, options);
+        }
+        
+        // Build AppleScript with System Events for tabs
+        let appleScript = 'tell application "Terminal"\n  activate\n';
+        
+        // Execute first command
+        appleScript += '  do script';
+        if (options?.cwd) {
+          appleScript += ` "cd '${options.cwd}' && ${tabCommands[0].replace(/"/g, '\\"')}"`;
         } else {
-          // Try to find it in PATH using PowerShell's Get-Command
-          const result = await this.executeCommand({ 
-            command: `powershell -Command "Get-Command '${command}' -ErrorAction SilentlyContinue"`, 
-            timeout: 5000 
-          });
-          return { ok: true, value: result.ok && result.value.success && result.value.stdout.trim() !== '' };
+          appleScript += ` "${tabCommands[0].replace(/"/g, '\\"')}"`;
         }
-      } else {
-        // On Unix-like systems, use 'which' command
-        const result = await this.executeCommand({ 
-          command: `which ${command}`, 
-          timeout: 5000 
+        appleScript += '\n';
+        
+        // Create tabs for remaining commands using System Events
+        for (let i = 1; i < tabCommands.length; i++) {
+          appleScript += '  delay 0.5\n';
+          appleScript += '  tell application "System Events" to tell process "Terminal" to keystroke "t" using command down\n';
+          appleScript += '  delay 0.5\n';
+          appleScript += '  do script';
+          if (options?.cwd) {
+            appleScript += ` "cd '${options.cwd}' && ${tabCommands[i].replace(/"/g, '\\"')}"`;
+          } else {
+            appleScript += ` "${tabCommands[i].replace(/"/g, '\\"')}"`;
+          }
+          appleScript += ' in window 1\n';
+        }
+        
+        appleScript += 'end tell';
+        
+        this.logger.log('🍎 SYSTEM EVENTS APPLESCRIPT:', { 
+          appleScript, 
+          commandCount: tabCommands.length,
+          formattedScript: appleScript.replace(/\n/g, '\\n')
         });
-        return { ok: true, value: result.ok && result.value.success };
-      }
-    } catch (error) {
-      this.logger.debug('Command availability check failed', { command, error });
-      return { ok: true, value: false };
-    }
-  }
-
-  async getShell(): Promise<Result<string>> {
-    this.logger.debug('TerminalService.getShell called');
-    
-    try {
-      const shell = this.getDefaultShell();
-      this.logger.log('Shell detected', { shell });
-      return { ok: true, value: shell };
-    } catch (error) {
-      this.logger.error('Failed to get shell', { error });
-      return { ok: false, error: new TerminalError('Failed to get shell', ErrorCode.TERMINAL_COMMAND_FAILED) };
-    }
-  }
-
-  async getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>> {
-    this.logger.debug('TerminalService.getLastCommandsFromTerminals called');
-    
-    try {
-      const osPlatform = platform();
-      const currentCwd = process.cwd();
-      const terminalCommands: TerminalCommandState[] = [];
-      
-      if (osPlatform === 'win32') {
-        // Windows: Use tasklist to find cmd.exe processes and get their command lines
-        const result = await this.execute('tasklist /v /fo csv /nh');
-        if (result.ok) {
-          const lines = result.value.stdout.split('\n');
-          let terminalId = 1;
-          
-          for (const line of lines) {
-            if (line.includes('cmd.exe') && line.includes(currentCwd)) {
-              // Extract command from tasklist output
-              const commandMatch = line.match(/"([^"]+)"/g);
-              if (commandMatch && commandMatch.length > 1) {
-                const command = commandMatch[1].replace(/"/g, '');
-                if (command && command !== 'cmd.exe') {
-                  terminalCommands.push({
-                    terminalId: terminalId++,
-                    terminalName: `cmd-${terminalId}`,
-                    commands: [{
-                      command: command,
-                      name: `Command ${terminalId}`,
-                      priority: 1
-                    }]
-                  });
-                }
-              }
-            }
-          }
+        
+        // Execute the AppleScript
+        const args = ['-e', appleScript];
+        this.logger.debug('Executing System Events AppleScript', { terminalCmd, args });
+        
+        const child = spawn(terminalCmd, args, {
+          detached: false,
+          stdio: 'pipe'
+        });
+        
+        // Log any errors from the spawn process
+        child.stderr?.on('data', (data) => {
+          this.logger.error('AppleScript stderr', { data: data.toString() });
+        });
+        
+        child.stdout?.on('data', (data) => {
+          this.logger.debug('AppleScript stdout', { data: data.toString() });
+        });
+        
+        child.on('error', (error) => {
+          this.logger.error('AppleScript spawn error', { error: error.message });
+        });
+        
+        child.on('close', (code) => {
+          this.logger.debug('AppleScript process closed', { code });
+        });
+        
+        child.unref();
+        
+        this.logger.log('Terminal with tabs spawned successfully using System Events', { 
+          terminalCmd, 
+          command, 
+          tabCount: tabCommands.length 
+        });
+        return { ok: true, value: true };
+      } else if (terminalCmd === 'wt.exe' || terminalCmd === 'wt' || terminalCmd.includes('wt')) {
+        // For Windows Terminal, use wt command for tabs
+        this.logger.debug('Using Windows Terminal (wt) approach for tabs');
+        
+        // Use provided tab commands if available, otherwise extract from combined command
+        let tabCommands: string[];
+        if (options?.tabCommands && options.tabCommands.length > 0) {
+          tabCommands = options.tabCommands;
+          this.logger.debug('Using provided tab commands', { commandCount: tabCommands.length, commands: tabCommands });
+        } else {
+          tabCommands = this.extractTabCommands(command);
+          this.logger.debug('Extracted tab commands', { commandCount: tabCommands.length, commands: tabCommands });
         }
+        
+        if (tabCommands.length <= 1) {
+          this.logger.debug('Single command, using regular spawning');
+          return this.spawnTerminal(command, options);
+        }
+        
+        return this.spawnWindowsTerminalWithTabs(tabCommands, options);
       } else {
-        // Unix-like systems: Use ps to find terminal processes
-        const result = await this.execute('ps -eo pid,ppid,cmd --no-headers');
-        if (result.ok) {
-          const lines = result.value.stdout.split('\n');
-          let terminalId = 1;
-          
-          for (const line of lines) {
-            // Look for terminal processes (bash, zsh, etc.) in current directory
-            if ((line.includes('/bin/bash') || line.includes('/bin/zsh') || line.includes('terminal')) && 
-                line.includes(currentCwd)) {
-              // Extract the actual command being run
-              const parts = line.trim().split(/\s+/);
-              if (parts.length >= 3) {
-                const command = parts.slice(2).join(' '); // Skip pid and ppid
-                if (command && !command.includes('ps -eo')) {
-                  terminalCommands.push({
-                    terminalId: terminalId++,
-                    terminalName: `terminal-${terminalId}`,
-                    commands: [{
-                      command: command,
-                      name: `Command ${terminalId}`,
-                      priority: 1
-                    }]
-                  });
-                }
-              }
-            }
-          }
+        // For Linux and other platforms, implement tab support
+        this.logger.debug('Using Linux/other platform tab approach');
+        
+        // Use provided tab commands if available, otherwise extract from combined command
+        let tabCommands: string[];
+        if (options?.tabCommands && options.tabCommands.length > 0) {
+          tabCommands = options.tabCommands;
+          this.logger.debug('Using provided tab commands', { commandCount: tabCommands.length, commands: tabCommands });
+        } else {
+          tabCommands = this.extractTabCommands(command);
+          this.logger.debug('Extracted tab commands', { commandCount: tabCommands.length, commands: tabCommands });
+        }
+        
+        if (tabCommands.length <= 1) {
+          this.logger.debug('Single command, using regular spawning');
+          return this.spawnTerminal(command, options);
+        }
+        
+        // Check if terminal supports tabs
+        const linuxHandler = this.terminalHandler as any;
+        if (linuxHandler.supportsTabs && linuxHandler.supportsTabs(terminalCmd)) {
+          this.logger.debug('Terminal supports tabs, creating tabs', { terminalCmd });
+          return this.spawnLinuxTerminalWithTabs(terminalCmd, tabCommands, options);
+        } else {
+          this.logger.warn('Terminal does not support tabs, falling back to sequential execution', { terminalCmd });
+          return this.spawnTerminal(command, options);
         }
       }
       
-      this.logger.log('Captured terminal commands', { 
-        count: terminalCommands.length,
-        commands: terminalCommands.map(t => ({ 
-          id: t.terminalId, 
-          name: t.terminalName,
-          commandCount: t.commands.length 
-        }))
-      });
-      
-      return { ok: true, value: terminalCommands };
     } catch (error) {
-      this.logger.error('Failed to capture terminal commands', { error });
+      this.logger.error('Failed to spawn terminal with tabs', { error: error instanceof Error ? error.message : 'Unknown error' });
       return { 
         ok: false, 
         error: new TerminalError(
-          `Failed to capture terminal commands: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          `Failed to spawn terminal with tabs: ${error instanceof Error ? error.message : 'Unknown error'}`,
           ErrorCode.TERMINAL_COMMAND_FAILED
         )
       };
     }
   }
 
-  private getDefaultShell(): string {
-    const osPlatform = platform();
+  private async spawnLinuxTerminalWithTabs(
+    terminalCmd: string, 
+    tabCommands: string[], 
+    options?: TerminalOptions & { title?: string; useTabs?: boolean; tabCommands?: string[] }
+  ): Promise<Result<boolean>> {
+    try {
+      this.logger.debug('Spawning Linux terminal with tabs', { terminalCmd, tabCommands });
+      
+      // Get shell
+      const shellResult = await this.getShell();
+      if (isFailure(shellResult)) {
+        return { ok: false, error: shellResult.error };
+      }
+      const shell = shellResult.value;
+      
+      // Create the first tab with the first command
+      const firstCommand = tabCommands[0];
+      const firstArgs = this.terminalHandler.getTerminalArgs(terminalCmd, shell, firstCommand, options?.cwd);
+      
+      this.logger.debug('Spawning first tab', { terminalCmd, firstArgs });
+      
+      // Spawn the first terminal window
+      const firstChild = spawn(terminalCmd, firstArgs, {
+        detached: true,
+        stdio: 'ignore'
+      });
+      
+      firstChild.unref();
+      
+      // Wait a bit for the first terminal to open
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create additional tabs for remaining commands
+      for (let i = 1; i < tabCommands.length; i++) {
+        const command = tabCommands[i];
+        
+        // Use terminal-specific tab creation commands
+        let tabArgs: string[];
+        if (terminalCmd.includes('gnome-terminal')) {
+          tabArgs = ['--tab', '--', shell, '-c', command];
+        } else if (terminalCmd.includes('konsole')) {
+          tabArgs = ['--new-tab', '-e', shell, '-c', command];
+        } else if (terminalCmd.includes('xfce4-terminal')) {
+          tabArgs = ['--tab', '--execute', shell, '-c', command];
+        } else if (terminalCmd.includes('mate-terminal')) {
+          tabArgs = ['--tab', '--execute', shell, '-c', command];
+        } else if (terminalCmd.includes('terminator')) {
+          tabArgs = ['--new-tab', '-e', shell, '-c', command];
+        } else {
+          // Fallback: spawn new terminal window
+          tabArgs = this.terminalHandler.getTerminalArgs(terminalCmd, shell, command, options?.cwd);
+        }
+        
+        // Add working directory if supported
+        if (options?.cwd && (terminalCmd.includes('gnome-terminal') || terminalCmd.includes('xfce4-terminal') || terminalCmd.includes('mate-terminal'))) {
+          tabArgs.unshift('--working-directory', options.cwd);
+        }
+        
+        this.logger.debug(`Spawning tab ${i + 1}`, { terminalCmd, tabArgs });
+        
+        const tabChild = spawn(terminalCmd, tabArgs, {
+          detached: true,
+          stdio: 'ignore'
+        });
+        
+        tabChild.unref();
+        
+        // Small delay between tab creation
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      this.logger.log('Linux terminal with tabs spawned successfully', { 
+        terminalCmd, 
+        tabCount: tabCommands.length 
+      });
+      
+      return { ok: true, value: true };
+      
+    } catch (error) {
+      this.logger.error('Failed to spawn Linux terminal with tabs', { error: error instanceof Error ? error.message : 'Unknown error' });
+      return { 
+        ok: false, 
+        error: new TerminalError(
+          `Failed to spawn Linux terminal with tabs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        )
+      };
+    }
+  }
+
+  private async spawnWindowsTerminalWithTabs(
+    tabCommands: string[], 
+    options?: TerminalOptions & { title?: string; useTabs?: boolean; tabCommands?: string[] }
+  ): Promise<Result<boolean>> {
+    try {
+      this.logger.debug('Spawning Windows Terminal with tabs', { tabCommands });
+
+      // Get shell
+      const shellResult = await this.getShell();
+      if (isFailure(shellResult)) {
+        return { ok: false, error: shellResult.error };
+      }
+      const shell = shellResult.value;
+
+      // Build Windows Terminal command with tabs
+      // Format: wt new-tab --title "Tab1" -- cmd /k "command1" ; new-tab --title "Tab2" -- cmd /k "command2"
+      let wtCommand = 'wt';
+      const wtArgs: string[] = [];
+
+      for (let i = 0; i < tabCommands.length; i++) {
+        const command = tabCommands[i];
+        const tabTitle = options?.title ? `${options.title} - Tab ${i + 1}` : `Script ${i + 1}`;
+        
+        // Add new-tab command
+        wtArgs.push('new-tab');
+        wtArgs.push('--title', tabTitle);
+        
+        // Add working directory if provided
+        if (options?.cwd) {
+          wtArgs.push('--startingDirectory', options.cwd);
+        }
+        
+        // Add the command to execute
+        wtArgs.push('--', shell, '/k', command);
+        
+        // Add separator between tabs (except for the last one)
+        if (i < tabCommands.length - 1) {
+          wtArgs.push(';');
+        }
+      }
+
+      this.logger.log('🪟 WINDOWS TERMINAL COMMAND:', {
+        wtCommand,
+        wtArgs,
+        commandCount: tabCommands.length,
+        formattedCommand: `${wtCommand} ${wtArgs.join(' ')}`
+      });
+
+      // Execute the Windows Terminal command
+      const child = spawn(wtCommand, wtArgs, {
+        detached: true,
+        stdio: 'ignore'
+      });
+
+      child.unref();
+
+      this.logger.log('Windows Terminal with tabs spawned successfully', {
+        tabCount: tabCommands.length,
+        command: wtCommand,
+        args: wtArgs
+      });
+
+      return { ok: true, value: true };
+
+    } catch (error) {
+      this.logger.error('Failed to spawn Windows Terminal with tabs', { error: error instanceof Error ? error.message : 'Unknown error' });
+      return {
+        ok: false,
+        error: new TerminalError(
+          `Failed to spawn Windows Terminal with tabs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        )
+      };
+    }
+  }
+
+  private extractTabCommands(combinedCommand: string): string[] {
+    // Split by the pattern that separates tab commands
+    // Look for: && echo "🚀 Starting script X/Y:" (this indicates start of new tab)
+    const tabSeparator = / && echo "🚀 Starting script \d+\/\d+:/;
+    const commands = combinedCommand.split(tabSeparator);
     
-    switch (osPlatform) {
+    // The first command might not have the echo prefix, so we need to handle it
+    const result: string[] = [];
+    
+    for (let i = 0; i < commands.length; i++) {
+      let cmd = commands[i].trim();
+      
+      // Remove leading && if present
+      if (cmd.startsWith('&& ')) {
+        cmd = cmd.substring(3);
+      }
+      
+      // For the first command, keep it as is (it already has the echo prefix)
+      // For subsequent commands, add back the echo prefix
+      if (i > 0) {
+        // Extract the script name from the original command
+        const scriptNameMatch = cmd.match(/^echo "🚀 Starting script \d+\/\d+: ([^"]+)"/);
+        if (scriptNameMatch) {
+          const scriptName = scriptNameMatch[1];
+          cmd = `echo "🚀 Starting script ${i + 1}/${commands.length}:" && ${cmd.replace(/^echo "🚀 Starting script \d+\/\d+: [^"]+" && /, '')}`;
+        } else {
+          cmd = `echo "🚀 Starting script ${i + 1}/${commands.length}:" && ${cmd}`;
+        }
+      }
+      
+      if (cmd.length > 0) {
+        result.push(cmd);
+      }
+    }
+    
+    return result;
+  }
+
+  async spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>> {
+    this.logger.debug('TerminalService.spawnTerminalCommand called', { command });
+    
+    // Use different spawning method based on closeAfterExecution flag
+    if (command.closeAfterExecution === false) {
+      // Use regular terminal spawning (keeps terminal open)
+      return this.spawnTerminal(command.command, {
+        cwd: command.cwd,
+        env: command.env,
+        timeout: command.timeout
+      });
+    } else {
+      // Use application spawning (allows terminal to close)
+      return this.spawnApplication(command.command, {
+        cwd: command.cwd,
+        env: command.env,
+        timeout: command.timeout
+      });
+    }
+  }
+
+  async spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>> {
+    this.logger.debug('TerminalService.spawnApplication called', { command, options });
+    
+    try {
+      // Detect the best terminal for the current OS
+      const terminalCmd = await this.terminalHandler.detectTerminal();
+      this.logger.debug('Detected terminal for application', { terminalCmd });
+      
+      // Get shell
+      const shellResult = await this.getShell();
+      if (isFailure(shellResult)) {
+        return { ok: false, error: shellResult.error };
+      }
+      const shell = shellResult.value;
+      
+      // Get terminal arguments for application (non-interactive)
+      const args = this.terminalHandler.getTerminalArgsForApp(terminalCmd, shell, command, options?.cwd);
+      
+      this.logger.debug('Spawning application', { terminalCmd, args });
+      
+      // Spawn the application process
+      const child = spawn(terminalCmd, args, {
+        detached: true,
+        stdio: 'ignore'
+      });
+      
+      child.unref();
+      
+      this.logger.log('Application spawned successfully', { terminalCmd, command });
+      return { ok: true, value: true };
+      
+    } catch (error) {
+      this.logger.error('Failed to spawn application', { error: error instanceof Error ? error.message : 'Unknown error' });
+      return { 
+        ok: false, 
+        error: new TerminalError(
+          `Failed to spawn application: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        ) 
+      };
+    }
+  }
+
+  async getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>> {
+    this.logger.debug('TerminalService.getLastCommandsFromTerminals called');
+    
+    // This is a placeholder implementation
+    // In a real implementation, this would capture commands from terminal history
+    // For now, return empty array
+    return { ok: true, value: [] };
+  }
+
+  async isCommandAvailable(command: string): Promise<Result<boolean>> {
+    this.logger.debug('TerminalService.isCommandAvailable called', { command });
+    
+    try {
+      const isAvailable = await this.terminalHandler.isCommandAvailable(command);
+      return { ok: true, value: isAvailable };
+    } catch (error) {
+      this.logger.error('Failed to check command availability', { command, error: error instanceof Error ? error.message : 'Unknown error' });
+      return { 
+        ok: false, 
+        error: new TerminalError(
+          `Failed to check command availability: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        ) 
+      };
+    }
+  }
+
+  async getShell(): Promise<Result<string>> {
+    this.logger.debug('TerminalService.getShell called');
+    
+    const currentPlatform = platform();
+    
+    try {
+      let shell: string;
+      
+      switch (currentPlatform) {
+        case 'win32':
+          // On Windows, try to detect PowerShell first, then fall back to cmd
+          const powershellAvailable = await this.terminalHandler.isCommandAvailable('powershell');
+          shell = powershellAvailable ? 'powershell' : 'cmd';
+          break;
+        case 'darwin':
+        case 'linux':
+          // On Unix-like systems, try to detect bash first, then fall back to sh
+          const bashAvailable = await this.terminalHandler.isCommandAvailable('bash');
+          shell = bashAvailable ? 'bash' : 'sh';
+          break;
+        default:
+          shell = 'sh';
+      }
+      
+      this.logger.debug('Detected shell', { shell, platform: currentPlatform });
+      return { ok: true, value: shell };
+      
+    } catch (error) {
+      this.logger.error('Failed to detect shell', { error: error instanceof Error ? error.message : 'Unknown error' });
+      return { 
+        ok: false, 
+        error: new TerminalError(
+          `Failed to detect shell: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        ) 
+      };
+    }
+  }
+
+
+  private getDefaultShell(): boolean | string {
+    const currentPlatform = platform();
+    
+    switch (currentPlatform) {
       case 'win32':
-        return process.env.COMSPEC || 'cmd.exe';
+        return true; // Use default shell on Windows
       case 'darwin':
-        return process.env.SHELL || '/bin/zsh';
-      default: // linux, freebsd, etc.
-        return process.env.SHELL || '/bin/bash';
+      case 'linux':
+        return '/bin/sh'; // Use sh on Unix-like systems
+      default:
+        return true;
     }
   }
 
-  private async getTerminalCommand(): Promise<string> {
-    const osPlatform = platform();
-    if (osPlatform === 'win32') {
-      return this.detectWindowsTerminal();
-    } else if (osPlatform === 'darwin') {
-      return 'open';
-    } else {
-      // Linux - detect available terminal emulators
-      return this.detectLinuxTerminal();
-    }
-  }
-
-  private async detectWindowsTerminal(): Promise<string> {
-    // Common Windows terminal emulators to try, in order of preference
-    const terminals = [
-      'wt.exe',           // Windows Terminal (modern)
-      'powershell.exe',   // PowerShell
-      'wsl.exe',          // Windows Subsystem for Linux
-      'bash.exe',         // Git Bash
-      'mintty.exe',       // MinTTY
-      'cmd.exe'           // Fallback to Command Prompt
-    ];
-
-    this.logger.debug('Detecting available Windows terminals', { terminals });
-
-    for (const terminal of terminals) {
-      try {
-        // On Windows, use 'where' instead of 'which'
-        const result = await this.executeCommand({ 
-          command: `where ${terminal}`, 
-          timeout: 2000 
-        });
-        if (result.ok && result.value.success) {
-          this.logger.debug(`Windows terminal detected: ${terminal}`);
-          return terminal;
-        }
-      } catch (error) {
-        this.logger.debug(`Windows terminal ${terminal} not available`, { error });
-        // Continue to next terminal
-        continue;
-      }
-    }
-
-    // Fallback to cmd.exe if none detected (will fail gracefully)
-    this.logger.warn('No common Windows terminal emulator detected, falling back to cmd.exe');
-    return 'cmd.exe';
-  }
-
-  private async detectLinuxTerminal(): Promise<string> {
-    // Common terminal emulators to try, in order of preference
-    const terminals = [
-      'gnome-terminal',
-      'xterm',
-      'konsole',
-      'xfce4-terminal',
-      'mate-terminal',
-      'tilix',
-      'terminator',
-      'alacritty',
-      'kitty'
-    ];
-
-    this.logger.debug('Detecting available Linux terminals', { terminals });
-
-    for (const terminal of terminals) {
-      try {
-        const result = await this.executeCommand({ 
-          command: `which ${terminal}`, 
-          timeout: 2000 
-        });
-        if (result.ok && result.value.success) {
-          this.logger.debug(`Linux terminal detected: ${terminal}`);
-          return terminal;
-        }
-      } catch (error) {
-        this.logger.debug(`Terminal ${terminal} not available`, { error });
-        // Continue to next terminal
-        continue;
-      }
-    }
-
-    // Fallback to gnome-terminal if none detected (will fail gracefully)
-    this.logger.warn('No common terminal emulator detected, falling back to gnome-terminal');
-    return 'gnome-terminal';
-  }
-
-  private getTerminalArgs(terminalCmd: string, shell: string, command: string, cwd?: string): string[] {
-    const args: string[] = [];
-    
-    if (terminalCmd === 'wt.exe') {
-      // Windows Terminal (modern)
-      args.push('new-tab', '--title', 'CodeState Script', '--', 'cmd', '/k', command);
-    } else if (terminalCmd === 'cmd.exe') {
-      // Windows Command Prompt
-      args.push('/c', 'start', 'cmd', '/k', command);
-    } else if (terminalCmd === 'powershell.exe') {
-      // Windows PowerShell
-      args.push('-Command', 'Start-Process', 'powershell', '-ArgumentList', '-NoExit', '-Command', command);
-    } else if (terminalCmd === 'wsl.exe') {
-      // Windows Subsystem for Linux
-      args.push('-e', 'bash', '-c', command);
-    } else if (terminalCmd === 'bash.exe') {
-      // Git Bash
-      args.push('-c', command);
-    } else if (terminalCmd === 'mintty.exe') {
-      // MinTTY (Git Bash)
-      args.push('-e', 'bash', '-c', command);
-    } else if (terminalCmd === 'open') {
-      // macOS
-      args.push('-a', 'Terminal', command);
-    } else {
-      // Linux - handle different terminal emulators
-      if (terminalCmd.includes('gnome-terminal')) {
-        args.push('--', shell, '-c', command);
-      } else if (terminalCmd.includes('xterm')) {
-        args.push('-hold', '-e', shell, '-c', command);
-      } else if (terminalCmd.includes('konsole')) {
-        args.push('--hold', '-e', shell, '-c', command);
-      } else if (terminalCmd.includes('xfce4-terminal')) {
-        args.push('--execute', shell, '-c', command);
-      } else if (terminalCmd.includes('mate-terminal')) {
-        args.push('--execute', shell, '-c', command);
-      } else if (terminalCmd.includes('tilix')) {
-        args.push('--new-process', '-e', shell, '-c', command);
-      } else if (terminalCmd.includes('terminator')) {
-        args.push('--new-tab', '-e', shell, '-c', command);
-      } else if (terminalCmd.includes('alacritty')) {
-        args.push('-e', shell, '-c', command);
-      } else if (terminalCmd.includes('kitty')) {
-        args.push('--', shell, '-c', command);
-      } else {
-        // fallback to gnome-terminal style
-        args.push('--', shell, '-c', command);
-      }
-      
-      if (cwd && typeof cwd === 'string') {
-        // Add working directory argument for terminals that support it
-        if (terminalCmd.includes('gnome-terminal') || 
-            terminalCmd.includes('xfce4-terminal') || 
-            terminalCmd.includes('mate-terminal') ||
-            terminalCmd.includes('tilix')) {
-          args.unshift('--working-directory', cwd);
-        } else if (terminalCmd.includes('xterm') || terminalCmd.includes('konsole')) {
-          // xterm and konsole don't have working directory flags, use cd command
-          const cdCommand = `cd "${cwd}" && ${command}`;
-          args.splice(-1, 1, cdCommand); // Replace the last argument (command) with cdCommand
-        }
-      }
-    }
-    
-    return args;
-  }
-
-  private getTerminalArgsForApp(terminalCmd: string, shell: string, command: string, cwd?: string): string[] {
-    const args: string[] = [];
-    
-    if (terminalCmd === 'cmd.exe') {
-      // Windows - use /c to execute and close
-      args.push('/c', command);
-    } else if (terminalCmd === 'open') {
-      // macOS
-      args.push('-a', 'Terminal', command);
-    } else {
-      // Linux - handle different terminal emulators without hold flags
-      if (terminalCmd.includes('gnome-terminal')) {
-        args.push('--', shell, '-c', command);
-      } else if (terminalCmd.includes('xterm')) {
-        // Use -e without -hold to allow terminal to close
-        args.push('-e', shell, '-c', command);
-      } else if (terminalCmd.includes('konsole')) {
-        // Use -e without --hold to allow terminal to close
-        args.push('-e', shell, '-c', command);
-      } else if (terminalCmd.includes('xfce4-terminal')) {
-        args.push('--execute', shell, '-c', command);
-      } else if (terminalCmd.includes('mate-terminal')) {
-        args.push('--execute', shell, '-c', command);
-      } else if (terminalCmd.includes('tilix')) {
-        args.push('--new-process', '-e', shell, '-c', command);
-      } else if (terminalCmd.includes('terminator')) {
-        args.push('--new-tab', '-e', shell, '-c', command);
-      } else if (terminalCmd.includes('alacritty')) {
-        args.push('-e', shell, '-c', command);
-      } else if (terminalCmd.includes('kitty')) {
-        args.push('--', shell, '-c', command);
-      } else {
-        // fallback to gnome-terminal style
-        args.push('--', shell, '-c', command);
-      }
-      
-      if (cwd && typeof cwd === 'string') {
-        // Add working directory argument for terminals that support it
-        if (terminalCmd.includes('gnome-terminal') || 
-            terminalCmd.includes('xfce4-terminal') || 
-            terminalCmd.includes('mate-terminal') ||
-            terminalCmd.includes('tilix')) {
-          args.unshift('--working-directory', cwd);
-        } else if (terminalCmd.includes('xterm') || terminalCmd.includes('konsole')) {
-          // xterm and konsole don't have working directory flags, use cd command
-          const cdCommand = `cd "${cwd}" && ${command}`;
-          args.splice(-1, 1, cdCommand); // Replace the last argument (command) with cdCommand
-        }
-      }
-    }
-    
-    return args;
-  }
-
-  private parseCommand(commandString: string): [string, string[]] {
-    // Simple command parsing - split by spaces, handle quotes
-    const parts = commandString.match(/(?:[^\s"']+|"[^"]*"|'[^']*')/g) || [];
-    const cmd = parts[0] || '';
-    const args = parts.slice(1).map(arg => {
-      // Remove quotes if present
-      if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
-        return arg.slice(1, -1);
-      }
-      return arg;
-    });
+  private parseCommand(command: string): [string, string[]] {
+    // Simple command parsing - split by spaces
+    // In a more sophisticated implementation, this would handle quoted arguments
+    const parts = command.trim().split(/\s+/);
+    const cmd = parts[0];
+    const args = parts.slice(1);
     
     return [cmd, args];
   }
 
-  private spawnCommand(command: string, args: string[], options: SpawnOptions): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  private async spawnCommand(cmd: string, args: string[], options: SpawnOptions): Promise<{ exitCode: number; stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      const process = spawn(command, args, options);
+      const child = spawn(cmd, args, options);
       
       let stdout = '';
       let stderr = '';
       
-      // Set up timeout
-      const timeout = setTimeout(() => {
-        process.kill('SIGTERM');
-        reject(new TerminalError('Command timed out', ErrorCode.TERMINAL_TIMEOUT));
-      }, options.timeout || 30000);
-      
-      // Collect stdout
-      process.stdout?.on('data', (data) => {
+      child.stdout?.on('data', (data) => {
         stdout += data.toString();
       });
       
-      // Collect stderr
-      process.stderr?.on('data', (data) => {
+      child.stderr?.on('data', (data) => {
         stderr += data.toString();
       });
       
-      // Handle process completion
-      process.on('close', (code) => {
-        clearTimeout(timeout);
+      child.on('close', (code) => {
         resolve({
           exitCode: code || 0,
           stdout: stdout.trim(),
@@ -706,25 +776,9 @@ export class TerminalService implements ITerminalService {
         });
       });
       
-      // Handle process errors
-      process.on('error', (error) => {
-        clearTimeout(timeout);
-        reject(new TerminalError(`Process error: ${error.message}`, ErrorCode.TERMINAL_COMMAND_FAILED));
-      });
-      
-      // Handle process exit with signal
-      process.on('exit', (code, signal) => {
-        clearTimeout(timeout);
-        if (signal) {
-          reject(new TerminalError(`Process killed by signal: ${signal}`, ErrorCode.TERMINAL_COMMAND_FAILED));
-        } else {
-          resolve({
-            exitCode: code || 0,
-            stdout: stdout.trim(),
-            stderr: stderr.trim()
-          });
-        }
+      child.on('error', (error) => {
+        reject(error);
       });
     });
   }
-} 
+}
