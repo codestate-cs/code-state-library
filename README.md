@@ -1,6 +1,52 @@
 # CodeState - Development Environment Management Tool
 
-**Version 1.0.9** - A powerful tool for managing development environments, scripts, and sessions with complete terminal collection management and enhanced architecture.
+**Version 1.0.10** - A powerful tool for managing development environments, scripts, and sessions with cross-platform terminal execution modes and intelligent OS detection.
+
+## 🚀 What's New in v1.0.10
+
+### ✨ **Major New Features**
+- **Cross-Platform Terminal Execution Modes**: Intelligent terminal execution based on OS capabilities
+  - **Same-Terminal Mode**: Scripts run in tabs within a single terminal (macOS + Windows Terminal)
+  - **Multi-Terminal Mode**: Each script runs in separate terminal windows
+  - **IDE Mode**: Reserved for IDE extension integration
+  - **OS-Aware CLI**: Automatically shows/hides options based on platform capabilities
+- **Windows Terminal Support**: Full Windows Terminal (`wt`) integration for tab creation
+  - Automatic detection of Windows Terminal availability
+  - Programmatic tab creation using `wt new-tab` commands
+  - Support for working directories and tab titles
+  - Fallback to multi-terminal mode when Windows Terminal unavailable
+- **Enhanced macOS Terminal Support**: Improved AppleScript-based tab creation
+  - Uses System Events for reliable tab creation in Terminal.app
+  - Better error handling and debugging capabilities
+  - Comprehensive logging for tab creation process
+
+### 🏗️ **Architecture Improvements**
+- **OS Detection Service**: New core service for platform detection and capabilities
+  - `OSDetectionService` for detecting OS and terminal capabilities
+  - `GetOSInfo` use case for CLI consumption
+  - Async command execution for Windows Terminal detection
+- **Terminal Collection Execution Modes**: Enhanced terminal collection management
+  - `executionMode` field added to terminal collections
+  - Backward compatibility with default `same-terminal` mode
+  - CLI commands updated to show OS-appropriate options
+- **Cross-Platform Terminal Handling**: Unified terminal spawning across platforms
+  - macOS: AppleScript System Events for tab creation
+  - Windows: Windows Terminal (`wt`) for tab creation
+  - Linux: Multi-terminal fallback (no reliable tab support)
+
+### 🔧 **Technical Enhancements**
+- **Script Filtering by IDs**: Enhanced script management capabilities
+  - `GetScripts` use case now supports filtering by script IDs
+  - Efficient individual script fetching for specific ID lists
+  - Maintains backward compatibility with existing filtering options
+- **Terminal Command Interface**: Enhanced terminal command structure
+  - `closeAfterExecution` flag added to `TerminalCommand` interface
+  - Proper terminal spawning method selection based on close behavior
+  - Better Linux terminal handling with `-hold` flags
+- **Comprehensive Logging**: Enhanced debugging and monitoring
+  - Detailed logging for terminal tab creation processes
+  - OS detection logging with capability explanations
+  - Windows Terminal command logging with formatted output
 
 ## 🚀 What's New in v1.0.9
 
@@ -82,9 +128,12 @@
 ## 🌟 Key Features
 
 - **Script Management**: Create, save, and execute development scripts with priority-based execution
-- **Terminal Collections**: Group multiple scripts together for complex workflows
+- **Terminal Collections**: Group multiple scripts together for complex workflows with intelligent execution modes
+- **Cross-Platform Terminal Support**: OS-aware terminal execution with tab support on macOS and Windows Terminal
 - **Session Management**: Save and resume complete development contexts including Git state
 - **Advanced Filtering**: Filter sessions by project path, tags, search terms, and load full data
-- **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
+- **OS Detection**: Automatic platform detection with capability-based feature availability
 - **UUID-Based Storage**: Consistent, reliable file naming convention across all entities
-- **Full Data Loading**: Access complete session data with terminal collections and scripts 
+- **Full Data Loading**: Access complete session data with terminal collections and scripts
+- **Windows Terminal Integration**: Full support for Windows Terminal (`wt`) with programmatic tab creation
+- **macOS Terminal Enhancement**: Improved AppleScript-based tab creation using System Events 
