@@ -19,7 +19,7 @@ export class GetOSInfo {
   
   async execute(): Promise<Result<OSInfo>> {
     try {
-      const osInfo = this.osDetectionService.getOSInfo();
+      const osInfo = await this.osDetectionService.getOSInfo();
       return { ok: true, value: osInfo };
     } catch (error) {
       return { 

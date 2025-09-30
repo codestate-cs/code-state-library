@@ -332,6 +332,26 @@ export class TerminalService implements ITerminalService {
           tabCount: tabCommands.length 
         });
         return { ok: true, value: true };
+      } else if (terminalCmd === 'wt.exe' || terminalCmd === 'wt' || terminalCmd.includes('wt')) {
+        // For Windows Terminal, use wt command for tabs
+        this.logger.debug('Using Windows Terminal (wt) approach for tabs');
+        
+        // Use provided tab commands if available, otherwise extract from combined command
+        let tabCommands: string[];
+        if (options?.tabCommands && options.tabCommands.length > 0) {
+          tabCommands = options.tabCommands;
+          this.logger.debug('Using provided tab commands', { commandCount: tabCommands.length, commands: tabCommands });
+        } else {
+          tabCommands = this.extractTabCommands(command);
+          this.logger.debug('Extracted tab commands', { commandCount: tabCommands.length, commands: tabCommands });
+        }
+        
+        if (tabCommands.length <= 1) {
+          this.logger.debug('Single command, using regular spawning');
+          return this.spawnTerminal(command, options);
+        }
+        
+        return this.spawnWindowsTerminalWithTabs(tabCommands, options);
       } else {
         // For Linux and other platforms, implement tab support
         this.logger.debug('Using Linux/other platform tab approach');
@@ -458,6 +478,82 @@ export class TerminalService implements ITerminalService {
         ok: false, 
         error: new TerminalError(
           `Failed to spawn Linux terminal with tabs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          ErrorCode.TERMINAL_COMMAND_FAILED
+        )
+      };
+    }
+  }
+
+  private async spawnWindowsTerminalWithTabs(
+    tabCommands: string[], 
+    options?: TerminalOptions & { title?: string; useTabs?: boolean; tabCommands?: string[] }
+  ): Promise<Result<boolean>> {
+    try {
+      this.logger.debug('Spawning Windows Terminal with tabs', { tabCommands });
+
+      // Get shell
+      const shellResult = await this.getShell();
+      if (isFailure(shellResult)) {
+        return { ok: false, error: shellResult.error };
+      }
+      const shell = shellResult.value;
+
+      // Build Windows Terminal command with tabs
+      // Format: wt new-tab --title "Tab1" -- cmd /k "command1" ; new-tab --title "Tab2" -- cmd /k "command2"
+      let wtCommand = 'wt';
+      const wtArgs: string[] = [];
+
+      for (let i = 0; i < tabCommands.length; i++) {
+        const command = tabCommands[i];
+        const tabTitle = options?.title ? `${options.title} - Tab ${i + 1}` : `Script ${i + 1}`;
+        
+        // Add new-tab command
+        wtArgs.push('new-tab');
+        wtArgs.push('--title', tabTitle);
+        
+        // Add working directory if provided
+        if (options?.cwd) {
+          wtArgs.push('--startingDirectory', options.cwd);
+        }
+        
+        // Add the command to execute
+        wtArgs.push('--', shell, '/k', command);
+        
+        // Add separator between tabs (except for the last one)
+        if (i < tabCommands.length - 1) {
+          wtArgs.push(';');
+        }
+      }
+
+      this.logger.log('🪟 WINDOWS TERMINAL COMMAND:', {
+        wtCommand,
+        wtArgs,
+        commandCount: tabCommands.length,
+        formattedCommand: `${wtCommand} ${wtArgs.join(' ')}`
+      });
+
+      // Execute the Windows Terminal command
+      const child = spawn(wtCommand, wtArgs, {
+        detached: true,
+        stdio: 'ignore'
+      });
+
+      child.unref();
+
+      this.logger.log('Windows Terminal with tabs spawned successfully', {
+        tabCount: tabCommands.length,
+        command: wtCommand,
+        args: wtArgs
+      });
+
+      return { ok: true, value: true };
+
+    } catch (error) {
+      this.logger.error('Failed to spawn Windows Terminal with tabs', { error: error instanceof Error ? error.message : 'Unknown error' });
+      return {
+        ok: false,
+        error: new TerminalError(
+          `Failed to spawn Windows Terminal with tabs: ${error instanceof Error ? error.message : 'Unknown error'}`,
           ErrorCode.TERMINAL_COMMAND_FAILED
         )
       };
