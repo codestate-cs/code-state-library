@@ -1,4 +1,4 @@
-import { UpdateTerminalCollection, TerminalCollection, TerminalCollectionWithScripts, Result, Script, ScriptReference, GetTerminalCollections, GetTerminalCollectionById, GetScripts } from "@codestate/core";
+import { UpdateTerminalCollection, TerminalCollection, TerminalCollectionWithScripts, Result, Script, ScriptReference, GetTerminalCollections, GetTerminalCollectionById, GetScripts, GetOSInfo } from "@codestate/core";
 import { CLISpinner } from "../../utils/CLISpinner";
 import { ConfigurableLogger } from "@codestate/core";
 import inquirer from "../../utils/inquirer";
@@ -13,6 +13,7 @@ export async function updateTerminalCollectionCommand(
   const getTerminalCollections = new GetTerminalCollections();
   const getTerminalCollectionById = new GetTerminalCollectionById();
   const getScripts = new GetScripts();
+  const getOSInfo = new GetOSInfo();
 
   try {
     let targetTerminalCollectionName = terminalCollectionName;
@@ -207,29 +208,39 @@ export async function updateTerminalCollectionCommand(
           break;
 
         case "executionMode":
+          // Get OS info to filter execution mode choices
+          const osInfoResult = await getOSInfo.execute();
+          if (!osInfoResult.ok) {
+            logger.error("Failed to detect OS information");
+            return { ok: false, error: osInfoResult.error };
+          }
+          const osInfo = osInfoResult.value;
+          
+          // Build execution mode choices based on OS support
+          const executionModeChoices = [
+            { 
+              name: "Multi Terminal - Each script in separate terminal", 
+              value: "multi-terminal",
+              checked: currentCollection.executionMode === 'multi-terminal'
+            },
+          ];
+          
+          // Only add same-terminal option if OS supports terminal tabs
+          if (osInfo.supportsTerminalTabs) {
+            executionModeChoices.unshift({
+              name: "Same Terminal - Try tabs first, fallback to multiple terminals", 
+              value: "same-terminal",
+              checked: (currentCollection.executionMode || 'same-terminal') === 'same-terminal'
+            });
+          }
+          
           const { executionMode } = await inquirer.customPrompt([
             {
               name: "executionMode",
               message: "How should scripts be executed?",
               type: "list",
-              choices: [
-                { 
-                  name: "Same Terminal - Try tabs first, fallback to multiple terminals", 
-                  value: "same-terminal",
-                  checked: (currentCollection.executionMode || 'same-terminal') === 'same-terminal'
-                },
-                { 
-                  name: "Multi Terminal - Each script in separate terminal", 
-                  value: "multi-terminal",
-                  checked: currentCollection.executionMode === 'multi-terminal'
-                },
-                { 
-                  name: "IDE - For IDE extension use only", 
-                  value: "ide",
-                  checked: currentCollection.executionMode === 'ide'
-                },
-              ],
-              default: currentCollection.executionMode || 'same-terminal',
+              choices: executionModeChoices,
+              default: currentCollection.executionMode || (osInfo.supportsTerminalTabs ? 'same-terminal' : 'multi-terminal'),
             },
           ]);
           updates.executionMode = executionMode;
