@@ -1,6 +1,70 @@
 # @codestate/cli
 
-**Version 1.0.9** - CLI interface for CodeState - A powerful development environment management tool
+**Version 1.0.11** - CLI interface for CodeState - A powerful development environment management tool
+
+## 🚀 What's New in v1.0.11
+
+### ✨ **Major New Features**
+- **Cross-Platform Terminal Execution Modes**: OS-aware terminal execution with intelligent mode selection
+  - **Same-Terminal Mode**: Scripts run in tabs within a single terminal (macOS + Windows Terminal)
+  - **Multi-Terminal Mode**: Each script runs in separate terminal windows
+  - **IDE Mode**: Reserved for IDE extension integration
+  - **OS-Aware CLI**: Automatically shows/hides options based on platform capabilities
+- **Windows Terminal Support**: Full Windows Terminal (`wt`) integration for tab creation
+  - Automatic detection of Windows Terminal availability
+  - Programmatic tab creation using `wt new-tab` commands
+  - Support for working directories and tab titles
+  - Fallback to multi-terminal mode when Windows Terminal unavailable
+- **Enhanced macOS Terminal Support**: Improved AppleScript-based tab creation
+  - Uses System Events for reliable tab creation in Terminal.app
+  - Better error handling and debugging capabilities
+  - Comprehensive logging for tab creation process
+- **Script Filtering by IDs**: Enhanced script management capabilities
+  - `GetScripts` use case now supports filtering by script IDs
+  - Efficient individual script fetching for specific ID lists
+  - Maintains backward compatibility with existing filtering options
+
+### 🏗️ **Architecture Improvements**
+- **OS Detection Integration**: CLI now uses OS detection service for platform-aware features
+  - Automatic platform detection and capability assessment
+  - OS-specific execution mode filtering in CLI commands
+  - Enhanced terminal collection creation/update with OS-aware options
+- **Terminal Collection Execution Modes**: Enhanced terminal collection management
+  - `executionMode` field added to terminal collections (`'ide' | 'same-terminal' | 'multi-terminal'`)
+  - Backward compatibility with default `same-terminal` mode
+  - CLI commands updated to show OS-appropriate options
+- **Cross-Platform Terminal Handling**: Unified terminal spawning across platforms
+  - macOS: AppleScript System Events for tab creation
+  - Windows: Windows Terminal (`wt`) for tab creation
+  - Linux: Multi-terminal fallback (no reliable tab support)
+
+### 🔧 **Technical Enhancements**
+- **Enhanced Terminal Collection Commands**: Improved terminal collection management
+  - `codestate terminals create` now shows OS-appropriate execution modes
+  - `codestate terminals update` filters execution modes based on platform capabilities
+  - Better error handling and user feedback for terminal operations
+- **Comprehensive Logging**: Enhanced debugging and monitoring
+  - Detailed logging for terminal tab creation processes
+  - OS detection logging with capability explanations
+  - Windows Terminal command logging with formatted output
+  - AppleScript execution logging with error handling
+- **Improved Error Handling**: Better user experience with platform-specific error messages
+  - Clear error messages for unsupported terminal operations
+  - Graceful fallback when terminal capabilities are unavailable
+  - Enhanced validation for OS-specific features
+
+### 🐛 **Bug Fixes**
+- **Linux Terminal Issues**: Fixed multi-terminal mode closing automatically despite `closeTerminalAfterExecution: false`
+  - Proper use of `-hold` flags for Linux terminals
+  - Better terminal spawning method selection
+- **Linux Same-Terminal Mode**: Fixed same-terminal mode not creating tabs and only running first script
+  - Implemented Linux-specific tab creation logic
+  - Support for GNOME Terminal, Konsole, XFCE Terminal, MATE Terminal, and Terminator
+  - Proper fallback to sequential execution for unsupported terminals
+- **Terminal Collection Execution**: Fixed terminal collection execution issues
+  - Proper handling of `closeAfterExecution` flag
+  - Better command building without forced exit
+  - Enhanced error handling and logging
 
 ## 🚀 What's New in v1.0.9
 

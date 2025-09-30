@@ -1,6 +1,6 @@
 # CodeState - Development Environment Management Tool
 
-**Version 1.0.10** - A powerful tool for managing development environments, scripts, and sessions with cross-platform terminal execution modes and intelligent OS detection.
+**Version 1.0.11** - A powerful tool for managing development environments, scripts, and sessions with cross-platform terminal execution modes and intelligent OS detection.
 
 ## 🚀 What's New in v1.0.10
 

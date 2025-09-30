@@ -1,6 +1,74 @@
 # @codestate/core
 
-**Version 1.0.9** - Core domain models, services, and infrastructure for CodeState
+**Version 1.0.11** - Core domain models, services, and infrastructure for CodeState
+
+## 🚀 What's New in v1.0.11
+
+### ✨ **Major New Features**
+- **Cross-Platform Terminal Execution Modes**: Intelligent terminal execution based on OS capabilities
+  - **Same-Terminal Mode**: Scripts run in tabs within a single terminal (macOS + Windows Terminal)
+  - **Multi-Terminal Mode**: Each script runs in separate terminal windows
+  - **IDE Mode**: Reserved for IDE extension integration
+  - **OS-Aware Execution**: Automatic platform detection and capability-based execution
+- **Windows Terminal Support**: Full Windows Terminal (`wt`) integration for tab creation
+  - Automatic detection of Windows Terminal availability using `wt --version`
+  - Programmatic tab creation using `wt new-tab` commands
+  - Support for working directories (`--startingDirectory`) and tab titles (`--title`)
+  - Fallback to multi-terminal mode when Windows Terminal unavailable
+- **Enhanced macOS Terminal Support**: Improved AppleScript-based tab creation
+  - Uses System Events for reliable tab creation in Terminal.app
+  - Better error handling and debugging capabilities
+  - Comprehensive logging for tab creation process
+- **Script Filtering by IDs**: Enhanced script management capabilities
+  - `GetScripts` use case now supports filtering by script IDs
+  - Efficient individual script fetching for specific ID lists
+  - Maintains backward compatibility with existing filtering options
+
+### 🏗️ **Architecture Improvements**
+- **OS Detection Service**: New core service for platform detection and capabilities
+  - `OSDetectionService` for detecting OS and terminal capabilities
+  - `GetOSInfo` use case for CLI consumption
+  - Async command execution for Windows Terminal detection
+  - Platform-specific capability detection (macOS, Windows, Linux)
+- **Terminal Collection Execution Modes**: Enhanced terminal collection management
+  - `executionMode` field added to terminal collections (`'ide' | 'same-terminal' | 'multi-terminal'`)
+  - Backward compatibility with default `same-terminal` mode
+  - Schema validation with proper default values
+- **Cross-Platform Terminal Handling**: Unified terminal spawning across platforms
+  - macOS: AppleScript System Events for tab creation
+  - Windows: Windows Terminal (`wt`) for tab creation
+  - Linux: Multi-terminal fallback (no reliable tab support)
+
+### 🔧 **Technical Enhancements**
+- **Terminal Command Interface**: Enhanced terminal command structure
+  - `closeAfterExecution` flag added to `TerminalCommand` interface
+  - Proper terminal spawning method selection based on close behavior
+  - Better Linux terminal handling with `-hold` flags
+  - `spawnTerminalCommand` method updated to use appropriate spawning method
+- **Comprehensive Logging**: Enhanced debugging and monitoring
+  - Detailed logging for terminal tab creation processes
+  - OS detection logging with capability explanations
+  - Windows Terminal command logging with formatted output
+  - AppleScript execution logging with error handling
+- **Terminal Service Enhancements**: Improved terminal spawning capabilities
+  - `spawnWindowsTerminalWithTabs` method for Windows Terminal tab creation
+  - Enhanced `spawnTerminalWithTabs` with platform-specific handling
+  - Better error handling and fallback mechanisms
+  - Support for multiple tab commands with proper formatting
+
+### 🐛 **Bug Fixes**
+- **Linux Terminal Issues**: Fixed multi-terminal mode closing automatically despite `closeTerminalAfterExecution: false`
+  - Removed forced `exit` from command strings
+  - Proper use of `-hold` flags for Linux terminals
+  - Updated `spawnTerminalCommand` to use appropriate spawning method
+- **Linux Same-Terminal Mode**: Fixed same-terminal mode not creating tabs and only running first script
+  - Implemented Linux-specific tab creation logic
+  - Support for GNOME Terminal, Konsole, XFCE Terminal, MATE Terminal, and Terminator
+  - Proper fallback to sequential execution for unsupported terminals
+- **Terminal Collection Execution**: Fixed terminal collection execution issues
+  - Proper handling of `closeAfterExecution` flag
+  - Better command building without forced exit
+  - Enhanced error handling and logging
 
 ## 🚀 What's New in v1.0.9
 
