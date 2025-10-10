@@ -91,19 +91,31 @@ export class IDEService implements IIDEService {
         return { ok: false, error: new Error(`IDE definition for '${request.ide}' not found`) };
       }
 
-      // Build file opening command
-      const fileArgs = request.files.map(file => {
-        let fileArg = file.path;
+      // Build file opening command with proper IDE-specific formatting
+      const fileArgs: string[] = [];
+      
+      request.files.forEach(file => {
         if (file.line && file.column) {
-          fileArg += `:${file.line}:${file.column}`;
+          // Use -g flag for VS Code to go to specific line and column
+          fileArgs.push('-g', `${file.path}:${file.line}:${file.column}`);
         } else if (file.line) {
-          fileArg += `:${file.line}`;
+          // Use -g flag for VS Code to go to specific line
+          fileArgs.push('-g', `${file.path}:${file.line}`);
+        } else {
+          // Just open the file
+          fileArgs.push(file.path);
         }
-        return fileArg;
       });
 
       const args = [...ide.args, request.projectRoot, ...fileArgs];
       const command = `${ide.command} ${args.join(' ')}`;
+
+      this.logger.debug('Generated IDE command with cursor positions', { 
+        ide: request.ide, 
+        command, 
+        args,
+        files: request.files 
+      });
 
       // Execute file opening command using spawnApplication to avoid keeping terminal open
       const result = await this.terminalService.spawnApplication(command, {
