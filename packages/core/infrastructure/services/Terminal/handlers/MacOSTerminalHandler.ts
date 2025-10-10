@@ -72,8 +72,8 @@ export class MacOSTerminalHandler implements ITerminalHandler {
   async isCommandAvailable(command: string): Promise<boolean> {
     try {
       const result = await this.executeCommand({ 
-        command: `which ${command}`, 
-        timeout: 2000 
+        command: `command -v ${command}`, 
+        timeout: 3000 
       });
       return result.ok && result.value.success;
     } catch (error) {
