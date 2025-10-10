@@ -71,6 +71,8 @@ export class MacOSTerminalHandler implements ITerminalHandler {
 
   async isCommandAvailable(command: string): Promise<boolean> {
     try {
+      // On macOS, use 'command -v' which is POSIX compliant and works reliably
+      // Unlike 'which', 'command -v' doesn't require flags and is more portable
       const result = await this.executeCommand({ 
         command: `command -v ${command}`, 
         timeout: 3000 
