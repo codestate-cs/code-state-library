@@ -48,22 +48,37 @@ export class MacOSTerminalHandler implements ITerminalHandler {
   getTerminalArgsForApp(terminalCmd: string, shell: string, command: string, cwd?: string): string[] {
     const args: string[] = [];
     
+    // For applications, we should spawn them directly, not through terminals
+    // This method is called by spawnApplication, so we need to return args that will spawn the command directly
+    
     if (terminalCmd === 'osascript') {
-      // macOS - use AppleScript to execute command
-      const appleScript = this.buildTerminalWithTabsScript([command], cwd);
-      args.push('-e', appleScript);
+      // For applications, don't use AppleScript - spawn the command directly
+      // Split the command into executable and arguments
+      const parts = command.split(' ');
+      const executable = parts[0];
+      const commandArgs = parts.slice(1);
+      
+      // Return args for direct execution
+      args.push('-c', command);
     } else if (terminalCmd === 'open') {
-      // macOS - use AppleScript to execute command
-      const appleScript = this.buildTerminalWithTabsScript([command], cwd);
-      args.push('-e', appleScript);
-    } else if (terminalCmd === 'Terminal.app') {
-      // Direct Terminal.app
-      const appleScript = this.buildTerminalWithTabsScript([command], cwd);
-      args.push('-e', appleScript);
-    } else if (terminalCmd === 'iTerm2') {
-      // iTerm2
-      const appleScript = this.buildiTermScript(command, cwd);
-      args.push('-e', appleScript);
+      // For applications, use open command to launch GUI apps
+      const parts = command.split(' ');
+      const executable = parts[0];
+      const commandArgs = parts.slice(1);
+      
+      if (executable === 'code' || executable === 'cursor' || executable === 'webstorm' || executable === 'idea' || executable === 'subl') {
+        // GUI applications - use open -a
+        args.push('-a', executable);
+        if (commandArgs.length > 0) {
+          args.push(...commandArgs);
+        }
+      } else {
+        // CLI applications - execute directly
+        args.push('-c', command);
+      }
+    } else {
+      // For other terminal commands, execute the command directly
+      args.push('-c', command);
     }
     
     return args;

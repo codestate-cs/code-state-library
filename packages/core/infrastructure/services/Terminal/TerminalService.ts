@@ -623,31 +623,39 @@ export class TerminalService implements ITerminalService {
     this.logger.debug('TerminalService.spawnApplication called', { command, options });
     
     try {
-      // Detect the best terminal for the current OS
-      const terminalCmd = await this.terminalHandler.detectTerminal();
-      this.logger.debug('Detected terminal for application', { terminalCmd });
+      const currentPlatform = platform();
       
-      // Get shell
-      const shellResult = await this.getShell();
-      if (isFailure(shellResult)) {
-        return { ok: false, error: shellResult.error };
+      // For applications, spawn the command directly instead of through terminals
+      this.logger.debug('Spawning application directly', { command, platform: currentPlatform });
+      
+      let child;
+      
+      if (currentPlatform === 'win32') {
+        // Windows: Use cmd to execute the command
+        child = spawn('cmd', ['/c', command], {
+          detached: true,
+          stdio: 'ignore',
+          cwd: options?.cwd
+        });
+      } else if (currentPlatform === 'darwin') {
+        // macOS: Use sh to execute the command directly
+        child = spawn('sh', ['-c', command], {
+          detached: true,
+          stdio: 'ignore',
+          cwd: options?.cwd
+        });
+      } else {
+        // Linux: Use sh to execute the command directly
+        child = spawn('sh', ['-c', command], {
+          detached: true,
+          stdio: 'ignore',
+          cwd: options?.cwd
+        });
       }
-      const shell = shellResult.value;
-      
-      // Get terminal arguments for application (non-interactive)
-      const args = this.terminalHandler.getTerminalArgsForApp(terminalCmd, shell, command, options?.cwd);
-      
-      this.logger.debug('Spawning application', { terminalCmd, args });
-      
-      // Spawn the application process
-      const child = spawn(terminalCmd, args, {
-        detached: true,
-        stdio: 'ignore'
-      });
       
       child.unref();
       
-      this.logger.log('Application spawned successfully', { terminalCmd, command });
+      this.logger.log('Application spawned successfully', { command, platform: currentPlatform });
       return { ok: true, value: true };
       
     } catch (error) {
