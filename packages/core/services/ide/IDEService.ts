@@ -5,6 +5,7 @@ import { ILoggerService } from '../../domain/ports/ILoggerService';
 import { IDE, FileOpenRequest } from '../../domain/models/IDE';
 import { Result, isFailure } from '../../domain/models/Result';
 import { platform } from 'os';
+import { spawn } from 'child_process';
 
 export class IDEService implements IIDEService {
   constructor(
@@ -48,16 +49,16 @@ export class IDEService implements IIDEService {
       const args = [...ide.args, projectRoot];
       const command = `${ide.command} ${args.join(' ')}`;
 
-      // Execute IDE command using spawnApplication to avoid keeping terminal open
-      const result = await this.terminalService.spawnApplication(command, {
-        cwd: projectRoot,
-        timeout: 10000
+      // Execute IDE command directly (not through terminal)
+      this.logger.debug('Spawning IDE directly', { ideName, command, args });
+      
+      const child = spawn(ide.command, args, {
+        detached: true,
+        stdio: 'ignore',
+        cwd: projectRoot
       });
 
-      if (isFailure(result)) {
-        this.logger.error('Failed to open IDE', { error: result.error, ideName, command });
-        return { ok: false, error: result.error };
-      }
+      child.unref();
 
       this.logger.log('IDE opened successfully', { ideName, projectRoot });
       return { ok: true, value: true };
@@ -105,16 +106,16 @@ export class IDEService implements IIDEService {
       const args = [...ide.args, request.projectRoot, ...fileArgs];
       const command = `${ide.command} ${args.join(' ')}`;
 
-      // Execute file opening command using spawnApplication to avoid keeping terminal open
-      const result = await this.terminalService.spawnApplication(command, {
-        cwd: request.projectRoot,
-        timeout: 10000
+      // Execute file opening command directly (not through terminal)
+      this.logger.debug('Spawning IDE with files directly', { ide: request.ide, command, args });
+      
+      const child = spawn(ide.command, args, {
+        detached: true,
+        stdio: 'ignore',
+        cwd: request.projectRoot
       });
 
-      if (isFailure(result)) {
-        this.logger.error('Failed to open files', { error: result.error, request, command });
-        return { ok: false, error: result.error };
-      }
+      child.unref();
 
       this.logger.log('Files opened successfully', { request });
       return { ok: true, value: true };
